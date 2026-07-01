@@ -1,0 +1,151 @@
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f4f7f6;
+  font-family: 'Inter', sans-serif;
+}
+
+.admin-sidebar {
+  width: 250px;
+  background-color: #1a1a2e;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-sidebar-header {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+}
+
+.admin-sidebar-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  letter-spacing: 1px;
+}
+
+.admin-nav {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0;
+}
+
+.admin-nav-link {
+  padding: 15px 25px;
+  color: #a0a0b2;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.admin-nav-link:hover, .admin-nav-link.active {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  border-left: 4px solid #ff4b2b;
+}
+
+.admin-nav-link.back-to-site {
+  margin-top: auto;
+  border-left: none;
+  color: #ff4b2b;
+}
+
+.admin-main {
+  flex: 1;
+  padding: 40px;
+  overflow-y: auto;
+}
+
+.admin-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.admin-page-header h1 {
+  margin: 0;
+  color: #333;
+}
+
+/* Card */
+.admin-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  margin-bottom: 20px;
+}
+
+/* Table */
+.admin-table-container {
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th, .admin-table td {
+  padding: 15px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.admin-table th {
+  background-color: #f9fafb;
+  font-weight: 600;
+  color: #555;
+}
+
+.admin-table tbody tr:hover {
+  background-color: #fcfcfc;
+}
+
+/* Buttons */
+.admin-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+.admin-btn:hover {
+  opacity: 0.8;
+}
+
+.admin-btn-primary {
+  background: #4caf50;
+  color: white;
+}
+
+.admin-btn-danger {
+  background: #f44336;
+  color: white;
+}
+
+.admin-btn-secondary {
+  background: #2196f3;
+  color: white;
+}
+
+.admin-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* Badge */
+.admin-badge {
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.admin-badge.pending { background: #fff3cd; color: #856404; }
+.admin-badge.approved { background: #d4edda; color: #155724; }
+.admin-badge.verified { background: #d4edda; color: #155724; }
+.admin-badge.rejected { background: #f8d7da; color: #721c24; }

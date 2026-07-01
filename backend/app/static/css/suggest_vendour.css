@@ -1,0 +1,163 @@
+/* 🌟 HungryBird – Suggest Vendor Page Styles */
+
+/* Full page gradient ONLY on this page (because this CSS is loaded only here) */
+html, body {
+  height: 100%;
+}
+
+body {
+  background: linear-gradient(135deg, #FF7B54 0%, #FFB31A 50%, #FFF3C7 100%) !important;
+}
+
+/* Remove white background from wrapper */
+.page-wrapper {
+  background: transparent !important;
+}
+
+/* Space around section */
+.hb-suggest-bg {
+  padding-top: 2rem;
+  padding-bottom: 4rem;
+}
+
+/* Optional: footer style on gradient */
+footer.footer {
+  background: rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(4px);
+}
+
+/* Card styling */
+.hb-card {
+  border-radius: 1.5rem;
+  border: none;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
+  background: #ffffff;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Thin gradient bar at card top */
+.hb-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #ff7b54, #ffb31a, #ffdd73);
+}
+
+.hb-card-body {
+  position: relative;
+  z-index: 1;
+}
+
+/* Header emoji */
+.hb-header-emoji {
+  font-size: 2.4rem;
+  display: inline-block;
+  transform: translateY(4px);
+}
+
+/* Highlight badge */
+.hb-pill-badge {
+  background: rgba(255, 179, 26, 0.15);
+  color: #8a3f00;
+  border: 1px solid rgba(255, 179, 26, 0.4);
+}
+
+/* Step badges */
+.hb-step-badge {
+  background: #ffffff;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  padding: 0.25rem 0.9rem;
+  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  box-shadow: 0 4px 12px rgba(148, 163, 184, 0.25);
+}
+
+.hb-step-badge small {
+  font-weight: 600;
+  color: #f97316;
+}
+
+.hb-step-badge span {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+/* Section labels + tags */
+.hb-section-label {
+  color: #574f4e;
+  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.hb-section-tag {
+  background: rgba(255, 250, 240, 0.9);
+  border-radius: 999px;
+  padding: 0.15rem 0.8rem;
+  font-size: 0.75rem;
+  color: #4d2d00;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+/* Form elements */
+.form-label {
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.form-control,
+.form-select {
+  border-radius: 0.75rem;
+  border-color: #e2e8f0;
+  font-size: 0.95rem;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #f97316;
+  box-shadow: 0 0 0 0.2rem rgba(249, 115, 22, 0.18);
+}
+
+.input-group-text {
+  border-radius: 0.75rem 0 0 0.75rem;
+  border-color: #e2e8f0;
+  background: #fff7eb;
+}
+
+/* Submit button */
+.hb-submit-btn {
+  background: linear-gradient(135deg, #ff7b54, #ffb31a);
+  border: none;
+  border-radius: 999px;
+  font-weight: 600;
+  color: #fff;
+  box-shadow: 0 16px 30px rgba(249, 115, 22, 0.35);
+  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+}
+
+.hb-submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 24px 40px rgba(249, 115, 22, 0.45);
+}
+
+.hb-submit-btn:active {
+  transform: translateY(0);
+}
+
+/* Footer text */
+.hb-footer-text {
+  color: #4d4d4d;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+  .hb-card {
+    border-radius: 1.25rem;
+  }
+}
