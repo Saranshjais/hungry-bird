@@ -16,13 +16,67 @@ const staggerGrid = {
   show:   { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
 };
 
+function InteractiveRating({ vendorId, initialRating, initialTotal }) {
+  const [rating, setRating] = useState(initialRating || 0);
+  const [total, setTotal] = useState(initialTotal || 0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const submitRating = async (val) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
+      const res = await axios.post(`${API_URL}/api/vendors/${vendorId}/rate`, { rating: val });
+      if (res.data.success) {
+        setRating(res.data.avg_rating);
+        setTotal(res.data.total_ratings);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-1.5 mb-3" onClick={e => e.stopPropagation()}>
+      <div className="flex items-center">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            onMouseEnter={() => setHoverRating(star)}
+            onMouseLeave={() => setHoverRating(0)}
+            onClick={(e) => { e.preventDefault(); submitRating(star); }}
+            disabled={isSubmitting}
+            className={`p-0.5 outline-none transition-transform hover:scale-125 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <Star
+              size={13}
+              className={`transition-colors ${
+                (hoverRating || Math.round(rating)) >= star
+                  ? "fill-brand-500 text-brand-500"
+                  : "fill-stone-100 text-stone-200"
+              }`}
+            />
+          </button>
+        ))}
+      </div>
+      <span className="text-[11px] font-bold text-stone-700 bg-stone-100 px-1.5 py-0.5 rounded shadow-sm border border-stone-200/50 ml-1">
+        {rating > 0 ? rating.toFixed(1) : 'New'}
+      </span>
+      <span className="text-[10px] text-stone-400 font-medium">({total})</span>
+    </div>
+  );
+}
+
 function VendorCard({ vendor, cityName, recommended }) {
   return (
     <motion.div
       variants={fadeUp}
       whileHover={{ y: -5, scale: 1.01 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="card group cursor-pointer"
+      className="card group cursor-pointer flex flex-col"
     >
       <div className="relative h-48 overflow-hidden">
         <img
@@ -45,23 +99,14 @@ function VendorCard({ vendor, cityName, recommended }) {
         </div>
       </div>
 
-      <div className="p-4 bg-white">
+      <div className="p-4 bg-white flex flex-col flex-1">
         <h3 className="font-extrabold text-stone-900 text-[15px] leading-tight mb-2 truncate group-hover:text-brand-600 transition-colors">
           {vendor.name}
         </h3>
 
-        <div className="flex items-center gap-2 mb-3">
-          <span className="star-badge">
-            <Star size={8} className="fill-white" />
-            {vendor.rating ? vendor.rating.toFixed(1) : '4.2'}
-          </span>
-          <span className="text-stone-300">·</span>
-          <span className="text-xs font-medium text-stone-500 flex items-center gap-1">
-            <Clock size={10} /> 25–30 min
-          </span>
-        </div>
+        <InteractiveRating vendorId={vendor.id} initialRating={vendor.rating} initialTotal={vendor.total_ratings} />
 
-        <div className="flex items-center justify-between border-t border-stone-100 pt-3">
+        <div className="flex items-center justify-between border-t border-stone-100 pt-3 mt-auto">
           <p className="text-[11px] font-medium text-stone-400 truncate">
             {vendor.cuisine_type} · {vendor.area || 'Local Market'}
           </p>

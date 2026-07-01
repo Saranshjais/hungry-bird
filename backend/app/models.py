@@ -28,6 +28,7 @@ class Vendor(db.Model):
     is_famous = db.Column(db.Boolean, default=False)
 
     avg_rating = db.Column(db.Float)  # your rating later
+    total_ratings = db.Column(db.Integer, default=0)
     price_level = db.Column(db.String(20))  # "₹", "₹₹", etc.
 
     address_text = db.Column(db.String(300))
@@ -72,3 +73,17 @@ class VendorSubmission(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     city = db.relationship("City")
+
+
+class Rating(db.Model):
+    __tablename__ = "ratings"
+
+    id = db.Column(db.Integer, primary_key=True)
+    vendor_id = db.Column(db.Integer, db.ForeignKey("vendors.id"), nullable=False)
+    
+    rating_value = db.Column(db.Float, nullable=False)
+    user_ip = db.Column(db.String(100))  # Optional: To track if a user already rated
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    vendor = db.relationship("Vendor", backref=db.backref("ratings", lazy=True, cascade="all, delete-orphan"))

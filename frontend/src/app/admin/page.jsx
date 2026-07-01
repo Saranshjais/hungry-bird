@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { Users, Store, MapPin, TrendingUp } from "lucide-react";
+import { motion } from "motion/react";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -12,8 +14,6 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // In a real app, we'd fetch actual stats from a dashboard endpoint.
-    // For now, we'll fetch all lists to count them.
     const fetchStats = async () => {
       try {
         const token = localStorage.getItem("admin_token");
@@ -44,36 +44,94 @@ export default function AdminDashboard() {
     fetchStats();
   }, []);
 
-  return (
-    <div>
-      <div className="admin-page-header">
-        <h1>Dashboard Overview</h1>
-      </div>
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: (i) => ({
+      opacity: 1,
+      y: 0,
+      transition: {
+        delay: i * 0.1,
+        type: "spring",
+        stiffness: 300,
+        damping: 24,
+      },
+    }),
+  };
 
-      <div className="admin-card">
-        <h3>Welcome to HungryBird Admin</h3>
-        <p>Manage vendors, approve user submissions, and handle city data.</p>
+  return (
+    <div className="font-sans">
+      <div className="admin-page-header">
+        <div>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight m-0 leading-none">Dashboard Overview</h1>
+          <p className="text-slate-500 mt-1 font-medium text-sm">Welcome back to the HungryBird Admin Portal.</p>
+        </div>
       </div>
 
       {loading ? (
-        <p>Loading stats...</p>
+        <div className="flex justify-center items-center h-64">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            className="w-10 h-10 border-4 border-brand-500/30 border-t-brand-500 rounded-full"
+          />
+        </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-          <div className="admin-card" style={{ textAlign: 'center' }}>
-            <h2>{stats.submissions}</h2>
-            <p>Total Submissions</p>
-            <Link href="/admin/submissions" className="admin-btn admin-btn-secondary" style={{ display: 'inline-block', marginTop: '10px', textDecoration: 'none' }}>View Submissions</Link>
-          </div>
-          <div className="admin-card" style={{ textAlign: 'center' }}>
-            <h2>{stats.vendors}</h2>
-            <p>Active Vendors</p>
-            <Link href="/admin/vendors" className="admin-btn admin-btn-secondary" style={{ display: 'inline-block', marginTop: '10px', textDecoration: 'none' }}>Manage Vendors</Link>
-          </div>
-          <div className="admin-card" style={{ textAlign: 'center' }}>
-            <h2>{stats.cities}</h2>
-            <p>Cities</p>
-            <Link href="/admin/cities" className="admin-btn admin-btn-secondary" style={{ display: 'inline-block', marginTop: '10px', textDecoration: 'none' }}>Manage Cities</Link>
-          </div>
+        <div className="admin-dashboard-grid">
+          
+          <motion.div custom={0} initial="hidden" animate="visible" variants={cardVariants}>
+            <div className="admin-metric-card group">
+              <div className="admin-metric-bg-circle bg-amber" />
+              <div className="admin-metric-header">
+                <div className="admin-metric-icon bg-amber">
+                  <Users size={24} />
+                </div>
+                <span className="admin-metric-badge bg-amber">
+                  Pending Review
+                </span>
+              </div>
+              <h3 className="admin-metric-value">{stats.submissions}</h3>
+              <p className="admin-metric-label">User Submissions</p>
+              <Link href="/admin/submissions" className="admin-metric-link text-amber">
+                Review Submissions <TrendingUp size={16} />
+              </Link>
+            </div>
+          </motion.div>
+
+          <motion.div custom={1} initial="hidden" animate="visible" variants={cardVariants}>
+            <div className="admin-metric-card group">
+              <div className="admin-metric-bg-circle bg-brand" />
+              <div className="admin-metric-header">
+                <div className="admin-metric-icon bg-brand">
+                  <Store size={24} />
+                </div>
+                <span className="admin-metric-badge bg-brand">
+                  Active
+                </span>
+              </div>
+              <h3 className="admin-metric-value">{stats.vendors}</h3>
+              <p className="admin-metric-label">Verified Vendors</p>
+              <Link href="/admin/vendors" className="admin-metric-link text-brand">
+                Manage Vendors <TrendingUp size={16} />
+              </Link>
+            </div>
+          </motion.div>
+
+          <motion.div custom={2} initial="hidden" animate="visible" variants={cardVariants}>
+            <div className="admin-metric-card group">
+              <div className="admin-metric-bg-circle bg-blue" />
+              <div className="admin-metric-header">
+                <div className="admin-metric-icon bg-blue">
+                  <MapPin size={24} />
+                </div>
+              </div>
+              <h3 className="admin-metric-value">{stats.cities}</h3>
+              <p className="admin-metric-label">Supported Cities</p>
+              <Link href="/admin/cities" className="admin-metric-link text-blue">
+                Manage Regions <TrendingUp size={16} />
+              </Link>
+            </div>
+          </motion.div>
+
         </div>
       )}
     </div>

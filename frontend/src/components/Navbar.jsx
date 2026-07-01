@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useScroll, useMotionValueEvent } from 'motion/react';
 import { UtensilsCrossed, MapPin, Menu, X } from 'lucide-react';
 
@@ -9,8 +10,13 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { scrollY } = useScroll();
+  const pathname = usePathname();
 
   useMotionValueEvent(scrollY, 'change', v => setScrolled(v > 40));
+
+  if (pathname && pathname.startsWith('/admin')) {
+    return null;
+  }
 
   return (
     <header

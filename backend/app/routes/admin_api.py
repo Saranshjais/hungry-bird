@@ -4,6 +4,8 @@ from app import db
 from app.models import VendorSubmission, Vendor, City
 import jwt
 import datetime
+import pandas as pd
+import io
 
 admin_api_bp = Blueprint("admin_api", __name__, url_prefix="/api/admin")
 
@@ -34,9 +36,17 @@ def admin_required(f):
 @admin_api_bp.route("/login", methods=["POST"])
 def login():
     data = request.json
+    username = data.get("username")
     password = data.get("password")
     
-    if password == current_app.config["ADMIN_PASSWORD"]:
+    # Check explicitly for user requested credentials, or fallback to config password if no username provided (for backwards compatibility)
+    is_valid = False
+    if username == "saransh" and password == "Sara@123":
+        is_valid = True
+    elif not username and password == current_app.config["ADMIN_PASSWORD"]:
+        is_valid = True
+        
+    if is_valid:
         token = jwt.encode({
             "role": "admin",
             "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=24)
@@ -44,7 +54,7 @@ def login():
         
         return jsonify({"token": token}), 200
         
-    return jsonify({"error": "Invalid password"}), 401
+    return jsonify({"error": "Invalid username or password"}), 401
 
 # --- SUBMISSIONS ---
 
@@ -167,6 +177,86 @@ def update_vendor(vendor_id):
     db.session.commit()
     return jsonify({"message": "Vendor updated successfully."}), 200
 
+# --- BULK UPLOAD ---
+
+@admin_api_bp.route("/vendors/bulk-upload", methods=["POST"])
+@admin_required
+def bulk_upload_vendors():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+        
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No file selected"}), 400
+        
+    try:
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(file)
+        elif file.filename.endswith('.xlsx'):
+            df = pd.read_excel(file, engine='openpyxl')
+        else:
+            return jsonify({"error": "Unsupported file format. Please upload .csv or .xlsx"}), 400
+            
+        # Standardize column names (lowercase, replace spaces with underscores)
+        df.columns = [str(c).strip().lower().replace(' ', '_') for c in df.columns]
+        
+        required_cols = ['stall_name', 'city_name', 'cuisine_type']
+        missing_cols = [c for c in required_cols if c not in df.columns]
+        if missing_cols:
+            return jsonify({"error": f"Missing required columns: {', '.join(missing_cols)}"}), 400
+            
+        success_count = 0
+        
+        for _, row in df.iterrows():
+            stall_name = str(row['stall_name']).strip()
+            city_name = str(row['city_name']).strip()
+            cuisine_type = str(row.get('cuisine_type', '')).strip()
+            description = str(row.get('description', '')).strip() if pd.notna(row.get('description')) else ""
+            price_level = str(row.get('price_level', '₹150 for two')).strip() if pd.notna(row.get('price_level')) else "₹150 for two"
+            lat = float(row['lat']) if 'lat' in df.columns and pd.notna(row['lat']) else None
+            lng = float(row['lng']) if 'lng' in df.columns and pd.notna(row['lng']) else None
+            
+            if not stall_name or not city_name:
+                continue
+                
+            # Handle city
+            city_slug = city_name.lower().replace(' ', '-')
+            city = City.query.filter_by(slug=city_slug).first()
+            if not city:
+                city = City(name=city_name, slug=city_slug, country="India")
+                db.session.add(city)
+                db.session.flush() # get city.id
+                
+            # Check if vendor already exists
+            existing = Vendor.query.filter_by(name=stall_name, city_id=city.id).first()
+            if existing:
+                continue
+                
+            vendor = Vendor(
+                city_id=city.id,
+                name=stall_name,
+                cuisine_type=cuisine_type,
+                is_hidden_gem=True,
+                is_famous=False,
+                price_level=price_level,
+                address_text=description, 
+                lat=lat,
+                lng=lng,
+                source="admin_bulk",
+                verified_status="verified"
+            )
+            db.session.add(vendor)
+            success_count += 1
+            
+        db.session.commit()
+        return jsonify({"message": f"Successfully imported {success_count} vendors!"}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 # --- CITIES ---
 
 @admin_api_bp.route("/cities", methods=["GET"])
@@ -207,3 +297,21 @@ def add_city():
     db.session.commit()
     return jsonify({"message": "City added successfully.", "id": city.id}), 201
 
+# --- RATINGS ---
+
+@admin_api_bp.route("/ratings", methods=["GET"])
+@admin_required
+def get_ratings():
+    vendors = Vendor.query.order_by(Vendor.avg_rating.desc().nullslast()).all()
+    data = []
+    for v in vendors:
+        if v.total_ratings and v.total_ratings > 0:
+            data.append({
+                "id": v.id,
+                "city_name": v.city.name if v.city else None,
+                "name": v.name,
+                "cuisine_type": v.cuisine_type,
+                "avg_rating": v.avg_rating,
+                "total_ratings": v.total_ratings
+            })
+    return jsonify({"ratings": data}), 200

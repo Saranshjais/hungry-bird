@@ -128,11 +128,11 @@ export default function HomePage() {
             className="w-full h-full object-cover select-none"
           />
           {/* Subtle dark vignette overlay to anchor the card */}
-          <div className="absolute inset-0 bg-stone-950/20 backdrop-blur-[1px]" />
+          <div className="absolute inset-0 bg-stone-950/20" />
         </div>
 
-        {/* Content Panel — Floating Frosted Glass Card */}
-        <div className="relative z-10 max-w-4xl mx-auto px-6 py-12 sm:py-16 sm:px-12 text-center rounded-[2.5rem] bg-white/85 backdrop-blur-xl border border-white/50 shadow-[0_24px_64px_-16px_rgba(28,25,23,0.18)] mx-4 sm:mx-6 transition-all duration-500 animate-fadeIn">
+        {/* Content Panel — Floating Glass panel container */}
+        <div className="relative z-10 max-w-4xl mx-auto px-6 py-12 sm:py-16 sm:px-12 text-center rounded-[2.5rem] bg-white border border-slate-100 shadow-[0_24px_64px_-16px_rgba(28,25,23,0.08)] mx-4 sm:mx-6 transition-all duration-500 animate-fadeIn">
           {/* Slogan Eyebrow */}
           <div className="flex justify-center mb-6">
             <span className="eyebrow bg-brand-50/90 border-brand-200/60 shadow-sm">

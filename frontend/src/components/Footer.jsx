@@ -1,9 +1,16 @@
 "use client";
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Send, Heart } from 'lucide-react';
 
 export default function Footer() {
+  const pathname = usePathname();
+
+  if (pathname && pathname.startsWith('/admin')) {
+    return null;
+  }
+
   return (
     <footer className="bg-stone-950 text-stone-300 pt-20 pb-10 relative overflow-hidden border-t border-stone-800">
       {/* Background ambient glow */}
