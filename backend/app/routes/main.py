@@ -4,7 +4,7 @@ import re
 import requests
 
 from app import db, cache
-from app.models import City, Vendor, VendorSubmission
+from app.models import City, Vendor, VendorSubmission, Rating
 
 # ✅ ML import
 from app.ml_model import build_recommendation_model, get_recommendations
@@ -79,6 +79,7 @@ def city_page(slug):
             "name": v.name,
             "cuisine_type": v.cuisine_type,
             "rating": v.avg_rating,
+            "total_ratings": v.total_ratings,
             "lat": v.lat,
             "lng": v.lng,
             "address": v.address_text,
@@ -218,3 +219,49 @@ def submit_vendor():
         print("WebSocket emit failed:", e)
 
     return jsonify({"success": True, "message": "Thank you! Your hidden stall suggestion is submitted."})
+
+# -------------------- RATE VENDOR --------------------
+@main_bp.route("/vendors/<int:vendor_id>/rate", methods=["POST"])
+def rate_vendor(vendor_id):
+    data = request.json or {}
+    rating_val = data.get("rating")
+    
+    if not rating_val:
+        return jsonify({"success": False, "error": "Rating value is required"}), 400
+        
+    try:
+        rating_val = float(rating_val)
+        if rating_val < 1 or rating_val > 5:
+            raise ValueError
+    except:
+        return jsonify({"success": False, "error": "Invalid rating value"}), 400
+
+    vendor = Vendor.query.get_or_404(vendor_id)
+    
+    # Optional: Get user IP for tracking
+    user_ip = request.remote_addr
+    
+    new_rating = Rating(
+        vendor_id=vendor.id,
+        rating_value=rating_val,
+        user_ip=user_ip
+    )
+    
+    db.session.add(new_rating)
+    db.session.flush()
+    
+    # Calculate new average
+    all_ratings = Rating.query.filter_by(vendor_id=vendor.id).all()
+    total = len(all_ratings)
+    avg = sum(r.rating_value for r in all_ratings) / total if total > 0 else 0
+    
+    vendor.avg_rating = round(avg, 1)
+    vendor.total_ratings = total
+    
+    db.session.commit()
+    
+    return jsonify({
+        "success": True, 
+        "avg_rating": vendor.avg_rating,
+        "total_ratings": vendor.total_ratings
+    })

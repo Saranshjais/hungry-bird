@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
 
 export default function AdminAuthProvider({ children }) {
   const router = useRouter();
@@ -38,11 +39,24 @@ export default function AdminAuthProvider({ children }) {
           <h2>HB Admin</h2>
         </div>
         <nav className="admin-nav">
-          <a href="/admin" className="admin-nav-link">Dashboard</a>
-          <a href="/admin/submissions" className="admin-nav-link">Submissions</a>
-          <a href="/admin/vendors" className="admin-nav-link">Vendors</a>
-          <a href="/admin/cities" className="admin-nav-link">Cities</a>
-          <a href="/" className="admin-nav-link back-to-site">← Back to Site</a>
+          <Link href="/admin" className={`admin-nav-link ${pathname === '/admin' ? 'active' : ''}`}>
+            Dashboard
+          </Link>
+          <Link href="/admin/submissions" className={`admin-nav-link ${pathname === '/admin/submissions' ? 'active' : ''}`}>
+            Submissions
+          </Link>
+          <Link href="/admin/vendors" className={`admin-nav-link ${pathname === '/admin/vendors' ? 'active' : ''}`}>
+            Vendors
+          </Link>
+          <Link href="/admin/cities" className={`admin-nav-link ${pathname === '/admin/cities' ? 'active' : ''}`}>
+            Cities
+          </Link>
+          <Link href="/admin/ratings" className={`admin-nav-link ${pathname === '/admin/ratings' ? 'active' : ''}`}>
+            Ratings
+          </Link>
+          <Link href="/" className="admin-nav-link back-to-site">
+            ← Back to Site
+          </Link>
         </nav>
       </aside>
       <main className="admin-main">
