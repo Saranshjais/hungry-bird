@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% block title %}{{ city.name }} – Street Food on HungryBird{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
+  <div>
+    <h1 class="h4 mb-1">{{ city.name }} Street Food</h1>
+    <p class="text-muted mb-0">
+      Explore delicious hidden gems & famous spots in {{ city.name }} 🍽
+    </p>
+  </div>
+
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{{ url_for('main.index') }}" class="btn btn-outline-dark btn-sm">
+      🔄 Change City
+    </a>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-bar mb-3 p-2 rounded-3">
+  <div class="row g-2 align-items-center">
+    <div class="col-12 col-md-4">
+      <input type="text" class="form-control form-control-sm" id="searchInput"
+             placeholder="Search by stall, area or cuisine...">
+    </div>
+
+    <div class="col-12 col-md-4">
+      <div class="btn-group btn-group-sm w-100" role="group">
+        <button type="button" class="btn btn-outline-secondary active" data-filter-gem="all">All</button>
+        <button type="button" class="btn btn-outline-secondary" data-filter-gem="hidden">Hidden gems</button>
+        <button type="button" class="btn btn-outline-secondary" data-filter-gem="famous">Famous spots</button>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <select id="priceFilter" class="form-select form-select-sm">
+        <option value="">Any price</option>
+        <option value="₹50">Under ₹100</option>
+        <option value="₹100">₹100–₹200</option>
+        <option value="₹200">₹200+</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- Map -->
+<div id="map" class="city-map mb-3"></div>
+
+<!-- Vendor list -->
+<div id="vendorList" class="row g-3">
+  {% for v in vendors %}
+  <div class="col-md-4 vendor-card-wrapper"
+       data-name="{{ v.name|lower }}"
+       data-area="{{ (v.area or '')|lower }}"
+       data-cuisine="{{ (v.cuisine_type or '')|lower }}"
+       data-gem="{% if v.is_hidden_gem %}hidden{% elif v.is_famous %}famous{% else %}none{% endif %}"
+       data-price="{{ v.price_level or '' }}">
+
+    <div class="card vendor-card shadow-sm border-0 rounded-4 h-100">
+      <img src="{{ url_for('static', filename='img/vendor-fallback.jpg') }}"
+           alt="{{ v.name }}" class="vendor-img-top">
+
+      <div class="card-body d-flex flex-column">
+
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <h5 class="vendor-name mb-0">{{ v.name }}</h5>
+          {% if v.avg_rating %}
+          <span class="badge bg-success rounded-pill">⭐ {{ "%.1f"|format(v.avg_rating) }}</span>
+          {% endif %}
+        </div>
+
+        {% if v.cuisine_type %}
+        <p class="text-muted small mb-1">🍽 {{ v.cuisine_type }}</p>
+        {% endif %}
+
+        <p class="text-muted small mb-2">
+          <span class="me-1">📍</span>{{ v.address_text or v.area or "See on map" }}
+        </p>
+
+        {% if v.is_hidden_gem %}
+          <span class="badge text-bg-success small mb-2">Hidden Gem 🌟</span>
+        {% elif v.is_famous %}
+          <span class="badge text-bg-warning text-dark small mb-2">Famous 🔥</span>
+        {% endif %}
+
+        <div class="mt-auto d-flex justify-content-between align-items-center">
+          <a class="btn btn-sm btn-primary"
+             href="https://www.google.com/maps/search/?api=1&query={{ v.lat }},{{ v.lng }}"
+             target="_blank">📌 Maps</a>
+
+          <button type="button" class="btn btn-sm btn-outline-secondary scroll-to-marker-btn"
+                  data-lat="{{ v.lat }}" data-lng="{{ v.lng }}" data-name="{{ v.name }}">🔍 Focus</button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+  {% else %}
+  <p class="text-muted">No street food vendors added yet.</p>
+  {% endfor %}
+</div>
+
+<!-- ✅ ML RECOMMENDATIONS -->
+{% if recommendations %}
+<div class="mt-4">
+  <h5 class="mb-3">🍽 You may also like</h5>
+
+  <div class="row g-3">
+    {% for r in recommendations %}
+      <div class="col-md-4">
+        <div class="card shadow-sm border-0 rounded-4 h-100 p-2">
+          <div class="card-body">
+            <h6 class="mb-1">{{ r.name }}</h6>
+
+            {% if r.cuisine_type %}
+              <p class="text-muted small mb-1">🍽 {{ r.cuisine_type }}</p>
+            {% endif %}
+
+            <p class="text-muted small mb-0">
+              Similar to what you are viewing
+            </p>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+
+{% block scripts %}
+{{ super() }}
+
+<script>
+  const VENDORS = {{ vendor_data | tojson }};
+  let map, markers = [];
+
+  function initMap() {
+    if (!VENDORS.length) return;
+
+    const first = VENDORS[0];
+    map = new google.maps.Map(document.getElementById("map"), {
+      zoom: 13, center: { lat: first.lat, lng: first.lng }
+    });
+
+    const bounds = new google.maps.LatLngBounds();
+
+    VENDORS.forEach(v => {
+      const pos = { lat: v.lat, lng: v.lng };
+      const marker = new google.maps.Marker({ position: pos, map, title: v.name });
+
+      const info = new google.maps.InfoWindow({
+        content: `<strong>${v.name}</strong><br/>${v.cuisine_type || "Street food"}`
+      });
+
+      marker.addListener("click", () => info.open(map, marker));
+      markers.push({ marker, data: v });
+      bounds.extend(pos);
+    });
+
+    if (VENDORS.length > 1) map.fitBounds(bounds);
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const searchInput = document.getElementById("searchInput");
+    const priceFilter = document.getElementById("priceFilter");
+    const gemButtons = document.querySelectorAll("[data-filter-gem]");
+    const vendorCards = document.querySelectorAll(".vendor-card-wrapper");
+    let activeGemFilter = "all";
+
+    function applyFilters() {
+      const q = (searchInput.value || "").toLowerCase();
+
+      vendorCards.forEach(card => {
+        const name = card.dataset.name;
+        const area = card.dataset.area;
+        const cuisine = card.dataset.cuisine;
+        const gem = card.dataset.gem;
+
+        let visible = (!q || name.includes(q) || area.includes(q) || cuisine.includes(q));
+        if (visible && activeGemFilter !== "all") visible = (gem === activeGemFilter);
+
+        card.style.display = visible ? "" : "none";
+      });
+    }
+
+    searchInput?.addEventListener("input", applyFilters);
+    priceFilter?.addEventListener("change", applyFilters);
+
+    gemButtons.forEach(btn =>
+      btn.addEventListener("click", () => {
+        gemButtons.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        activeGemFilter = btn.dataset.filterGem;
+        applyFilters();
+      })
+    );
+
+    document.querySelectorAll(".scroll-to-marker-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const lat = parseFloat(btn.dataset.lat);
+        const lng = parseFloat(btn.dataset.lng);
+        const name = btn.dataset.name;
+        const markerObj = markers.find(m => m.data.name === name);
+
+        if (markerObj) {
+          map.panTo(markerObj.marker.getPosition());
+          map.setZoom(16);
+          new google.maps.InfoWindow({ content: `<strong>${name}</strong>` })
+            .open(map, markerObj.marker);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      });
+    });
+  });
+</script>
+
+<script async src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap"></script>
+{% endblock %}

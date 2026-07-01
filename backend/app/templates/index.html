@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}HungryBird – Discover Hidden Street Food{% endblock %}
+
+{% block content %}
+
+<section class="hero-section mb-4">
+  <div class="row align-items-center g-4">
+    <div class="col-lg-7">
+      <h1 class="hero-title mb-3">
+        Discover hidden <span class="highlight">street food</span> in your city
+      </h1>
+      <p class="text-muted mb-4">
+        Not the fancy restaurants. Not the overrated tourist spots.
+        Just the stalls and carts where locals actually eat – starting with Jaipur and Delhi.
+      </p>
+
+      <div class="d-flex flex-wrap gap-2">
+        {% if cities %}
+          <div class="dropdown">
+            <button class="btn btn-primary dropdown-toggle" type="button"
+                    data-bs-toggle="dropdown" aria-expanded="false">
+              Explore a city
+            </button>
+            <ul class="dropdown-menu">
+              {% for c in cities %}
+                <li>
+                  <a class="dropdown-item" href="{{ url_for('main.city_page', slug=c.slug) }}">
+                    {{ c.name }}{% if c.state %}, {{ c.state }}{% endif %}
+                  </a>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% else %}
+          <p class="text-muted">No cities yet. Add some from the admin / shell.</p>
+        {% endif %}
+
+        <a href="{{ url_for('main.submit_vendor') }}" class="btn btn-outline-secondary">
+          + Suggest a hidden stall
+        </a>
+      </div>
+    </div>
+
+    <div class="col-lg-5 d-none d-lg-block">
+      <div class="hero-card">
+        <div class="hero-pill mb-2">Curated by locals</div>
+        <h2 class="h5 mb-3">What is HungryBird?</h2>
+        <p class="small text-muted mb-3">
+          A simple map of affordable, real-deal street food vendors.
+          Each stall comes with a map location so you can just show up and eat.
+        </p>
+        <ul class="small mb-0 ps-3">
+          <li>Hidden gems tagged by locals</li>
+          <li>Filters coming soon: veg, budget, late-night</li>
+          <li>Start with Jaipur & Delhi and expand city by city</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+{% if cities %}
+<section class="mb-3">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h2 class="h5 mb-0">Cities on HungryBird</h2>
+    <span class="small text-muted">
+      {{ cities|length }} city{{ 'ies' if cities|length != 1 else '' }} listed
+    </span>
+  </div>
+
+  <div class="row g-3">
+    {% for c in cities %}
+      <div class="col-6 col-md-4 col-lg-3">
+        <a href="{{ url_for('main.city_page', slug=c.slug) }}" class="city-card text-decoration-none">
+          <div class="city-card-body">
+
+            <div class="city-image-wrapper mb-2">
+              <img 
+                src="{{ url_for('static', filename='img/cities/' ~ c.name|lower ~ '.png') }}"
+                class="city-image"
+                alt="{{ c.name }}">
+            </div>
+
+            <div class="city-name fw-bold">{{ c.name }}</div>
+
+            {% if c.state %}
+              <div class="city-meta text-muted small">{{ c.state }}</div>
+            {% endif %}
+
+            {% if c.desc %}
+              <div class="city-desc small text-muted mt-1">
+                {{ c.desc }}
+              </div>
+            {% endif %}
+
+          </div>
+        </a>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+
+<section class="home-banner my-4">
+  <div id="homeBannerCarousel"
+       class="carousel slide carousel-fade home-banner-carousel"
+       data-bs-ride="carousel"
+       data-bs-interval="4000"
+       data-bs-pause="hover">
+
+    <div class="carousel-indicators">
+      {% for i in range(8) %}
+        <button type="button"
+                data-bs-target="#homeBannerCarousel"
+                data-bs-slide-to="{{ i }}"
+                class="{{ 'active' if i == 0 else '' }}">
+        </button>
+      {% endfor %}
+    </div>
+
+    <div class="carousel-inner">
+      {% for i in range(1, 9) %}
+      <div class="carousel-item {% if i == 1 %}active{% endif %}">
+        <img src="{{ url_for('static', filename='img/banners/banner' ~ i ~ '.png') }}"
+             class="d-block w-100 home-banner-img">
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="banner-overlay d-flex flex-column justify-content-center align-items-center text-center">
+      <h3 class="fw-bold text-white mb-2 shadow-text">Explore the Hidden Flavors</h3>
+      <a href="{{ url_for('main.city_page', slug=cities[0].slug) }}" class="btn btn-warning fw-semibold banner-cta">
+        Find Food Near Me
+      </a>
+    </div>
+
+  </div>
+</section>
+
+
+<section class="about-section my-5 py-4">
+  <div class="container">
+    <div class="card about-card shadow-sm border-0 mx-auto" style="max-width: 850px;">
+      <div class="card-body p-4 p-md-5 text-center">
+        
+        <h2 class="h5 fw-semibold mb-3">🍴 About HungryBird</h2>
+
+        <p class="text-muted mb-3">
+          HungryBird helps you discover <strong>authentic street food</strong> —
+          the kind locals actually love.
+        </p>
+
+        <a href="{{ url_for('main.submit_vendor') }}" class="btn btn-primary">
+          + Add a Hidden Stall
+        </a>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

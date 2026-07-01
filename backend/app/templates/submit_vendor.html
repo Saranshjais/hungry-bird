@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}Suggest a Hidden Stall – HungryBird{% endblock %}
+
+{% block body_class %}hb-submit-bg{% endblock %}
+
+{% block head_extra %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/suggest_vendor.css') }}">
+{% endblock %}
+
+{% block content %}
+  <div class="hb-suggest-bg py-4 py-lg-5">
+    <div class="row justify-content-center">
+      <div class="col-xl-8 col-lg-9">
+
+        <!-- Page Header -->
+        <div class="text-center mb-4">
+          <div class="mb-2">
+            <span class="hb-header-emoji">🍢</span>
+          </div>
+          <span class="badge rounded-pill hb-pill-badge mb-2 px-3 py-2">
+            🐦 Help other foodies discover gems
+          </span>
+          <h1 class="h3 mb-2 fw-semibold">Suggest a hidden street food stall</h1>
+          <p class="text-muted mb-1">
+            Share that <span class="fw-semibold">“only locals know”</span> spot with the HungryBird community.
+          </p>
+          <p class="text-muted small mb-0">
+            Takes less than <span class="fw-semibold">2 minutes</span> and can help hundreds of people eat better.
+          </p>
+        </div>
+
+        <!-- Visual steps -->
+        <div class="d-flex justify-content-center flex-wrap gap-2 mb-3">
+          <div class="hb-step-badge">
+            <small>1</small>
+            <span>Stall details</span>
+          </div>
+          <div class="hb-step-badge">
+            <small>2</small>
+            <span>Location &amp; price</span>
+          </div>
+          <div class="hb-step-badge">
+            <small>3</small>
+            <span>Your details</span>
+          </div>
+        </div>
+
+        <!-- Card -->
+        <div class="card hb-card mb-4">
+          <div class="card-body hb-card-body p-4 p-md-5">
+            <form method="post" novalidate>
+              <!-- Stall details -->
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <h6 class="hb-section-label mb-0">
+                  Stall details
+                </h6>
+                <span class="hb-section-tag">
+                  🍽️ Local favourite
+                </span>
+              </div>
+              <hr class="mt-2 mb-3">
+
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">City <span class="text-danger">*</span></label>
+                  <select name="city_id" class="form-select" required>
+                    <option value="">Select city</option>
+                    {% for c in cities %}
+                      <option value="{{ c.id }}">{{ c.name }}</option>
+                    {% endfor %}
+                  </select>
+                  <div class="form-text">
+                    Where can we find this stall?
+                  </div>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Stall name <span class="text-danger">*</span></label>
+                  <input type="text" name="stall_name" class="form-control" required
+                         placeholder="e.g. Sharma Chaat Corner">
+                  <div class="form-text">
+                    No name? Describe it (e.g. “Red cart near metro gate”).
+                  </div>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Cuisine / what to eat</label>
+                <input type="text" name="cuisine_type" class="form-control"
+                       placeholder="e.g. Pani puri, Chaat, Vada pav">
+                <div class="form-text">
+                  Tell people what they <span class="fw-semibold">must try</span> here.
+                </div>
+              </div>
+
+              <div class="mb-4">
+                <label class="form-label">Why is this place special?</label>
+                <textarea name="description" class="form-control" rows="3"
+                          placeholder="Taste, value for money, crowd, vibe, late-night saviour…"></textarea>
+                <div class="form-text">
+                  The more details you share, the easier it is for others to discover it.
+                </div>
+              </div>
+
+              <!-- Location & price -->
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <h6 class="hb-section-label mb-0">
+                  Location &amp; price
+                </h6>
+                <span class="hb-section-tag">
+                  📍 Help people reach the right spot
+                </span>
+              </div>
+              <hr class="mt-2 mb-3">
+
+              <div class="mb-3">
+                <label class="form-label">Google Maps link <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text">📍</span>
+                  <input type="url" name="google_maps_url" class="form-control" required
+                        placeholder="Paste Google Maps link like: https://www.google.com/maps/@26.9124,75.7873">
+                </div>
+                <div class="form-text">
+                  Google Maps → long press → Share → Copy link → paste here.
+                </div>
+                <div class="text-danger small">
+                  ⚠️ Must be a full Google Maps link (not short link)
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Approx address / area</label>
+                <input type="text" name="approx_address" class="form-control"
+                       placeholder="Inside small lane near XYZ Temple, Bapu Bazar">
+                <div class="form-text">
+                  Landmarks, nearby shops, or “opposite to…” really help.
+                </div>
+              </div>
+
+              <div class="mb-4">
+                <label class="form-label">Typical spend per person</label>
+                <div class="input-group">
+                  <span class="input-group-text">₹</span>
+                  <input type="text" name="estimated_price" class="form-control"
+                         placeholder="e.g. 50–100">
+                </div>
+                <div class="form-text">
+                  Just an estimate so people know what to expect.
+                </div>
+              </div>
+
+              <!-- Your details -->
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <h6 class="hb-section-label mb-0">
+                  Your details <span class="text-muted">(optional)</span>
+                </h6>
+                <span class="hb-section-tag">
+                  ⭐ For credits &amp; follow-ups
+                </span>
+              </div>
+              <hr class="mt-2 mb-3">
+
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Your name</label>
+                  <input type="text" name="submitted_by_name" class="form-control"
+                         placeholder="We may give you a shout-out">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Your email</label>
+                  <input type="email" name="submitted_by_email" class="form-control"
+                         placeholder="In case we need more details">
+                  <div class="form-text">
+                    Only used for this stall. We’ll never spam you.
+                  </div>
+                </div>
+              </div>
+
+              <button type="submit" class="btn hb-submit-btn w-100 py-2 mt-2">
+                <span class="me-1">🚀</span> Submit hidden stall
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <p class="text-center hb-footer-text small mb-0">
+          By submitting, you help build a better map for hungry people in your city. 💛
+        </p>
+      </div>
+    </div>
+  </div>
+{% endblock %}
