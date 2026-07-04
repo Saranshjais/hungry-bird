@@ -32,6 +32,9 @@
             <td>
               <div class="fw-semibold">{{ s.stall_name }}</div>
               <div class="small text-muted">{{ s.cuisine_type or "-" }}</div>
+              {% if s.rating %}
+              <div class="small text-warning">★ {{ s.rating }}</div>
+              {% endif %}
             </td>
 
             <td>{{ s.city.name }}</td>

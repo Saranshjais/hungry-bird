@@ -10,8 +10,8 @@ export default function AdminCities() {
 
   const fetchCities = async () => {
     try {
-      const token = localStorage.getItem("admin_token");
-      const res = await fetch("http://127.0.0.1:5000/api/admin/cities", {
+      const token = sessionStorage.getItem("admin_token");
+      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000") + "/api/admin/cities", {
         headers: { "Authorization": `Bearer ${token}` }
       });
       const data = await res.json();
@@ -32,8 +32,8 @@ export default function AdminCities() {
   const handleAddCity = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem("admin_token");
-      const res = await fetch("http://127.0.0.1:5000/api/admin/cities", {
+      const token = sessionStorage.getItem("admin_token");
+      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000") + "/api/admin/cities", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -132,3 +132,4 @@ export default function AdminCities() {
     </div>
   );
 }
+

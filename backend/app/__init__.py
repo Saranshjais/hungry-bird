@@ -25,9 +25,11 @@ def create_app():
     # import blueprints
     from app.routes.main import main_bp
     from app.routes.admin_api import admin_api_bp
+    from app.routes.auth_api import auth_api
 
     app.register_blueprint(main_bp, url_prefix="/api")
     app.register_blueprint(admin_api_bp)
+    app.register_blueprint(auth_api)
 
     @app.route("/")
     def index():

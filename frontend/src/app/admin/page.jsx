@@ -16,13 +16,13 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const token = localStorage.getItem("admin_token");
+        const token = sessionStorage.getItem("admin_token");
         const headers = { "Authorization": `Bearer ${token}` };
         
         const [vRes, sRes, cRes] = await Promise.all([
-          fetch("http://127.0.0.1:5000/api/admin/vendors", { headers }),
-          fetch("http://127.0.0.1:5000/api/admin/submissions", { headers }),
-          fetch("http://127.0.0.1:5000/api/admin/cities", { headers }),
+          fetch((process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000") + "/api/admin/vendors", { headers }),
+          fetch((process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000") + "/api/admin/submissions", { headers }),
+          fetch((process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000") + "/api/admin/cities", { headers }),
         ]);
         
         const vendors = await vRes.json();
@@ -137,3 +137,4 @@ export default function AdminDashboard() {
     </div>
   );
 }
+

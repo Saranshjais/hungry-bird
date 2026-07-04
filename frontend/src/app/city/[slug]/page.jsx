@@ -6,6 +6,9 @@ import Link from 'next/link';
 import { motion, AnimatePresence, useInView } from 'motion/react';
 import axios from 'axios';
 import { MapPin, Star, Sparkles, ChevronLeft, Clock, Flame, Search, X } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const CityMap = dynamic(() => import('./CityMap'), { ssr: false });
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -21,16 +24,33 @@ function InteractiveRating({ vendorId, initialRating, initialTotal }) {
   const [total, setTotal] = useState(initialTotal || 0);
   const [hoverRating, setHoverRating] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [selectedStar, setSelectedStar] = useState(0);
+  const [reviewText, setReviewText] = useState("");
+  const [authorName, setAuthorName] = useState("");
+  const [submittedMessage, setSubmittedMessage] = useState("");
 
-  const submitRating = async (val) => {
-    if (isSubmitting) return;
+  const handleStarClick = (star) => {
+    setSelectedStar(star);
+    setShowReviewForm(true);
+  };
+
+  const submitRating = async () => {
+    if (isSubmitting || !selectedStar) return;
     setIsSubmitting(true);
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
-      const res = await axios.post(`${API_URL}/api/vendors/${vendorId}/rate`, { rating: val });
+      const res = await axios.post(`${API_URL}/api/vendors/${vendorId}/rate`, { 
+        rating: selectedStar,
+        review_text: reviewText,
+        author_name: authorName
+      });
       if (res.data.success) {
         setRating(res.data.avg_rating);
         setTotal(res.data.total_ratings);
+        setShowReviewForm(false);
+        setSubmittedMessage("Rated!");
+        setTimeout(() => setSubmittedMessage(""), 3000);
       }
     } catch (e) {
       console.error(e);
@@ -40,32 +60,75 @@ function InteractiveRating({ vendorId, initialRating, initialTotal }) {
   };
 
   return (
-    <div className="flex items-center gap-1.5 mb-3" onClick={e => e.stopPropagation()}>
-      <div className="flex items-center">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <button
-            key={star}
-            onMouseEnter={() => setHoverRating(star)}
-            onMouseLeave={() => setHoverRating(0)}
-            onClick={(e) => { e.preventDefault(); submitRating(star); }}
-            disabled={isSubmitting}
-            className={`p-0.5 outline-none transition-transform hover:scale-125 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            <Star
-              size={13}
-              className={`transition-colors ${
-                (hoverRating || Math.round(rating)) >= star
-                  ? "fill-brand-500 text-brand-500"
-                  : "fill-stone-100 text-stone-200"
-              }`}
-            />
-          </button>
-        ))}
+    <div className="mb-3" onClick={e => e.stopPropagation()}>
+      <div className="flex items-center gap-1.5">
+        <div className="flex items-center">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <button
+              key={star}
+              onMouseEnter={() => setHoverRating(star)}
+              onMouseLeave={() => setHoverRating(0)}
+              onClick={(e) => { e.preventDefault(); handleStarClick(star); }}
+              disabled={isSubmitting}
+              className={`p-0.5 outline-none transition-transform hover:scale-125 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <Star
+                size={13}
+                className={`transition-colors ${
+                  (hoverRating || selectedStar || Math.round(rating)) >= star
+                    ? "fill-brand-500 text-brand-500"
+                    : "fill-stone-100 text-stone-200"
+                }`}
+              />
+            </button>
+          ))}
+        </div>
+        <span className="text-[11px] font-bold text-stone-700 bg-stone-100 px-1.5 py-0.5 rounded shadow-sm border border-stone-200/50 ml-1">
+          {rating > 0 ? rating.toFixed(1) : 'New'}
+        </span>
+        <span className="text-[10px] text-stone-400 font-medium">({total})</span>
+        {submittedMessage && <span className="text-[10px] text-green-500 ml-1 font-bold">{submittedMessage}</span>}
       </div>
-      <span className="text-[11px] font-bold text-stone-700 bg-stone-100 px-1.5 py-0.5 rounded shadow-sm border border-stone-200/50 ml-1">
-        {rating > 0 ? rating.toFixed(1) : 'New'}
-      </span>
-      <span className="text-[10px] text-stone-400 font-medium">({total})</span>
+      
+      <AnimatePresence>
+        {showReviewForm && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-3 flex flex-col gap-2 overflow-hidden"
+          >
+            <input 
+              type="text" 
+              placeholder="Your Name (Optional)" 
+              value={authorName}
+              onChange={e => setAuthorName(e.target.value)}
+              className="w-full text-xs p-2 border border-stone-200 rounded outline-none focus:border-brand-500 transition-colors"
+            />
+            <textarea 
+              placeholder="Write a review... (Optional)" 
+              value={reviewText}
+              onChange={e => setReviewText(e.target.value)}
+              className="w-full text-xs p-2 border border-stone-200 rounded outline-none focus:border-brand-500 min-h-[50px] resize-none transition-colors"
+            />
+            <div className="flex justify-end gap-2 mt-1">
+              <button 
+                onClick={() => setShowReviewForm(false)} 
+                className="text-[10px] font-bold text-stone-500 px-2 py-1 hover:text-stone-700 transition-colors"
+              >
+                CANCEL
+              </button>
+              <button 
+                onClick={submitRating} 
+                disabled={isSubmitting}
+                className="text-[10px] font-bold bg-brand-500 hover:bg-brand-600 text-white px-3 py-1 rounded shadow-sm transition-colors"
+              >
+                {isSubmitting ? "..." : "SUBMIT"}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -77,10 +140,11 @@ function VendorCard({ vendor, cityName, recommended }) {
       whileHover={{ y: -5, scale: 1.01 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className="card group cursor-pointer flex flex-col"
+      onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${vendor.lat},${vendor.lng}`, '_blank')}
     >
-      <div className="relative h-48 overflow-hidden">
+      <div className="relative h-48 overflow-hidden bg-stone-100">
         <img
-          src={vendor.image_url || '/vendor-placeholder.png'}
+          src={(!vendor.image_url || vendor.image_url.includes('maps.googleapis')) ? '/vendor-placeholder.png' : vendor.image_url}
           alt={vendor.name}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
         />
@@ -171,7 +235,7 @@ export default function CityPage() {
   });
 
   return (
-    <div className="min-h-screen bg-stone-50 pt-16">
+    <div className="min-h-screen bg-stone-50">
 
       {/* ── Hero Banner ── */}
       <section className="relative h-[48vh] min-h-[320px] overflow-hidden">
@@ -181,7 +245,7 @@ export default function CityPage() {
           className="w-full h-full object-cover"
           onError={e => { e.target.src = 'https://images.unsplash.com/photo-1601050690597-df0568f70950?q=80&w=1200&auto=format&fit=crop'; }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-stone-950/45 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-stone-950/45 to-stone-950/40" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_100%,rgba(249,115,22,0.1),transparent)]" />
 
         <div className="absolute inset-0 flex flex-col justify-end max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
@@ -370,14 +434,8 @@ export default function CityPage() {
                 <MapPin size={18} className="text-brand-500" /> Map Explorer
               </h3>
               <div className="rounded-2xl overflow-hidden bg-stone-100 h-[calc(100%-56px)] border border-stone-200">
-                {google_maps_api_key && city.lat ? (
-                  <iframe
-                    width="100%" height="100%"
-                    style={{ border: 0 }}
-                    referrerPolicy="no-referrer-when-downgrade"
-                    src={`https://www.google.com/maps/embed/v1/place?key=${google_maps_api_key}&q=${city.lat},${city.lng}&zoom=12`}
-                    allowFullScreen
-                  />
+                {city.lat && city.lng ? (
+                  <CityMap cityLat={city.lat} cityLng={city.lng} vendors={filtered} />
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center gap-3 text-stone-400">
                     <MapPin size={36} />

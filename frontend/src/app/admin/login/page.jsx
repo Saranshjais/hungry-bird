@@ -28,7 +28,7 @@ export default function AdminLogin() {
       const data = await res.json();
       
       if (res.ok) {
-        localStorage.setItem("admin_token", data.token);
+        sessionStorage.setItem("admin_token", data.token);
         router.push("/admin");
       } else {
         setError(data.error || "Login failed");
@@ -144,3 +144,4 @@ export default function AdminLogin() {
     </div>
   );
 }
+

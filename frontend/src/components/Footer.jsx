@@ -47,10 +47,11 @@ export default function Footer() {
           <div className="lg:col-span-2">
             <h4 className="text-white font-bold mb-5 text-sm tracking-widest uppercase">Legal</h4>
             <ul className="space-y-3.5 text-sm font-medium text-stone-400">
-              <li><Link href="#" className="hover:text-white inline-block transition-colors">Terms of Service</Link></li>
-              <li><Link href="#" className="hover:text-white inline-block transition-colors">Privacy Policy</Link></li>
-              <li><Link href="#" className="hover:text-white inline-block transition-colors">Cookie Policy</Link></li>
-              <li><a href="mailto:app.hungrybird@gmail.com" className="hover:text-white inline-block transition-colors mt-2">Contact Us</a></li>
+              <li><Link href="/about" className="hover:text-white inline-block transition-colors text-brand-500 font-bold">About Us</Link></li>
+              <li><Link href="/terms" className="hover:text-white inline-block transition-colors">Terms of Service</Link></li>
+              <li><Link href="/privacy" className="hover:text-white inline-block transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/cookies" className="hover:text-white inline-block transition-colors">Cookie Policy</Link></li>
+              <li><Link href="/contact" className="hover:text-white inline-block transition-colors mt-2">Contact Us</Link></li>
             </ul>
           </div>
 

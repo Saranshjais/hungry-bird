@@ -49,6 +49,74 @@ def index():
 
     return jsonify({"cities": results})
 
+@main_bp.route("/home", methods=["GET"])
+def home_feed():
+    cities = City.query.order_by(City.name).all()
+    
+    city_descriptions = {
+        "jaipur": "Famous for Dal Baati Churma, rich spices, and traditional Rajasthani flavors.",
+        "delhi": "Known for Chole Bhature, Golgappa, and diverse Mughlai cuisine.",
+        "mumbai": "Popular for Vada Pav, Pav Bhaji, and vibrant street food culture.",
+    }
+    
+    city_results = []
+    for city in cities:
+        city_results.append({
+            "id": city.id,
+            "name": city.name,
+            "slug": city.slug,
+            "desc": city_descriptions.get(city.slug, "Explore local food and hidden gems.")
+        })
+        
+    recent_vendors = Vendor.query.order_by(Vendor.id.desc()).limit(10).all()
+    
+    vendor_results = []
+    for v in recent_vendors:
+        vendor_results.append({
+            "id": v.id,
+            "name": v.name,
+            "cuisine_type": v.cuisine_type,
+            "area": v.city.name if v.city else "Local",
+            "rating": v.avg_rating,
+            "image_url": v.image_url,
+            "is_hidden_gem": v.is_hidden_gem
+        })
+        
+    return jsonify({
+        "cities": city_results,
+        "recent_vendors": vendor_results
+    })
+
+
+# -------------------- SEARCH --------------------
+@main_bp.route("/search", methods=["GET"])
+def search():
+    query = request.args.get("q", "").strip()
+    if not query:
+        return jsonify({"results": []})
+        
+    vendors = Vendor.query.filter(
+        db.or_(
+            Vendor.name.ilike(f"%{query}%"),
+            Vendor.cuisine_type.ilike(f"%{query}%")
+        )
+    ).limit(20).all()
+    
+    results = []
+    for v in vendors:
+        results.append({
+            "id": v.id,
+            "name": v.name,
+            "cuisine_type": v.cuisine_type,
+            "city_name": v.city.name if v.city else "Unknown",
+            "city_slug": v.city.slug if v.city else "",
+            "rating": v.avg_rating,
+            "image_url": v.image_url,
+            "is_hidden_gem": v.is_hidden_gem
+        })
+        
+    return jsonify({"results": results})
+
 
 # ✅ ADD HERE
 def convert_price(p):
@@ -202,6 +270,8 @@ def submit_vendor():
         submitted_by_email=submitted_by_email,
         lat=lat,
         lng=lng,
+        rating=data.get("rating"),
+        user_id=data.get("user_id"),
     )
 
     db.session.add(submission)
@@ -225,6 +295,8 @@ def submit_vendor():
 def rate_vendor(vendor_id):
     data = request.json or {}
     rating_val = data.get("rating")
+    review_text = data.get("review_text", "").strip()
+    author_name = data.get("author_name", "").strip()
     
     if not rating_val:
         return jsonify({"success": False, "error": "Rating value is required"}), 400
@@ -238,13 +310,15 @@ def rate_vendor(vendor_id):
 
     vendor = Vendor.query.get_or_404(vendor_id)
     
-    # Optional: Get user IP for tracking
     user_ip = request.remote_addr
     
     new_rating = Rating(
         vendor_id=vendor.id,
         rating_value=rating_val,
-        user_ip=user_ip
+        user_ip=user_ip,
+        user_id=data.get("user_id"),
+        review_text=review_text if review_text else None,
+        author_name=author_name if author_name else None
     )
     
     db.session.add(new_rating)
@@ -265,3 +339,80 @@ def rate_vendor(vendor_id):
         "avg_rating": vendor.avg_rating,
         "total_ratings": vendor.total_ratings
     })
+
+# -------------------- VENDOR REVIEWS --------------------
+@main_bp.route("/vendor-reviews", methods=["GET"])
+def get_vendor_reviews():
+    # Get recent ratings that actually have a review text
+    ratings = (
+        Rating.query.filter(Rating.review_text.isnot(None), Rating.review_text != "")
+        .order_by(Rating.created_at.desc())
+        .limit(20)
+        .all()
+    )
+    
+    data = []
+    for r in ratings:
+        data.append({
+            "id": r.id,
+            "vendor_name": r.vendor.name if r.vendor else "Unknown Vendor",
+            "city_name": r.vendor.city.name if r.vendor and r.vendor.city else "Unknown",
+            "city_slug": r.vendor.city.slug if r.vendor and r.vendor.city else "",
+            "rating_value": r.rating_value,
+            "review_text": r.review_text,
+            "author_name": r.author_name or "Anonymous",
+            "created_at": r.created_at.isoformat() if r.created_at else None
+        })
+    return jsonify({"reviews": data}), 200
+
+# -------------------- SITE REVIEWS --------------------
+from app.models import SiteReview
+
+@main_bp.route("/site-reviews", methods=["GET"])
+def get_site_reviews():
+    reviews = (
+        SiteReview.query.filter_by(status="approved")
+        .order_by(SiteReview.created_at.desc())
+        .limit(20)
+        .all()
+    )
+    
+    data = []
+    for r in reviews:
+        data.append({
+            "id": r.id,
+            "author_name": r.author_name,
+            "review_text": r.review_text,
+            "rating_value": r.rating_value,
+            "created_at": r.created_at.isoformat() if r.created_at else None
+        })
+    return jsonify({"site_reviews": data}), 200
+
+@main_bp.route("/site-reviews", methods=["POST"])
+def submit_site_review():
+    data = request.json or {}
+    author_name = data.get("author_name", "").strip()
+    review_text = data.get("review_text", "").strip()
+    rating_value = data.get("rating_value")
+
+    if not author_name or not review_text or not rating_value:
+        return jsonify({"success": False, "error": "All fields are required"}), 400
+
+    try:
+        rating_value = float(rating_value)
+        if rating_value < 1 or rating_value > 5:
+            raise ValueError
+    except:
+        return jsonify({"success": False, "error": "Invalid rating value"}), 400
+
+    new_review = SiteReview(
+        author_name=author_name,
+        review_text=review_text,
+        rating_value=rating_value,
+        status="approved" # Auto-approve for now
+    )
+    
+    db.session.add(new_review)
+    db.session.commit()
+
+    return jsonify({"success": True, "message": "Thank you for your review!"}), 201

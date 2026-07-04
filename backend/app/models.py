@@ -1,5 +1,22 @@
 from datetime import datetime
 from app import db
+from werkzeug.security import generate_password_hash, check_password_hash
+
+
+class User(db.Model):
+    __tablename__ = "users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(150), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
 
 class City(db.Model):
@@ -68,11 +85,14 @@ class VendorSubmission(db.Model):
 
     status = db.Column(db.String(20), default="pending")  # "pending", "approved", "rejected"
     review_notes = db.Column(db.Text)
+    rating = db.Column(db.Float)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     city = db.relationship("City")
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    user = db.relationship("User", backref=db.backref("submissions", lazy=True))
 
 
 class Rating(db.Model):
@@ -80,10 +100,48 @@ class Rating(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     vendor_id = db.Column(db.Integer, db.ForeignKey("vendors.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     
     rating_value = db.Column(db.Float, nullable=False)
     user_ip = db.Column(db.String(100))  # Optional: To track if a user already rated
+    review_text = db.Column(db.Text, nullable=True)
+    author_name = db.Column(db.String(100), nullable=True)
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     vendor = db.relationship("Vendor", backref=db.backref("ratings", lazy=True, cascade="all, delete-orphan"))
+    user = db.relationship("User", backref=db.backref("ratings", lazy=True))
+
+class SiteReview(db.Model):
+    __tablename__ = "site_reviews"
+
+    id = db.Column(db.Integer, primary_key=True)
+    author_name = db.Column(db.String(100), nullable=False)
+    review_text = db.Column(db.Text, nullable=False)
+    rating_value = db.Column(db.Float, nullable=False)
+    status = db.Column(db.String(20), default="approved") # pending, approved, rejected
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class Favorite(db.Model):
+    __tablename__ = "favorites"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    vendor_id = db.Column(db.Integer, db.ForeignKey("vendors.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", backref=db.backref("favorites", lazy=True, cascade="all, delete-orphan"))
+    vendor = db.relationship("Vendor", backref=db.backref("favorited_by", lazy=True, cascade="all, delete-orphan"))
+
+
+class SavedVendor(db.Model):
+    __tablename__ = "saved_vendors"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    vendor_id = db.Column(db.Integer, db.ForeignKey("vendors.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", backref=db.backref("saved_vendors", lazy=True, cascade="all, delete-orphan"))
+    vendor = db.relationship("Vendor", backref=db.backref("saved_by", lazy=True, cascade="all, delete-orphan"))
