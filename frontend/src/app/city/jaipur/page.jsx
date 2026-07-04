@@ -269,7 +269,7 @@ export default function JaipurPage() {
     : null;
 
   return (
-    <div className="min-h-screen bg-stone-50 pt-16">
+    <div className="min-h-screen bg-stone-50">
 
       {/* ── Hero ── */}
       <section className="relative h-[48vh] min-h-[320px] overflow-hidden">
@@ -278,7 +278,7 @@ export default function JaipurPage() {
           alt="Jaipur Pink City"
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-stone-950/45 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-stone-950/45 to-stone-950/40" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_100%,rgba(249,115,22,0.1),transparent)]" />
 
         <div className="absolute inset-0 flex flex-col justify-end max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">

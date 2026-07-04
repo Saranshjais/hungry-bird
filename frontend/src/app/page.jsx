@@ -35,61 +35,34 @@ function Counter({ end, suffix = '', decimals = 0 }) {
   return <span>{val}{suffix}</span>;
 }
 
+import { DestinationCard } from "@/components/ui/card-21";
+
+const THEME_COLORS = [
+  "22 100% 50%", // Orange
+  "150 50% 25%", // Green
+  "250 50% 30%", // Purple
+  "350 70% 40%", // Red
+  "45 100% 45%", // Yellow
+  "200 80% 40%", // Blue
+];
+
 function CityCard({ city, index }) {
   const isHero = index === 0;
+  const color = THEME_COLORS[index % THEME_COLORS.length];
+  
   return (
     <div
-      className={`relative rounded-[2rem] overflow-hidden group cursor-pointer border border-stone-200/50 shadow-sm transition-all duration-500 hover:shadow-2xl hover:shadow-brand-500/10 hover:-translate-y-1 ${
+      className={
         isHero ? 'sm:col-span-2 sm:row-span-2' : 'sm:col-span-1 sm:row-span-1'
-      }`}
+      }
     >
-      <Link href={`/city/${city.slug}`} className="block h-full w-full outline-none">
-        {/* Background Image */}
-        <div className="absolute inset-0 w-full h-full bg-stone-100">
-          <img
-            src={`/city-${city.slug}.png`}
-            alt={city.name}
-            className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
-            onError={e => { e.target.src = 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=800&auto=format&fit=crop'; }}
-          />
-          {/* Enhanced Gradient Overlays */}
-          <div className="absolute inset-0 bg-gradient-to-t from-stone-950/90 via-stone-950/20 to-stone-950/40 transition-opacity duration-500 group-hover:opacity-90" />
-        </div>
-
-        {/* Content Container */}
-        <div className="relative z-10 h-full flex flex-col justify-between p-6 sm:p-8">
-          
-          {/* Top Badges */}
-          <div className="flex justify-between items-start">
-            <span className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-md border border-white/20 text-white text-[10px] font-bold uppercase tracking-widest px-3.5 py-1.5 rounded-full shadow-sm">
-              {index === 0 ? (
-                <><Flame size={12} className="text-brand-500 fill-brand-500" /> Trending</>
-              ) : index === 1 ? (
-                <><Star size={12} className="text-amber-400 fill-amber-400" /> Top Rated</>
-              ) : (
-                <><MapPin size={12} className="text-brand-400" /> Explore</>
-              )}
-            </span>
-          </div>
-
-          {/* Bottom Info */}
-          <div className="mt-auto transform transition-transform duration-500 translate-y-3 group-hover:translate-y-0">
-            <p className="text-brand-400 text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] mb-2 drop-shadow-sm">
-              {city.desc?.split(' ').slice(0, 4).join(' ') || 'Legendary Street Food'}
-            </p>
-            <h3 className={`font-black text-white tracking-tight drop-shadow-md mb-4 ${isHero ? 'text-4xl sm:text-5xl lg:text-6xl' : 'text-2xl sm:text-3xl'}`}>
-              {city.name}
-            </h3>
-            
-            {/* Hover Action Button */}
-            <div className="flex items-center gap-2 text-white text-sm font-semibold opacity-0 group-hover:opacity-100 transition-all duration-500 -translate-x-4 group-hover:translate-x-0">
-              <span className="bg-brand-500 text-stone-950 px-5 py-2.5 rounded-full flex items-center gap-2 shadow-lg">
-                Explore Directory <ChevronRight size={14} />
-              </span>
-            </div>
-          </div>
-        </div>
-      </Link>
+      <DestinationCard
+        imageUrl={`/city-${city.slug}.png`}
+        location={city.name}
+        stats={city.desc || 'Legendary Street Food'}
+        href={`/city/${city.slug}`}
+        themeColor={color}
+      />
     </div>
   );
 }

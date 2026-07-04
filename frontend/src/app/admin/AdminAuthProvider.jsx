@@ -10,7 +10,7 @@ export default function AdminAuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("admin_token");
+    const token = sessionStorage.getItem("admin_token");
     const isLoginPage = pathname === "/admin/login";
 
     if (!token && !isLoginPage) {
@@ -64,7 +64,7 @@ export default function AdminAuthProvider({ children }) {
           <button 
             className="admin-btn admin-btn-secondary" 
             onClick={() => {
-              localStorage.removeItem("admin_token");
+              sessionStorage.removeItem("admin_token");
               router.push("/admin/login");
             }}
           >
@@ -76,3 +76,4 @@ export default function AdminAuthProvider({ children }) {
     </div>
   );
 }
+

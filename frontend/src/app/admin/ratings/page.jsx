@@ -12,8 +12,8 @@ export default function AdminRatings() {
   useEffect(() => {
     const fetchRatings = async () => {
       try {
-        const token = localStorage.getItem("admin_token");
-        const res = await axios.get("http://127.0.0.1:5000/api/admin/ratings", {
+        const token = sessionStorage.getItem("admin_token");
+        const res = await axios.get((process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000") + "/api/admin/ratings", {
           headers: { Authorization: `Bearer ${token}` }
         });
         setRatings(res.data.ratings || []);
@@ -86,3 +86,4 @@ export default function AdminRatings() {
     </div>
   );
 }
+

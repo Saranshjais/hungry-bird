@@ -69,7 +69,7 @@ export default function AdminSubmissions() {
 
   const fetchSubmissions = async () => {
     try {
-      const token = localStorage.getItem("admin_token");
+      const token = sessionStorage.getItem("admin_token");
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000";
       const res = await fetch(`${API_URL}/api/admin/submissions`, {
         headers: { "Authorization": `Bearer ${token}` }
@@ -102,8 +102,8 @@ export default function AdminSubmissions() {
   const handleApprove = async (id) => {
     if (!confirm("Are you sure you want to approve this and create a vendor?")) return;
     try {
-      const token = localStorage.getItem("admin_token");
-      const res = await fetch(`http://127.0.0.1:5000/api/admin/submissions/${id}/approve`, {
+      const token = sessionStorage.getItem("admin_token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000'}/api/admin/submissions/${id}/approve`, {
         method: "POST",
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -122,8 +122,8 @@ export default function AdminSubmissions() {
   const handleReject = async (id) => {
     if (!confirm("Are you sure you want to reject and delete this submission?")) return;
     try {
-      const token = localStorage.getItem("admin_token");
-      const res = await fetch(`http://127.0.0.1:5000/api/admin/submissions/${id}/reject`, {
+      const token = sessionStorage.getItem("admin_token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000'}/api/admin/submissions/${id}/reject`, {
         method: "POST",
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -278,3 +278,4 @@ export default function AdminSubmissions() {
     </div>
   );
 }
+

@@ -66,7 +66,7 @@ def get_submissions():
     if status_filter:
         query = query.filter_by(status=status_filter)
     
-    submissions = query.order_by(VendorSubmission.created_at.desc()).all()
+    submissions = query.filter_by(status='pending').order_by(VendorSubmission.created_at.desc()).all()
     
     data = []
     for sub in submissions:
@@ -106,7 +106,8 @@ def approve_submission(submission_id):
         cuisine_type=sub.cuisine_type,
         is_hidden_gem=True,
         is_famous=False,
-        avg_rating=None,
+        avg_rating=sub.rating if sub.rating else None,
+        total_ratings=1 if sub.rating else 0,
         price_level=sub.estimated_price,
         address_text=sub.approx_address,
         lat=sub.lat,
@@ -116,7 +117,19 @@ def approve_submission(submission_id):
     )
 
     db.session.add(vendor)
-    db.session.delete(sub)
+    db.session.flush()
+
+    if sub.rating:
+        from app.models import Rating
+        new_rating = Rating(
+            vendor_id=vendor.id,
+            rating_value=sub.rating,
+            author_name=sub.submitted_by_name or "Anonymous",
+            review_text="Initial rating from submitter"
+        )
+        db.session.add(new_rating)
+
+    sub.status = "approved"
     db.session.commit()
 
     return jsonify({"message": f"'{sub.stall_name}' approved and converted to vendor."}), 200
@@ -125,9 +138,11 @@ def approve_submission(submission_id):
 @admin_required
 def reject_submission(submission_id):
     sub = VendorSubmission.query.get_or_404(submission_id)
-    db.session.delete(sub)
+    
+    sub.status = "rejected"
     db.session.commit()
-    return jsonify({"message": "Submission rejected and deleted."}), 200
+    
+    return jsonify({"message": "Submission rejected."}), 200
 
 # --- VENDORS ---
 

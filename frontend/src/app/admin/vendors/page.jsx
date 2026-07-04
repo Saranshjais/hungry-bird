@@ -75,8 +75,8 @@ export default function AdminVendors() {
     formData.append('file', file);
 
     try {
-      const token = localStorage.getItem("admin_token");
-      const res = await fetch("http://127.0.0.1:5000/api/admin/vendors/bulk-upload", {
+      const token = sessionStorage.getItem("admin_token");
+      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000") + "/api/admin/vendors/bulk-upload", {
         method: 'POST',
         headers: { "Authorization": `Bearer ${token}` },
         body: formData
@@ -104,8 +104,8 @@ export default function AdminVendors() {
 
   const fetchVendors = async () => {
     try {
-      const token = localStorage.getItem("admin_token");
-      const res = await fetch("http://127.0.0.1:5000/api/admin/vendors", {
+      const token = sessionStorage.getItem("admin_token");
+      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000") + "/api/admin/vendors", {
         headers: { "Authorization": `Bearer ${token}` }
       });
       const data = await res.json();
@@ -126,8 +126,8 @@ export default function AdminVendors() {
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this vendor? This action cannot be undone.")) return;
     try {
-      const token = localStorage.getItem("admin_token");
-      const res = await fetch(`http://127.0.0.1:5000/api/admin/vendors/${id}`, {
+      const token = sessionStorage.getItem("admin_token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000'}/api/admin/vendors/${id}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -147,8 +147,8 @@ export default function AdminVendors() {
   const handleSaveEdit = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem("admin_token");
-      const res = await fetch(`http://127.0.0.1:5000/api/admin/vendors/${editingVendor.id}`, {
+      const token = sessionStorage.getItem("admin_token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000'}/api/admin/vendors/${editingVendor.id}`, {
         method: "PUT",
         headers: { 
           "Authorization": `Bearer ${token}`,
@@ -436,3 +436,4 @@ export default function AdminVendors() {
     </div>
   );
 }
+

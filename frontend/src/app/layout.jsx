@@ -16,14 +16,17 @@ export const metadata = {
   description: 'Find hidden gems, legendary street stalls, and local favourites hand-picked by India\'s food community.',
 };
 
+import { AuthProvider } from '../context/AuthContext';
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={jakarta.variable}>
       <body>
-        <Navbar />
-        <main>{children}</main>
-
-        <Footer />
+        <AuthProvider>
+          <Navbar />
+          <main>{children}</main>
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   );

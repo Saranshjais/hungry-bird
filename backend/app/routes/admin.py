@@ -8,9 +8,7 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 # 🔹 View all submissions
 @admin_bp.route("/submissions")
 def admin_submissions():
-    submissions = VendorSubmission.query.order_by(
-        VendorSubmission.created_at.desc()
-    ).all()
+    submissions = VendorSubmission.query.filter_by(status='pending').order_by(VendorSubmission.created_at.desc()).all()
     return render_template("admin_submissions.html", submissions=submissions)
 
 
@@ -41,7 +39,8 @@ def admin_approve_submission(submission_id):
         cuisine_type=sub.cuisine_type,
         is_hidden_gem=True,
         is_famous=False,
-        avg_rating=None,
+        avg_rating=sub.rating if sub.rating else None,
+        total_ratings=1 if sub.rating else 0,
         price_level=sub.estimated_price,
         address_text=sub.approx_address,
         lat=sub.lat,
@@ -51,7 +50,19 @@ def admin_approve_submission(submission_id):
     )
 
     db.session.add(vendor)
-    db.session.delete(sub)
+    db.session.flush()
+
+    if sub.rating:
+        from app.models import Rating
+        new_rating = Rating(
+            vendor_id=vendor.id,
+            rating_value=sub.rating,
+            author_name=sub.submitted_by_name or "Anonymous",
+            review_text="Initial rating from submitter"
+        )
+        db.session.add(new_rating)
+
+    sub.status = "approved"
     db.session.commit()
 
     flash(f"✅ '{sub.stall_name}' approved and added!", "success")
@@ -63,8 +74,8 @@ def admin_approve_submission(submission_id):
 def admin_reject_submission(submission_id):
     sub = VendorSubmission.query.get_or_404(submission_id)
 
-    db.session.delete(sub)
+    sub.status = "rejected"
     db.session.commit()
 
-    flash("❌ Submission rejected and removed.", "info")
+    flash("❌ Submission rejected.", "info")
     return redirect(url_for("admin.admin_submissions"))

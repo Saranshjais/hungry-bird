@@ -1,160 +1,131 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
 import {
-  MapPin, Send, CheckCircle2, UtensilsCrossed, ChevronLeft, Loader2,
-  AlertCircle, Store, ChefHat, IndianRupee, User, Mail, Info, ArrowRight, ArrowLeft, Navigation
+  MapPin, Send, CheckCircle2, ChevronLeft, Loader2,
+  AlertCircle, Store, ChefHat, Search, Crosshair, Star
 } from 'lucide-react';
 
 // Dynamically import MapComponent so it doesn't break SSR
 const MapComponent = dynamic(() => import('./MapComponent'), {
   ssr: false,
-  loading: () => <div className="w-full h-full bg-stone-100 animate-pulse rounded-xl flex items-center justify-center text-stone-400">Loading Map...</div>
+  loading: () => <div className="w-full h-full bg-stone-100 flex items-center justify-center text-stone-400">Loading Map...</div>
 });
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 18 },
-  show:   { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 90, damping: 20 } },
-};
-const staggerForm = {
-  hidden: {},
-  show:   { transition: { staggerChildren: 0.07, delayChildren: 0.1 } },
-};
-
-function Field({ label, required, hint, children }) {
-  return (
-    <motion.div variants={fadeUp} className="flex flex-col gap-2">
-      <label className="text-[11px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1">
-        {label}
-        {required && <span className="text-brand-500 font-bold">*</span>}
-      </label>
-      {children}
-      {hint && <p className="text-[11px] text-stone-400 font-medium flex items-center gap-1 mt-0.5"><Info size={11} className="text-brand-500" /> {hint}</p>}
-    </motion.div>
-  );
-}
-
-function CustomSelect({ options, value, onChange, placeholder, icon: Icon }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const selectedOption = options.find(o => o.value === value);
-
-  return (
-    <div className="relative">
-      {Icon && <Icon size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 z-10 transition-colors pointer-events-none ${isOpen ? 'text-brand-500' : 'text-stone-400'}`} />}
-      <div 
-        className={`input-field cursor-pointer flex items-center justify-between transition-all duration-300 ${Icon ? 'pl-11' : 'pl-4'} pr-4 ${isOpen ? 'border-brand-500 ring-4 ring-brand-500/10' : 'border-stone-200'} ${!value ? 'text-stone-400' : 'text-stone-900'}`}
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <span>{selectedOption ? selectedOption.label : placeholder}</span>
-        <div className={`transition-transform duration-300 text-[10px] text-stone-400 ${isOpen ? 'rotate-180' : ''}`}>▼</div>
-      </div>
-      
-      <AnimatePresence>
-        {isOpen && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-            <motion.div 
-              initial={{ opacity: 0, y: -10, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -10, scale: 0.98 }}
-              transition={{ duration: 0.2 }}
-              className="absolute z-50 w-full mt-2 bg-white/95 backdrop-blur-xl border border-stone-100 rounded-xl shadow-2xl overflow-hidden"
-            >
-              {options.map(opt => (
-                <div 
-                  key={opt.value}
-                  className="px-4 py-3.5 hover:bg-brand-50/80 hover:text-brand-700 cursor-pointer transition-colors text-sm font-semibold text-stone-600 border-b border-stone-50 last:border-0"
-                  onClick={() => {
-                    onChange({ target: { name: 'city_id', value: opt.value } });
-                    setIsOpen(false);
-                  }}
-                >
-                  {opt.label}
-                </div>
-              ))}
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
 export default function SubmitVendorPage() {
-  const [step, setStep] = useState(1);
-  const [cities, setCities] = useState([]);
-  const [activeCity, setActiveCity] = useState(null); // Full city object for map zoom
-  const [form, setForm] = useState({
-    city_id: '', stall_name: '', cuisine_type: '', description: '',
-    google_maps_url: '', approx_address: '', estimated_price: '₹100 for two',
-    submitted_by_name: '', submitted_by_email: '', lat: null, lng: null
-  });
-  const [status, setStatus] = useState('idle');
+  const router = useRouter();
+  const { user } = useAuth();
+  
+  // Form State
+  const [stallName, setStallName] = useState('');
+  const [cuisineType, setCuisineType] = useState('');
+  const [rating, setRating] = useState(0);
+  const [status, setStatus] = useState('idle'); // idle, loading, success, error
   const [errorMsg, setErrorMsg] = useState('');
 
-  useEffect(() => {
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
-    axios.get(`${API_URL}/api/cities`).then(r => setCities(r.data.cities || [])).catch(console.error);
-  }, []);
+  // Map State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [gettingLocation, setGettingLocation] = useState(false);
+  const [lat, setLat] = useState(28.6139); // Default Delhi
+  const [lng, setLng] = useState(77.2090);
 
-  const setField = e => {
-    setForm(f => ({ ...f, [e.target.name]: e.target.value }));
-    if (e.target.name === 'city_id') {
-      const city = cities.find(c => c.id.toString() === e.target.value);
-      setActiveCity(city || null);
-    }
-  };
-
-  const setLocation = (lat, lng) => setForm(f => ({ ...f, lat, lng }));
-
-  const [detectingLoc, setDetectingLoc] = useState(false);
-  const detectLocation = () => {
+  const handleAutoLocate = () => {
+    setGettingLocation(true);
     if (!navigator.geolocation) {
       alert("Geolocation is not supported by your browser");
+      setGettingLocation(false);
       return;
     }
-    setDetectingLoc(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setLocation(position.coords.latitude, position.coords.longitude);
-        setDetectingLoc(false);
+        setLat(position.coords.latitude);
+        setLng(position.coords.longitude);
+        setGettingLocation(false);
       },
       (error) => {
-        console.error(error);
+        console.error("Error fetching location:", error);
         alert("Unable to retrieve your location. Please check browser permissions.");
-        setDetectingLoc(false);
+        setGettingLocation(false);
       },
       { enableHighAccuracy: true }
     );
   };
 
-  const handleSubmit = async e => {
+  const handleSearch = async (e) => {
+    e?.preventDefault();
+    if (!searchQuery) return;
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`);
+      const data = await res.json();
+      if (data && data.length > 0) {
+        setLat(parseFloat(data[0].lat));
+        setLng(parseFloat(data[0].lon));
+      } else {
+        alert("Location not found");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error searching location");
+    }
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (step < 3) {
-      setStep(step + 1);
+    if (!stallName) {
+      setErrorMsg('Vendor Name is required.');
+      setStatus('error');
       return;
     }
 
     setStatus('loading');
     setErrorMsg('');
+    
+    // Attempt reverse geocoding to get approx address
+    let resolvedAddress = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+      const data = await res.json();
+      if (data && data.display_name) {
+        // split to make it shorter
+        const parts = data.display_name.split(',');
+        resolvedAddress = parts.slice(0, 3).join(', ');
+      }
+    } catch (err) {
+      console.log("Reverse geocode failed, using lat/lng");
+    }
+
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
-      // If we got lat/lng directly from the map, we generate a fake gmaps url so backend doesn't crash if it expects it
-      // but backend now accepts lat/lng directly!
-      await axios.post(`${API_URL}/api/submit-vendor`, form);
+      await axios.post(`${API_URL}/api/submit-vendor`, {
+        stall_name: stallName,
+        cuisine_type: cuisineType,
+        approx_address: resolvedAddress,
+        lat: lat,
+        lng: lng,
+        estimated_price: "",
+        description: "",
+        rating: rating,
+        city_id: 1, // Defaulting to 1 as per mobile app logic
+        submitted_by_name: user?.name || 'Anonymous',
+        submitted_by_email: user?.email || 'anonymous@example.com'
+      });
+      
       setStatus('success');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setTimeout(() => {
+        router.push('/');
+      }, 3000);
     } catch (err) {
-      setErrorMsg(err.response?.data?.error || 'Something went wrong. Please try again.');
+      setErrorMsg('Failed to submit. Please try again.');
       setStatus('error');
     }
   };
 
-  /* Success */
   if (status === 'success') {
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center p-4 pt-24">
@@ -162,7 +133,7 @@ export default function SubmitVendorPage() {
           initial={{ opacity: 0, scale: 0.9, y: 24 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ type: 'spring', stiffness: 90, damping: 18 }}
-          className="panel p-12 max-w-md w-full text-center bg-white"
+          className="panel p-12 max-w-md w-full text-center bg-white shadow-xl shadow-emerald-500/10"
         >
           <motion.div
             initial={{ scale: 0 }}
@@ -173,244 +144,160 @@ export default function SubmitVendorPage() {
             <CheckCircle2 size={48} className="text-emerald-500" strokeWidth={1.5} />
           </motion.div>
           <h2 className="text-3xl font-extrabold text-stone-900 mb-3 tracking-tight">
-            Thank you!
+            Submitted!
           </h2>
           <p className="text-stone-500 font-medium leading-relaxed mb-10 text-sm">
-            Your hidden gem is submitted. Once verified, thousands of foodies will discover it on HungryBird.
+            Your vendor was submitted successfully. Redirecting you back to home...
           </p>
-          <div className="flex flex-col gap-3">
-            <button
-              onClick={() => { setStatus('idle'); setStep(1); setForm(f => ({ ...f, stall_name: '', description: '', google_maps_url: '', cuisine_type: '', lat: null, lng: null })); }}
-              className="btn-orange w-full justify-center"
-            >
-              Submit Another Stall
-            </button>
-            <Link href="/" className="btn-ghost w-full justify-center">← Back to Home</Link>
-          </div>
+          <Link href="/" className="btn-ghost w-full justify-center">← Back to Home</Link>
         </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 pt-24 pb-24 relative overflow-hidden">
-      {/* Decorative premium background elements */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-brand-400/10 blur-[80px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-amber-400/5 blur-[80px]" />
-        <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-rose-400/5 blur-[80px]" />
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgwLDAsMCwwLjAyKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-60" />
-      </div>
+    <div className="h-screen w-full relative flex flex-col md:flex-row pt-16 overflow-hidden bg-stone-100">
       
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 relative z-10">
-        <Link href="/" className="inline-flex items-center gap-1.5 text-stone-400 hover:text-stone-700 text-sm font-semibold mb-8 transition-colors group">
-          <ChevronLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" /> Back to Home
-        </Link>
-
-        {/* Stepper Progress */}
-        <div className="flex items-center justify-between mb-10 relative px-2">
-          <div className="absolute left-4 right-4 top-1/2 h-1.5 bg-stone-200/60 -z-10 rounded-full -translate-y-1/2" />
-          <div className="absolute left-4 top-1/2 h-1.5 bg-gradient-to-r from-brand-400 to-brand-600 -z-10 rounded-full transition-all duration-700 ease-out shadow-[0_0_10px_rgba(249,115,22,0.4)] -translate-y-1/2" style={{ width: `calc(${((step - 1) / 2) * 100}% - 2rem)` }} />
-          
-          {[1, 2, 3].map(num => (
-            <div key={num} className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-[15px] transition-all duration-500 shadow-sm ${step >= num ? 'bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-brand-500/40 ring-4 ring-brand-500/20 scale-110' : 'bg-white text-stone-400 border-2 border-stone-100'}`}>
-              {step > num ? <CheckCircle2 size={20} strokeWidth={3} /> : num}
-            </div>
-          ))}
+      {/* Map Background Wrapper */}
+      <div className="absolute inset-0 z-0 pt-16">
+        <MapComponent 
+          lat={lat} 
+          lng={lng} 
+          onLocationChange={(newLat, newLng) => {
+            setLat(newLat);
+            setLng(newLng);
+          }} 
+        />
+        {/* Fixed center pointer simulating map pin if MapComponent doesn't have it natively centered */}
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10" style={{ marginTop: '-20px' }}>
+          <div className="flex flex-col items-center">
+            <div className="w-5 h-5 bg-brand-500 rounded-full border-4 border-white shadow-md shadow-brand-500/40" />
+            <div className="w-0.5 h-5 bg-stone-900 mt-0.5 shadow-sm" />
+          </div>
         </div>
+      </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, type: 'spring', stiffness: 80 }}
-          className="panel overflow-hidden bg-white shadow-xl shadow-stone-200/50"
-        >
-          {/* Header */}
-          <div className="relative p-8 md:p-10 overflow-hidden border-b border-stone-100 bg-gradient-to-br from-brand-50/40 via-stone-50/20 to-transparent">
-            <div className="absolute -right-16 -top-16 w-56 h-56 bg-brand-500/5 rounded-full blur-3xl pointer-events-none" />
-            <div className="flex items-start gap-5 relative">
-              <div className="p-3 bg-gradient-to-br from-brand-400 to-brand-600 text-white rounded-2xl shadow-md flex-shrink-0">
-                <UtensilsCrossed size={22} strokeWidth={2.5} />
-              </div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-stone-900 mb-2 tracking-tight">
-                  {step === 1 && "Pin the Location"}
-                  {step === 2 && "Stall Details"}
-                  {step === 3 && "Final Step"}
-                </h1>
-                <p className="text-stone-500 text-sm font-medium leading-relaxed">
-                  {step === 1 && "Select the city and drop a pin exactly where the stall is located."}
-                  {step === 2 && "Tell us what makes this street food vendor amazing."}
-                  {step === 3 && "Leave your name so we can give you a shoutout!"}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Error */}
-          <AnimatePresence>
-            {status === 'error' && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="mx-8 mt-6 bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl text-sm font-semibold flex items-center gap-2"
+      {/* Unified Floating Panel */}
+      <div className="absolute top-[76px] left-4 right-4 md:right-auto md:w-[400px] md:bottom-6 z-20 flex flex-col pointer-events-none max-h-[calc(100vh-100px)]">
+        <div className="pointer-events-auto bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-stone-200 overflow-hidden flex flex-col h-full">
+          
+          {/* Header & Search */}
+          <div className="p-5 border-b border-stone-100 bg-white">
+            <div className="flex items-center justify-between mb-4">
+              <Link href="/" className="inline-flex items-center gap-1.5 text-stone-500 hover:text-stone-900 text-sm font-bold transition-colors">
+                <ChevronLeft size={16} /> Back to Home
+              </Link>
+              <button 
+                onClick={handleAutoLocate}
+                disabled={gettingLocation}
+                className="text-brand-600 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5 text-[12px] font-bold"
               >
-                <AlertCircle size={16} className="flex-shrink-0" />
-                <span>{errorMsg}</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Form */}
-          <div className="p-8 md:p-10">
-            <motion.form
-              onSubmit={handleSubmit}
-              variants={staggerForm}
-              initial="hidden"
-              animate="show"
-              className="space-y-6"
-            >
-              
-              {/* STEP 1: LOCATION */}
-              {step === 1 && (
-                <motion.div variants={fadeUp} className="space-y-6">
-                  <Field label="City" required>
-                    <CustomSelect 
-                      options={cities.map(c => ({ label: c.name, value: c.id.toString() }))}
-                      value={form.city_id}
-                      onChange={setField}
-                      placeholder="Select a city…"
-                      icon={MapPin}
-                    />
-                  </Field>
-
-                  {form.city_id && (
-                    <div className="border border-stone-200 rounded-xl overflow-hidden shadow-inner bg-stone-50">
-                      <div className="p-3 bg-white border-b border-stone-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                        <div className="flex flex-wrap items-center gap-3">
-                          <span className="text-xs font-bold text-stone-500 flex items-center gap-1 uppercase tracking-wider">
-                            <Navigation size={12} className="text-brand-500" /> Drag map to set pin
-                          </span>
-                          <button 
-                            type="button"
-                            onClick={detectLocation}
-                            disabled={detectingLoc}
-                            className="text-[11px] font-bold bg-brand-50 text-brand-600 hover:bg-brand-100 px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-colors disabled:opacity-50 border border-brand-200/50"
-                          >
-                            {detectingLoc ? <Loader2 size={12} className="animate-spin" /> : <MapPin size={12} />}
-                            {detectingLoc ? 'Detecting...' : 'Locate Me'}
-                          </button>
-                        </div>
-                        {form.lat && <span className="text-xs font-mono text-stone-400 bg-stone-100 px-2 py-1 rounded shadow-sm">Lat: {form.lat.toFixed(4)}, Lng: {form.lng.toFixed(4)}</span>}
-                      </div>
-                      <div className="h-[350px] w-full">
-                        <MapComponent 
-                          cityLat={activeCity?.lat} 
-                          cityLng={activeCity?.lng} 
-                          lat={form.lat} 
-                          lng={form.lng} 
-                          onLocationChange={setLocation} 
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <Field label="Approximate Address (Optional)">
-                    <div className="relative">
-                      <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
-                      <input type="text" name="approx_address" placeholder="Near old post office, MG Road" value={form.approx_address} onChange={setField} className="input-field pl-11" />
-                    </div>
-                  </Field>
-                </motion.div>
-              )}
-
-              {/* STEP 2: STALL DETAILS */}
-              {step === 2 && (
-                <motion.div variants={fadeUp} className="space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <Field label="Stall Name" required>
-                      <div className="relative">
-                        <Store size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
-                        <input type="text" name="stall_name" required placeholder="e.g. Raju Chaat Bhandar" value={form.stall_name} onChange={setField} className="input-field pl-11" />
-                      </div>
-                    </Field>
-                    
-                    <Field label="Famous For / Cuisine" required>
-                      <div className="relative">
-                        <ChefHat size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
-                        <input type="text" name="cuisine_type" required placeholder="e.g. Aloo Tikki, Panipuri" value={form.cuisine_type} onChange={setField} className="input-field pl-11" />
-                      </div>
-                    </Field>
-                  </div>
-
-                  <Field label="Price for Two">
-                    <div className="relative">
-                      <IndianRupee size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
-                      <input type="text" name="estimated_price" placeholder="e.g. ₹150 for two" value={form.estimated_price} onChange={setField} className="input-field pl-11" />
-                    </div>
-                  </Field>
-
-                  <Field label="Why is this a hidden gem?" required>
-                    <textarea name="description" required rows={4} placeholder="What makes it special? What should first-timers order?" value={form.description} onChange={setField} className="input-field resize-none" />
-                  </Field>
-                </motion.div>
-              )}
-
-              {/* STEP 3: CONTACT */}
-              {step === 3 && (
-                <motion.div variants={fadeUp} className="space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <Field label="Your Name">
-                      <div className="relative">
-                        <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
-                        <input type="text" name="submitted_by_name" placeholder="For a shoutout" value={form.submitted_by_name} onChange={setField} className="input-field pl-11" />
-                      </div>
-                    </Field>
-                    <Field label="Your Email">
-                      <div className="relative">
-                        <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
-                        <input type="email" name="submitted_by_email" placeholder="For updates" value={form.submitted_by_email} onChange={setField} className="input-field pl-11" />
-                      </div>
-                    </Field>
-                  </div>
-                  
-                  <div className="bg-brand-50 p-4 rounded-xl border border-brand-100 flex gap-3 text-brand-800 text-sm mt-4">
-                    <Info size={18} className="flex-shrink-0 text-brand-500 mt-0.5" />
-                    <p>By submitting this form, you help us bring authentic local food to everyone. Your suggestion will be verified by our team before appearing on the map.</p>
-                  </div>
-                </motion.div>
-              )}
-
-              <div className="border-t border-stone-100 pt-6 mt-8 flex items-center justify-between">
-                {step > 1 ? (
-                  <button type="button" onClick={() => setStep(step - 1)} className="btn-ghost" style={{ minHeight: 48 }}>
-                    <ArrowLeft size={16} /> Back
-                  </button>
-                ) : <div />}
-
-                {step < 3 ? (
-                  <button 
-                    type="button" 
-                    disabled={step === 1 && !form.city_id} 
-                    onClick={() => setStep(step + 1)} 
-                    className="btn-primary" 
-                    style={{ minHeight: 48 }}
-                  >
-                    Next Step <ArrowRight size={16} />
-                  </button>
-                ) : (
-                  <button type="submit" disabled={status === 'loading'} className="btn-orange shadow-lg" style={{ minHeight: 48 }}>
-                    {status === 'loading'
-                      ? <><Loader2 size={18} className="animate-spin" /> Submitting…</>
-                      : <><Send size={17} /> Submit Hidden Stall</>
-                    }
-                  </button>
-                )}
-              </div>
-            </motion.form>
+                {gettingLocation ? <Loader2 size={14} className="animate-spin" /> : <Crosshair size={14} />}
+                Locate Me
+              </button>
+            </div>
+            
+            <form onSubmit={handleSearch} className="flex-1 bg-stone-100 rounded-xl flex items-center px-4 py-3 focus-within:ring-4 focus-within:ring-brand-500/10 focus-within:bg-white border border-transparent focus-within:border-brand-300 transition-all">
+              <Search size={18} className="text-stone-400" />
+              <input 
+                type="text" 
+                placeholder="Search place or address..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1 ml-3 text-[14px] font-medium text-stone-900 bg-transparent outline-none placeholder:text-stone-400"
+              />
+            </form>
           </div>
-        </motion.div>
+
+          {/* Form Content */}
+          <div className="p-6 overflow-y-auto no-scrollbar flex-1 bg-stone-50/50">
+            <h3 className="text-lg font-extrabold text-stone-900 mb-1">Add a Vendor</h3>
+            <p className="text-sm text-stone-500 font-medium mb-6">Drop a pin and share this hidden gem.</p>
+
+            <AnimatePresence>
+              {status === 'error' && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="mb-6 bg-red-50 border border-red-100 text-red-600 p-3 rounded-xl text-sm font-semibold flex items-center gap-2"
+                >
+                  <AlertCircle size={16} className="flex-shrink-0" />
+                  <span>{errorMsg}</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label className="block text-[11px] font-bold text-stone-500 uppercase tracking-wider mb-2">Vendor Name</label>
+                <div className="relative">
+                  <Store size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" />
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="e.g. Sharma Ji Chole Bhature" 
+                    value={stallName}
+                    onChange={(e) => setStallName(e.target.value)}
+                    className="w-full bg-white border border-stone-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 rounded-xl py-3 pl-10 pr-4 text-[15px] text-stone-900 font-medium outline-none transition-all placeholder:text-stone-400 shadow-sm"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-stone-500 uppercase tracking-wider mb-2">Cuisine Type</label>
+                <div className="relative">
+                  <ChefHat size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" />
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="e.g. North Indian, Snacks" 
+                    value={cuisineType}
+                    onChange={(e) => setCuisineType(e.target.value)}
+                    className="w-full bg-white border border-stone-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 rounded-xl py-3 pl-10 pr-4 text-[15px] text-stone-900 font-medium outline-none transition-all placeholder:text-stone-400 shadow-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between mb-4 mt-2">
+                <label className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">Your Rating</label>
+                <div className="flex items-center gap-1 bg-white border border-stone-200 px-3 py-1.5 rounded-full shadow-sm">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button 
+                      key={star} 
+                      type="button"
+                      onClick={() => setRating(star)} 
+                      className="p-1 transition-transform hover:scale-110 active:scale-95"
+                    >
+                      <Star 
+                        size={20} 
+                        className={star <= rating ? "text-amber-500" : "text-stone-300"} 
+                        fill={star <= rating ? "#f59e0b" : "transparent"} 
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button 
+                  type="submit" 
+                  disabled={status === 'loading' || !stallName}
+                  className={`w-full py-4 rounded-xl flex justify-center items-center font-bold text-white transition-all ${stallName ? 'bg-brand-500 hover:bg-brand-600 shadow-lg shadow-brand-500/30' : 'bg-stone-300 pointer-events-none'}`}
+                >
+                  {status === 'loading' ? (
+                    <Loader2 size={18} className="animate-spin" />
+                  ) : (
+                    <>
+                      Submit Vendor
+                      <Send size={16} className="ml-2" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
   );
