@@ -5,6 +5,7 @@ import axios from 'axios';
 import { MapPin, Search, Star, ChevronDown, UserCircle2, Clock, Percent, X, Crosshair } from 'lucide-react-native';
 import * as Location from 'expo-location';
 import { useAuth } from '../../context/AuthContext';
+import ReelsSection from '../../components/ReelsSection';
 
 const { width } = Dimensions.get('window');
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://172.29.129.85:8082';
@@ -335,6 +336,7 @@ export default function HomeScreen() {
           </View>
         )}
 
+        <ReelsSection />
       </ScrollView>
 
       {/* ── Location Selector Modal ── */}

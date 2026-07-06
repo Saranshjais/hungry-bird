@@ -36,6 +36,7 @@ function Counter({ end, suffix = '', decimals = 0 }) {
 }
 
 import { DestinationCard } from "@/components/ui/card-21";
+import ReelsSection from '@/components/ReelsSection';
 
 const THEME_COLORS = [
   "22 100% 50%", // Orange
@@ -93,15 +94,19 @@ export default function HomePage() {
     <>
       {/* ══ HERO ══ */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-transparent">
-        {/* Full-vibrancy Background Image */}
+        {/* Full-vibrancy Background Video */}
         <div className="absolute inset-0 z-[-1]">
-          <img
-            src="/bg-food.jpg"
-            alt="Indian street food"
+          <video
+            key="bg-video-flower"
+            autoPlay
+            loop
+            muted
+            playsInline
             className="w-full h-full object-cover select-none"
+            src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.webm"
           />
           {/* Subtle dark vignette overlay to anchor the card */}
-          <div className="absolute inset-0 bg-stone-950/20" />
+          <div className="absolute inset-0 bg-stone-950/40" />
         </div>
 
         {/* Content Panel — Floating Glass panel container */}
@@ -233,9 +238,9 @@ export default function HomePage() {
               ].map((b, i) => (
                 <div
                   key={`${b.id}-${i}`}
-                  className="card bg-white w-72 overflow-hidden shadow-sm flex-shrink-0 transition-transform duration-300 group/card hover:-translate-y-1"
+                  className="card bg-white w-72 flex flex-col h-full overflow-hidden shadow-sm flex-shrink-0 transition-transform duration-300 group/card hover:-translate-y-1"
                 >
-                  <div className="h-44 overflow-hidden relative">
+                  <div className="h-44 overflow-hidden relative shrink-0">
                     <img
                       src={`/banner${b.id}.png`}
                       alt={b.title}
@@ -246,9 +251,9 @@ export default function HomePage() {
                       Specialty 0{b.id}
                     </span>
                   </div>
-                  <div className="p-4.5">
+                  <div className="p-5 flex-1 flex flex-col">
                     <h4 className="font-extrabold text-stone-900 text-[15px] mb-1.5 leading-tight">{b.title}</h4>
-                    <p className="text-stone-400 text-xs leading-relaxed">{b.desc}</p>
+                    <p className="text-stone-400 text-xs leading-relaxed mt-auto">{b.desc}</p>
                   </div>
                 </div>
               ))}
@@ -256,6 +261,8 @@ export default function HomePage() {
           </div>
         </div>
       </motion.section>
+
+      <ReelsSection />
 
       {/* ══ DIVIDER ══ */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

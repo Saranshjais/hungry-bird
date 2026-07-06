@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence, useInView } from 'motion/react';
 import axios from 'axios';
-import { MapPin, Star, Sparkles, ChevronLeft, Clock, Flame, Search, X } from 'lucide-react';
+import { MapPin, Star, Sparkles, ChevronLeft, Clock, Flame, Search, X, Loader2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 const CityMap = dynamic(() => import('./CityMap'), { ssr: false });
@@ -139,10 +139,9 @@ function VendorCard({ vendor, cityName, recommended }) {
       variants={fadeUp}
       whileHover={{ y: -5, scale: 1.01 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="card group cursor-pointer flex flex-col"
-      onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${vendor.lat},${vendor.lng}`, '_blank')}
+      className="card group flex flex-col"
     >
-      <div className="relative h-48 overflow-hidden bg-stone-100">
+      <Link href={`/vendor/${vendor.id}`} className="relative h-48 overflow-hidden bg-stone-100 block cursor-pointer">
         <img
           src={(!vendor.image_url || vendor.image_url.includes('maps.googleapis')) ? '/vendor-placeholder.png' : vendor.image_url}
           alt={vendor.name}
@@ -150,33 +149,54 @@ function VendorCard({ vendor, cityName, recommended }) {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-stone-900/60 via-transparent to-transparent" />
 
-        {/* Offer */}
+        {/* Badges */}
         <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
-          <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-md">
-            {vendor.is_hidden_gem ? '60% OFF ↑ ₹120' : '40% OFF ↑ ₹80'}
-          </span>
+          <div className="flex items-center gap-1.5">
+            {vendor.is_hidden_gem && (
+              <span className="bg-violet-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-0.5 shadow-sm">
+                <Sparkles size={8} /> Hidden Gem
+              </span>
+            )}
+            {vendor.price_level && (
+              <span className="bg-white/90 backdrop-blur-sm text-stone-800 text-[10px] font-black px-2 py-0.5 rounded-md">
+                {vendor.price_level}
+              </span>
+            )}
+          </div>
           {recommended && (
-            <span className="bg-violet-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-0.5 shadow-sm">
-              <Sparkles size={8} /> Curated
+            <span className="bg-white/90 backdrop-blur-sm text-stone-800 text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-0.5 shadow-sm">
+              <Flame size={8} className="text-brand-500" /> Curated
             </span>
           )}
         </div>
-      </div>
+      </Link>
 
       <div className="p-4 bg-white flex flex-col flex-1">
-        <h3 className="font-extrabold text-stone-900 text-[15px] leading-tight mb-2 truncate group-hover:text-brand-600 transition-colors">
-          {vendor.name}
-        </h3>
+        <Link href={`/vendor/${vendor.id}`} className="cursor-pointer">
+          <h3 className="font-extrabold text-stone-900 text-[15px] leading-tight mb-2 truncate group-hover:text-brand-600 transition-colors">
+            {vendor.name}
+          </h3>
+        </Link>
 
         <InteractiveRating vendorId={vendor.id} initialRating={vendor.rating} initialTotal={vendor.total_ratings} />
 
         <div className="flex items-center justify-between border-t border-stone-100 pt-3 mt-auto">
           <p className="text-[11px] font-medium text-stone-400 truncate">
             {vendor.cuisine_type} · {vendor.area || 'Local Market'}
+            {typeof vendor.distanceKm === 'number' && (
+              <span className="text-brand-500 font-bold"> · {vendor.distanceKm < 1 ? `${Math.round(vendor.distanceKm * 1000)}m` : `${vendor.distanceKm.toFixed(1)}km`}</span>
+            )}
           </p>
-          <span className="text-[10px] font-bold bg-brand-50 text-brand-600 px-2 py-0.5 rounded border border-brand-100">
-            {cityName}
-          </span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              window.open(`https://www.google.com/maps/dir/?api=1&destination=${vendor.lat},${vendor.lng}`, '_blank');
+            }}
+            className="text-[10px] font-bold bg-brand-50 text-brand-600 px-2 py-0.5 rounded border border-brand-100 hover:bg-brand-100 transition-colors flex items-center gap-1 flex-shrink-0"
+          >
+            <MapPin size={10} /> Directions
+          </button>
         </div>
       </div>
     </motion.div>
@@ -189,15 +209,54 @@ const CATEGORY_IMGS = {
   'Momo': '/cat-momo.png', 'Noodles': '/cat-momo.png',
 };
 
+// Haversine distance in km
+function distanceKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export default function CityPage() {
   const { slug } = useParams();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('All');
   const [search, setSearch] = useState('');
+  const [userLocation, setUserLocation] = useState(null);
+  const [locating, setLocating] = useState(false);
+  const [locationError, setLocationError] = useState('');
 
   const feedRef  = useRef(null);
   const feedIn   = useInView(feedRef, { once: true, margin: '-60px' });
+
+  const handleNearMe = () => {
+    if (userLocation) {
+      // Toggle off if already active
+      setUserLocation(null);
+      return;
+    }
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported by your browser.');
+      return;
+    }
+    setLocating(true);
+    setLocationError('');
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
+        setLocating(false);
+      },
+      () => {
+        setLocationError('Unable to get your location. Check browser permissions.');
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
 
   useEffect(() => {
     if (!slug) return;
@@ -228,7 +287,15 @@ export default function CityPage() {
 
   const { city, vendors, recommendations, google_maps_api_key } = data;
   const categories = ['All', ...new Set(vendors.map(v => v.cuisine_type).filter(Boolean))];
-  const filtered = vendors.filter(v => {
+
+  const vendorsWithDistance = userLocation
+    ? vendors.map(v => ({
+        ...v,
+        distanceKm: (v.lat && v.lng) ? distanceKm(userLocation.lat, userLocation.lng, v.lat, v.lng) : null,
+      })).sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
+    : vendors;
+
+  const filtered = vendorsWithDistance.filter(v => {
     const matchCategory = activeCategory === 'All' || v.cuisine_type === activeCategory;
     const matchSearch = !search || v.name.toLowerCase().includes(search.toLowerCase()) || (v.cuisine_type || '').toLowerCase().includes(search.toLowerCase());
     return matchCategory && matchSearch;
@@ -295,14 +362,27 @@ export default function CityPage() {
               )}
             </div>
             
-            <button 
-              onClick={() => alert(`Detecting your location in ${city.name}...`)}
-              className="flex items-center justify-center gap-2 px-6 py-3.5 bg-white border-2 border-stone-100 rounded-[1.25rem] text-stone-600 font-bold text-sm hover:border-brand-500 hover:text-brand-500 hover:shadow-md transition-all sm:w-auto w-full group whitespace-nowrap shadow-sm"
+            <button
+              onClick={handleNearMe}
+              disabled={locating}
+              className={`flex items-center justify-center gap-2 px-6 py-3.5 rounded-[1.25rem] font-bold text-sm transition-all sm:w-auto w-full group whitespace-nowrap shadow-sm border-2 ${
+                userLocation
+                  ? 'bg-brand-500 border-brand-500 text-white'
+                  : 'bg-white border-stone-100 text-stone-600 hover:border-brand-500 hover:text-brand-500 hover:shadow-md'
+              }`}
             >
-              <MapPin size={18} className="text-stone-400 group-hover:text-brand-500 transition-colors" />
-              Near Me
+              {locating ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <MapPin size={18} className={userLocation ? 'text-white' : 'text-stone-400 group-hover:text-brand-500 transition-colors'} />
+              )}
+              {userLocation ? 'Sorted by Distance' : 'Near Me'}
             </button>
           </div>
+
+          {locationError && (
+            <p className="text-[11px] font-semibold text-red-500 -mt-2">{locationError}</p>
+          )}
 
           {/* ── Category Tabs ── */}
           <div className="flex items-center gap-4 overflow-x-auto pb-4 custom-scrollbar">
