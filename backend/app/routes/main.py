@@ -189,6 +189,78 @@ def city_page(slug):
         "google_maps_api_key": current_app.config.get("GOOGLE_MAPS_API_KEY"),
     })
 
+# -------------------- VENDOR DETAIL --------------------
+@main_bp.route("/vendors/<int:vendor_id>", methods=["GET"])
+def get_vendor_detail(vendor_id):
+    vendor = Vendor.query.get_or_404(vendor_id)
+
+    reviews = (
+        Rating.query.filter_by(vendor_id=vendor.id)
+        .order_by(Rating.created_at.desc())
+        .all()
+    )
+    reviews_data = [
+        {
+            "id": r.id,
+            "rating_value": r.rating_value,
+            "review_text": r.review_text,
+            "author_name": r.author_name or "Anonymous",
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        }
+        for r in reviews
+    ]
+
+    nearby = (
+        Vendor.query.filter(Vendor.city_id == vendor.city_id, Vendor.id != vendor.id)
+        .order_by(Vendor.avg_rating.desc().nullslast())
+        .limit(4)
+        .all()
+    )
+    nearby_data = [
+        {
+            "id": n.id,
+            "name": n.name,
+            "cuisine_type": n.cuisine_type,
+            "rating": n.avg_rating,
+            "total_ratings": n.total_ratings,
+            "area": n.area,
+            "image_url": n.image_url,
+            "is_hidden_gem": n.is_hidden_gem,
+            "price_level": n.price_level,
+        }
+        for n in nearby
+    ]
+
+    return jsonify({
+        "vendor": {
+            "id": vendor.id,
+            "name": vendor.name,
+            "cuisine_type": vendor.cuisine_type,
+            "description": vendor.description or "",
+            "specialty_dish": vendor.specialty_dish,
+            "opening_hours": vendor.opening_hours,
+            "rating": vendor.avg_rating,
+            "total_ratings": vendor.total_ratings,
+            "lat": vendor.lat,
+            "lng": vendor.lng,
+            "address": vendor.address_text,
+            "area": vendor.area,
+            "is_hidden_gem": vendor.is_hidden_gem,
+            "is_famous": vendor.is_famous,
+            "price_level": vendor.price_level,
+            "image_url": vendor.image_url,
+            "verified_status": vendor.verified_status,
+            "city": {
+                "id": vendor.city.id,
+                "name": vendor.city.name,
+                "slug": vendor.city.slug,
+            } if vendor.city else None,
+        },
+        "reviews": reviews_data,
+        "nearby": nearby_data,
+    })
+
+
 # -------------------- SUBMIT VENDOR --------------------
 @main_bp.route("/submit-vendor", methods=["POST"])
 def submit_vendor():

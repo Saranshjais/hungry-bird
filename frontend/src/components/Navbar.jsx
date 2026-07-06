@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useScroll, useMotionValueEvent } from 'motion/react';
-import { UtensilsCrossed, MapPin, Menu, X, Search, ChevronDown, User, LogOut } from 'lucide-react';
+import { UtensilsCrossed, MapPin, Menu, X, Search, ChevronDown, User, LogOut, Smartphone } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
@@ -176,6 +176,11 @@ export default function Navbar() {
                 <Search size={18} />
               </button>
 
+              {/* Home Link */}
+              <Link href="/" className={`text-[13px] font-bold transition-colors ${isDarkText ? 'text-stone-600 hover:text-brand-500' : 'text-white/80 hover:text-white'}`}>
+                Home
+              </Link>
+
               {/* Cities Dropdown */}
               <div className="relative group">
                 <button 
@@ -224,6 +229,9 @@ export default function Navbar() {
               </Link>
               <Link href="/contact" className={`text-[13px] font-bold transition-colors ${isDarkText ? 'text-stone-600 hover:text-brand-500' : 'text-white/80 hover:text-white'}`}>
                 Contact
+              </Link>
+              <Link href="/download" className={`text-[13px] font-bold transition-colors ${isDarkText ? 'text-brand-500 hover:text-brand-600' : 'text-brand-300 hover:text-brand-200'} flex items-center gap-1`}>
+                <Smartphone size={14} /> Get App
               </Link>
 
               {/* User Profile / Login */}
@@ -339,6 +347,13 @@ export default function Navbar() {
           {/* Mobile Links */}
           <div className="grid grid-cols-2 gap-2 mt-2">
             <Link
+              href="/"
+              className="w-full text-center py-2.5 rounded-xl border border-stone-200 text-stone-700 font-bold hover:bg-stone-50 transition-colors"
+              onClick={() => setMobileOpen(false)}
+            >
+              Home
+            </Link>
+            <Link
               href="/about"
               className="w-full text-center py-2.5 rounded-xl border border-stone-200 text-stone-700 font-bold hover:bg-stone-50 transition-colors"
               onClick={() => setMobileOpen(false)}
@@ -351,6 +366,13 @@ export default function Navbar() {
               onClick={() => setMobileOpen(false)}
             >
               Contact
+            </Link>
+            <Link
+              href="/download"
+              className="col-span-2 w-full text-center py-2.5 rounded-xl bg-brand-50 border border-brand-100 text-brand-600 font-bold hover:bg-brand-100 transition-colors flex items-center justify-center gap-2"
+              onClick={() => setMobileOpen(false)}
+            >
+              <Smartphone size={16} /> Get the App
             </Link>
           </div>
 

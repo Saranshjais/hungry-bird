@@ -51,6 +51,10 @@ class Vendor(db.Model):
     address_text = db.Column(db.String(300))
     area = db.Column(db.String(150))
 
+    description = db.Column(db.Text)  # vendor backstory / "why it's a hidden gem"
+    specialty_dish = db.Column(db.String(150))  # e.g. "Butter Pav Bhaji"
+    opening_hours = db.Column(db.String(150))  # free-text, e.g. "6 PM - 1 AM"
+
     lat = db.Column(db.Float, nullable=False)
     lng = db.Column(db.Float, nullable=False)
 
