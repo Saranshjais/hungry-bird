@@ -92,7 +92,10 @@ export default function HelpSupportScreen() {
 
         {/* Legal Links */}
         <View className="bg-white dark:bg-stone-900 rounded-3xl border border-stone-200 dark:border-stone-800 mb-12 overflow-hidden shadow-sm">
-          <TouchableOpacity className="flex-row items-center px-5 py-4 active:bg-stone-50 dark:active:bg-stone-800/50">
+          <TouchableOpacity 
+            onPress={() => router.push('/user/privacy')}
+            className="flex-row items-center px-5 py-4 active:bg-stone-50 dark:active:bg-stone-800/50"
+          >
             <View className="w-8 items-center justify-center mr-3">
               <FileText size={20} color={darkMode ? "#a8a29e" : "#57534e"} />
             </View>
@@ -100,7 +103,10 @@ export default function HelpSupportScreen() {
             <ChevronRight size={16} color="#d6d3d1" />
           </TouchableOpacity>
           <View className="h-[1px] bg-stone-100 dark:bg-stone-800 mx-5" />
-          <TouchableOpacity className="flex-row items-center px-5 py-4 active:bg-stone-50 dark:active:bg-stone-800/50">
+          <TouchableOpacity 
+            onPress={() => router.push('/user/privacy')}
+            className="flex-row items-center px-5 py-4 active:bg-stone-50 dark:active:bg-stone-800/50"
+          >
             <View className="w-8 items-center justify-center mr-3">
               <FileText size={20} color={darkMode ? "#a8a29e" : "#57534e"} />
             </View>

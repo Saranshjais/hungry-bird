@@ -1,27 +1,23 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, View, Text, Image, TouchableOpacity, ActivityIndicator, Dimensions, Platform } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import axios from 'axios';
 import { Heart, Bookmark } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
+import MapView, { Marker } from 'react-native-maps';
+import { Alert } from 'react-native';
 
-let MapView, Marker;
-if (Platform.OS !== 'web') {
-  const Maps = require('react-native-maps');
-  MapView = Maps.default;
-  Marker = Maps.Marker;
-}
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://172.29.129.85:8082';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.221.208.85:8082';
 
 export default function VendorScreen() {
   const { id } = useLocalSearchParams();
+  const { token } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    axios.get(`${API_URL}/api/vendor/${id}`)
+    axios.get(`${API_URL}/api/vendors/${id}`)
       .then(res => {
         setData(res.data);
       })
@@ -52,8 +48,43 @@ export default function VendorScreen() {
   const { vendor, reviews } = data;
 
   return (
-    <ScrollView className="flex-1 bg-stone-50 dark:bg-stone-950" showsVerticalScrollIndicator={false}>
-      <View className="w-full relative bg-stone-900" style={{ height: 300 }}>
+    <>
+      <Stack.Screen 
+        options={{
+          headerRight: () => (
+            <View className="flex-row gap-3 mr-2">
+              <TouchableOpacity 
+                onPress={async () => {
+                  try {
+                    await axios.post(`${API_URL}/api/favorites/toggle`, { vendor_id: vendor.id }, {
+                      headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    Alert.alert('Success', 'Favorite toggled!');
+                  } catch (e) { Alert.alert('Error', 'Please log in first.'); }
+                }}
+                className="w-10 h-10 bg-black/30 backdrop-blur-md rounded-full items-center justify-center"
+              >
+                <Heart size={20} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={async () => {
+                  try {
+                    await axios.post(`${API_URL}/api/saved/toggle`, { vendor_id: vendor.id }, {
+                      headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    Alert.alert('Success', 'Saved toggled!');
+                  } catch (e) { Alert.alert('Error', 'Please log in first.'); }
+                }}
+                className="w-10 h-10 bg-black/30 backdrop-blur-md rounded-full items-center justify-center"
+              >
+                <Bookmark size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          )
+        }} 
+      />
+      <ScrollView className="flex-1 bg-stone-50 dark:bg-stone-950" showsVerticalScrollIndicator={false}>
+        <View className="w-full relative bg-stone-900" style={{ height: 300 }}>
         <Image 
           source={{ uri: vendor.image_url || 'https://images.unsplash.com/photo-1601050690597-df0568f70950?q=80&w=800' }}
           className="absolute w-full h-full opacity-70"
@@ -61,37 +92,7 @@ export default function VendorScreen() {
         />
         <View className="absolute inset-0 bg-stone-900/40" />
 
-        {/* Action Buttons */}
-        <View className="absolute top-12 right-4 flex-row gap-3">
-          <TouchableOpacity 
-            onPress={async () => {
-              try {
-                await axios.post(`${API_URL}/api/favorites/toggle`, { vendor_id: vendor.id }, {
-                  headers: { 'Authorization': `Bearer ${useAuth().token}` }
-                });
-                alert('Favorite toggled!');
-              } catch (e) { alert('Please log in first.'); }
-            }}
-            className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full items-center justify-center"
-          >
-            <Heart size={20} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            onPress={async () => {
-              try {
-                await axios.post(`${API_URL}/api/saved/toggle`, { vendor_id: vendor.id }, {
-                  headers: { 'Authorization': `Bearer ${useAuth().token}` }
-                });
-                alert('Saved toggled!');
-              } catch (e) { alert('Please log in first.'); }
-            }}
-            className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full items-center justify-center"
-          >
-            <Bookmark size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
-
-        <View className="absolute inset-0 flex-col justify-end px-5 pb-8">
+        <View className="absolute inset-0 flex-col justify-end px-5 pb-8" pointerEvents="box-none">
           <Text className="text-white font-extrabold text-3xl mb-1">{vendor.name}</Text>
           <Text className="text-brand-500 font-bold text-sm mb-1">
             ★ {vendor.rating ? vendor.rating.toFixed(1) : 'New'} ({vendor.review_count} reviews)
@@ -152,6 +153,7 @@ export default function VendorScreen() {
           )}
         </View>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </>
   );
 }

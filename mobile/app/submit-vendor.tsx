@@ -5,16 +5,10 @@ import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import * as Location from 'expo-location';
 import { Search, ArrowRight, Crosshair, Star } from 'lucide-react-native';
+import MapView, { Marker } from 'react-native-maps';
 
 const { width, height } = Dimensions.get('window');
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://172.29.129.85:8082';
-
-let MapView, Marker;
-if (Platform.OS !== 'web') {
-  const Maps = require('react-native-maps');
-  MapView = Maps.default;
-  Marker = Maps.Marker;
-}
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.221.208.85:8082';
 
 export default function SubmitVendorScreen() {
   const { user } = useAuth();
@@ -211,7 +205,12 @@ export default function SubmitVendorScreen() {
       </View>
 
       {/* Bottom Form Section (Normal Document Flow) */}
-      <View className="bg-white dark:bg-stone-900 px-6 pt-6 pb-8 rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] elevation-10 border-t border-stone-100 dark:border-stone-800">
+      <ScrollView 
+        className="bg-white dark:bg-stone-900 px-6 pt-6 pb-8 rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] elevation-10 border-t border-stone-100 dark:border-stone-800"
+        style={{ flexShrink: 1 }}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
+      >
         <Text className="text-stone-700 dark:text-stone-300 font-bold mb-2 ml-1 text-sm">Vendor Name</Text>
         <TextInput
           className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-xl px-4 py-3 text-stone-900 dark:text-white focus:border-[#eb6e4b] focus:bg-white dark:focus:bg-stone-900 mb-4"
@@ -255,7 +254,7 @@ export default function SubmitVendorScreen() {
             </>
           )}
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }

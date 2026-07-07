@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from functools import wraps
 from app import db
-from app.models import VendorSubmission, Vendor, City
+from app.models import VendorSubmission, Vendor, City, ReelSubmission
 import jwt
 import datetime
 import pandas as pd
@@ -167,6 +167,41 @@ def get_vendors():
             "created_at": v.created_at.isoformat() if v.created_at else None
         })
     return jsonify({"vendors": data}), 200
+
+# -------------------- REEL SUBMISSIONS --------------------
+
+@admin_api_bp.route("/reels/pending", methods=["GET"])
+@admin_required
+def get_pending_reels():
+    reels = ReelSubmission.query.filter_by(status="pending").order_by(ReelSubmission.created_at.desc()).all()
+    results = []
+    for r in reels:
+        results.append({
+            "id": r.id,
+            "title": r.title,
+            "author_name": r.author_name,
+            "videoUrl": f"http://127.0.0.1:5000/static/uploads/reels/{r.video_filename}",
+            "created_at": r.created_at.isoformat() if r.created_at else None
+        })
+    return jsonify({"reels": results})
+
+
+@admin_api_bp.route("/reels/<int:reel_id>/approve", methods=["POST"])
+@admin_required
+def approve_reel(reel_id):
+    reel = ReelSubmission.query.get_or_404(reel_id)
+    reel.status = "approved"
+    db.session.commit()
+    return jsonify({"success": True})
+
+
+@admin_api_bp.route("/reels/<int:reel_id>/reject", methods=["POST"])
+@admin_required
+def reject_reel(reel_id):
+    reel = ReelSubmission.query.get_or_404(reel_id)
+    reel.status = "rejected"
+    db.session.commit()
+    return jsonify({"success": True})
 
 @admin_api_bp.route("/vendors/<int:vendor_id>", methods=["DELETE"])
 @admin_required

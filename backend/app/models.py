@@ -9,11 +9,15 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
+    phone = db.Column(db.String(20), nullable=True)
+    push_token = db.Column(db.String(255), nullable=True)
+    notifications_enabled = db.Column(db.Boolean, default=True)
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
+        # Using a lower work factor for local dev so login is fast
+        self.password_hash = generate_password_hash(password, method="pbkdf2:sha256:1000")
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
@@ -149,3 +153,30 @@ class SavedVendor(db.Model):
 
     user = db.relationship("User", backref=db.backref("saved_vendors", lazy=True, cascade="all, delete-orphan"))
     vendor = db.relationship("Vendor", backref=db.backref("saved_by", lazy=True, cascade="all, delete-orphan"))
+
+
+class ReelSubmission(db.Model):
+    __tablename__ = "reel_submissions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    author_name = db.Column(db.String(100), nullable=False)
+    video_filename = db.Column(db.String(300), nullable=False)
+    status = db.Column(db.String(20), default="pending")  # "pending", "approved", "rejected"
+    views = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class OTPVerification(db.Model):
+    __tablename__ = "otp_verifications"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    otp_code = db.Column(db.String(10), nullable=False)
+    new_name = db.Column(db.String(100))
+    new_email = db.Column(db.String(150))
+    new_phone = db.Column(db.String(20))
+    expires_at = db.Column(db.DateTime, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", backref=db.backref("otps", lazy=True, cascade="all, delete-orphan"))
