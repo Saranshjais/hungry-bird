@@ -1,17 +1,30 @@
-services:
-  - type: web
-    name: hungrybird-api
-    env: python
-    buildCommand: "cd backend && pip install -r requirements.txt"
-    startCommand: "cd backend && gunicorn -k eventlet -w 1 run:app"
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.0
-      - key: FLASK_ENV
-        value: production
-      - key: DATABASE_URL
-        sync: false
-      - key: ADMIN_PASSWORD
-        sync: false
-      - key: SECRET_KEY
-        generateValue: true
+{
+  "services": [
+    {
+      "type": "web",
+      "name": "hungry-bird-api",
+      "runtime": "python",
+      "rootDir": "backend",
+      "buildCommand": "pip install -r requirements.txt",
+      "startCommand": "gunicorn run:app",
+      "envVars": [
+        {
+          "key": "SECRET_KEY",
+          "generateValue": true
+        },
+        {
+          "key": "DATABASE_URL",
+          "value": "sqlite:///hungrybird.db"
+        },
+        {
+          "key": "GOOGLE_MAPS_API_KEY",
+          "sync": false
+        },
+        {
+          "key": "PYTHON_VERSION",
+          "value": "3.11.0"
+        }
+      ]
+    }
+  ]
+}
