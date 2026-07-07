@@ -39,11 +39,12 @@ def login():
     username = data.get("username")
     password = data.get("password")
     
-    # Check explicitly for user requested credentials, or fallback to config password if no username provided (for backwards compatibility)
+    admin_password = current_app.config.get("ADMIN_PASSWORD")
+    
     is_valid = False
     if username == "saransh" and password == "Sara@123":
         is_valid = True
-    elif not username and password == current_app.config["ADMIN_PASSWORD"]:
+    elif admin_password and not username and password == admin_password:
         is_valid = True
         
     if is_valid:
