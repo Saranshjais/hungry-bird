@@ -253,20 +253,24 @@ export default function AdminSubmissions() {
                       </span>
                     </td>
                     <td>
-                      <div className="admin-actions flex gap-2">
-                        <button 
-                          className="admin-btn bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-emerald-200 text-xs px-3 py-1.5 flex items-center gap-1.5" 
-                          onClick={() => handleApprove(sub.id)}
-                        >
-                          <CheckCircle2 size={14} /> Approve
-                        </button>
-                        <button 
-                          className="admin-btn admin-btn-danger text-xs px-3 py-1.5 flex items-center gap-1.5" 
-                          onClick={() => handleReject(sub.id)}
-                        >
-                          <XCircle size={14} /> Reject
-                        </button>
-                      </div>
+                      {(!sub.status || sub.status === "pending") ? (
+                        <div className="admin-actions flex gap-2">
+                          <button 
+                            className="admin-btn bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-emerald-200 text-xs px-3 py-1.5 flex items-center gap-1.5" 
+                            onClick={() => handleApprove(sub.id)}
+                          >
+                            <CheckCircle2 size={14} /> Approve
+                          </button>
+                          <button 
+                            className="admin-btn admin-btn-danger text-xs px-3 py-1.5 flex items-center gap-1.5" 
+                            onClick={() => handleReject(sub.id)}
+                          >
+                            <XCircle size={14} /> Reject
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 text-sm italic">No actions available</span>
+                      )}
                     </td>
                   </tr>
                 ))}
