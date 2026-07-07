@@ -9,7 +9,7 @@ import ReelsSection from '../../components/ReelsSection';
 import MapView, { Marker } from 'react-native-maps';
 
 const { width } = Dimensions.get('window');
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.37:8082';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.221.208.85:8082';
 
 export default function HomeScreen() {
   const [data, setData] = useState(null);
