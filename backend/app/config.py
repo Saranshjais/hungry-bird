@@ -3,7 +3,7 @@ import os
 class Config:
     # Security
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
-    ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+    ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")  # Must be set via environment variable
 
     # Database
     db_url = os.getenv("DATABASE_URL", "sqlite:///hungrybird.db")
