@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { useColorScheme } from 'nativewind';
 import axios from 'axios';
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.221.208.85:8082';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.37:8082';
 import { 
   ArrowLeft, 
   MoreVertical,
