@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Dimensions, StyleSheet, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { useColorScheme } from 'nativewind';
+import axios from 'axios';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.221.208.85:8082';
 import { 
   ArrowLeft, 
-  MoreVertical, 
+  MoreVertical,
   MapPin, 
   PlusCircle, 
   Clock, 
@@ -18,7 +20,8 @@ import {
   Shield,
   HelpCircle,
   ChevronRight,
-  TrendingUp
+  TrendingUp,
+  LogOut
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -28,8 +31,17 @@ export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const [menuVisible, setMenuVisible] = useState(false);
+  const [submissionCount, setSubmissionCount] = useState(0);
   const { colorScheme } = useColorScheme();
   const iconColor = colorScheme === 'dark' ? '#d6d3d1' : '#1c1917';
+
+  useEffect(() => {
+    if (user) {
+      axios.get(`${API_URL}/api/user/submissions`)
+        .then(res => setSubmissionCount(res.data.submissions?.length || 0))
+        .catch(err => console.error("Failed to load submissions count", err));
+    }
+  }, [user]);
 
   if (!user) {
     return (
@@ -66,9 +78,6 @@ export default function ProfileScreen() {
             <View className="w-10 h-10" />
             
             <View className="flex-row items-center">
-              <TouchableOpacity onPress={() => router.push('/user/help')} className="bg-white/10 px-4 py-1.5 rounded-full mr-2">
-                <Text className="text-white font-semibold text-sm">Help</Text>
-              </TouchableOpacity>
               <TouchableOpacity onPress={toggleMenu} className="w-10 h-10 items-center justify-center relative">
                 <MoreVertical size={24} color="#ffffff" />
               </TouchableOpacity>
@@ -96,7 +105,7 @@ export default function ProfileScreen() {
             </View>
             <View className="flex-row justify-between items-center mt-1">
               <View>
-                <Text className="text-stone-900 dark:text-white font-bold text-base">12 Hidden Gems Discovered</Text>
+                <Text className="text-stone-900 dark:text-white font-bold text-base">{submissionCount} Hidden Gems Discovered</Text>
                 <Text className="text-stone-500 dark:text-stone-400 text-xs mt-0.5">Keep submitting to reach Level 4!</Text>
               </View>
               <ChevronRight size={20} color="#a8a29e" />
@@ -106,9 +115,9 @@ export default function ProfileScreen() {
           {/* Quick Actions Grid */}
           <View className="flex-row justify-between mb-4">
             <QuickAction icon={<Heart size={22} color={iconColor} />} label="Favorites" onPress={() => router.push('/user/favorites')} />
-            <QuickAction icon={<Bookmark size={22} color={iconColor} />} label="Saved\nVendors" onPress={() => router.push('/user/saved')} />
-            <QuickAction icon={<Star size={22} color={iconColor} />} label="My\nReviews" onPress={() => router.push('/user/reviews')} />
-            <QuickAction icon={<PlusCircle size={22} color={iconColor} />} label="Add\nVendor" onPress={() => router.push('/submit-vendor')} />
+            <QuickAction icon={<Bookmark size={22} color={iconColor} />} label={"Saved\nVendors"} onPress={() => router.push('/user/saved')} />
+            <QuickAction icon={<Star size={22} color={iconColor} />} label={"My\nReviews"} onPress={() => router.push('/user/reviews')} />
+            <QuickAction icon={<PlusCircle size={22} color={iconColor} />} label={"Add\nVendor"} onPress={() => router.push('/submit-vendor')} />
           </View>
 
           {/* Menu List */}
@@ -146,10 +155,14 @@ export default function ProfileScreen() {
           onPress={() => setMenuVisible(false)}
           className="absolute inset-0 z-50"
         >
-          <View className="absolute top-20 right-4 bg-[#111111] rounded-2xl py-2 w-48 shadow-xl elevation-10">
+          <View className="absolute top-20 right-4 bg-[#111111] rounded-2xl py-2 w-48 shadow-xl elevation-10 border border-stone-800">
+            <TouchableOpacity className="px-5 py-3" onPress={() => { setMenuVisible(false); router.push('/user/edit-profile'); }}>
+              <Text className="text-white text-sm font-medium">Edit Profile</Text>
+            </TouchableOpacity>
             <TouchableOpacity className="px-5 py-3" onPress={() => { setMenuVisible(false); router.push('/user/settings'); }}>
               <Text className="text-white text-sm font-medium">Settings</Text>
             </TouchableOpacity>
+            <View className="h-[1px] bg-stone-800 mx-5 my-1" />
             <TouchableOpacity className="px-5 py-3" onPress={() => { setMenuVisible(false); logout(); }}>
               <Text className="text-[#ef4444] text-sm font-medium">Log out</Text>
             </TouchableOpacity>

@@ -1,14 +1,15 @@
 import { useEffect, useState, useRef } from 'react';
-import { ScrollView, View, Text, Image, TouchableOpacity, ActivityIndicator, TextInput, Dimensions, Modal } from 'react-native';
+import { ScrollView, View, Text, Image, TouchableOpacity, ActivityIndicator, TextInput, Dimensions, Modal, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import axios from 'axios';
 import { MapPin, Search, Star, ChevronDown, UserCircle2, Clock, Percent, X, Crosshair } from 'lucide-react-native';
 import * as Location from 'expo-location';
 import { useAuth } from '../../context/AuthContext';
 import ReelsSection from '../../components/ReelsSection';
+import MapView, { Marker } from 'react-native-maps';
 
 const { width } = Dimensions.get('window');
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://172.29.129.85:8082';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.221.208.85:8082';
 
 export default function HomeScreen() {
   const [data, setData] = useState(null);
@@ -333,6 +334,41 @@ export default function HomeScreen() {
               </TouchableOpacity>
 
             </View>
+
+            {/* ── Map Section ── */}
+            {Platform.OS !== 'web' && MapView && localVendors.length > 0 && (
+              <View className="mt-6 mb-4">
+                <Text className="text-stone-900 dark:text-white font-bold text-xl mb-4 px-2">Discover Near You</Text>
+                <View className="w-full h-64 rounded-3xl overflow-hidden shadow-sm border border-stone-200 dark:border-stone-800">
+                  <MapView
+                    style={{ flex: 1 }}
+                    initialRegion={{
+                      latitude: localVendors[0]?.lat || 26.9124,
+                      longitude: localVendors[0]?.lng || 75.7873,
+                      latitudeDelta: 0.05,
+                      longitudeDelta: 0.05,
+                    }}
+                    showsUserLocation={true}
+                  >
+                    {localVendors.map(vendor => {
+                      if (vendor.lat && vendor.lng) {
+                        return (
+                          <Marker
+                            key={vendor.id}
+                            coordinate={{ latitude: vendor.lat, longitude: vendor.lng }}
+                            title={vendor.name}
+                            description={vendor.cuisine_type || 'Street Food'}
+                            onCalloutPress={() => router.push(`/vendor/${vendor.id}`)}
+                          />
+                        );
+                      }
+                      return null;
+                    })}
+                  </MapView>
+                </View>
+              </View>
+            )}
+
           </View>
         )}
 

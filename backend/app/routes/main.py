@@ -4,7 +4,10 @@ import re
 import requests
 
 from app import db, cache
-from app.models import City, Vendor, VendorSubmission, Rating
+from app.models import City, Vendor, VendorSubmission, Rating, ReelSubmission
+import os
+import uuid
+from werkzeug.utils import secure_filename
 
 # ✅ ML import
 from app.ml_model import build_recommendation_model, get_recommendations
@@ -79,7 +82,9 @@ def home_feed():
             "area": v.city.name if v.city else "Local",
             "rating": v.avg_rating,
             "image_url": v.image_url,
-            "is_hidden_gem": v.is_hidden_gem
+            "is_hidden_gem": v.is_hidden_gem,
+            "lat": v.lat,
+            "lng": v.lng
         })
         
     return jsonify({
@@ -488,3 +493,49 @@ def submit_site_review():
     db.session.commit()
 
     return jsonify({"success": True, "message": "Thank you for your review!"}), 201
+
+@main_bp.route("/submit-reel", methods=["POST"])
+def submit_reel():
+    author_name = request.form.get("author_name")
+    title = request.form.get("title")
+    video_file = request.files.get("video")
+
+    if not author_name or not title or not video_file:
+        return jsonify({"success": False, "error": "Missing required fields"}), 400
+
+    if video_file.filename == '':
+        return jsonify({"success": False, "error": "No selected file"}), 400
+
+    filename = secure_filename(video_file.filename)
+    unique_filename = f"{uuid.uuid4().hex}_{filename}"
+    upload_folder = os.path.join(current_app.root_path, "static", "uploads", "reels")
+    os.makedirs(upload_folder, exist_ok=True)
+    file_path = os.path.join(upload_folder, unique_filename)
+    video_file.save(file_path)
+
+    new_reel = ReelSubmission(
+        title=title,
+        author_name=author_name,
+        video_filename=unique_filename,
+        status="pending"
+    )
+    db.session.add(new_reel)
+    db.session.commit()
+
+    return jsonify({"success": True, "message": "Video submitted for review!"})
+
+
+@main_bp.route("/reels", methods=["GET"])
+def get_reels():
+    reels = ReelSubmission.query.filter_by(status="approved").order_by(ReelSubmission.created_at.desc()).all()
+    results = []
+    for r in reels:
+        results.append({
+            "id": r.id,
+            "title": r.title,
+            "author": r.author_name,
+            # We assume flask is running on 5000 and can serve static files
+            "videoUrl": f"http://127.0.0.1:5000/static/uploads/reels/{r.video_filename}",
+            "views": r.views
+        })
+    return jsonify({"reels": results})

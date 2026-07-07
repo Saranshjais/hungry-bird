@@ -4,6 +4,7 @@ from app import db
 from app.models import User, Vendor, Favorite, SavedVendor
 from datetime import datetime, timedelta
 from functools import wraps
+from app.utils import send_push_notification
 
 auth_api = Blueprint("auth_api", __name__)
 
@@ -64,7 +65,9 @@ def register():
         "user": {
             "id": new_user.id,
             "name": new_user.name,
-            "email": new_user.email
+            "email": new_user.email,
+            "phone": new_user.phone,
+            "notifications_enabled": new_user.notifications_enabled
         }
     }), 201
 
@@ -99,7 +102,9 @@ def login():
         "user": {
             "id": user.id,
             "name": user.name,
-            "email": user.email
+            "email": user.email,
+            "phone": user.phone,
+            "notifications_enabled": user.notifications_enabled
         }
     }), 200
 
@@ -111,9 +116,96 @@ def get_me(current_user):
         "user": {
             "id": current_user.id,
             "name": current_user.name,
-            "email": current_user.email
+            "email": current_user.email,
+            "phone": current_user.phone,
+            "notifications_enabled": current_user.notifications_enabled
         }
     }), 200
+
+@auth_api.route('/api/auth/account', methods=['DELETE'])
+@token_required
+def delete_account(current_user):
+    # This will automatically delete related Favorites and SavedVendors due to cascade rules,
+    # and nullify user_id on Ratings and VendorSubmissions.
+    db.session.delete(current_user)
+    db.session.commit()
+    return jsonify({"message": "Account deleted successfully"}), 200
+
+@auth_api.route('/api/auth/profile', methods=['PUT'])
+@token_required
+def update_profile(current_user):
+    data = request.json
+    name = data.get('name')
+    email = data.get('email')
+    phone = data.get('phone')
+
+    if name:
+        current_user.name = name
+    if phone is not None:
+        current_user.phone = phone
+        
+    if email:
+        email = email.lower().strip()
+        # Check if email is being changed to one that already exists
+        if email != current_user.email:
+            existing_user = User.query.filter_by(email=email).first()
+            if existing_user:
+                return jsonify({"error": "Email already in use"}), 400
+            current_user.email = email
+
+    db.session.commit()
+    return jsonify({
+        "message": "Profile updated successfully",
+        "user": {
+            "id": current_user.id,
+            "name": current_user.name,
+            "email": current_user.email,
+            "phone": current_user.phone,
+            "notifications_enabled": current_user.notifications_enabled
+        }
+    }), 200
+
+@auth_api.route('/api/auth/push-token', methods=['PUT'])
+@token_required
+def update_push_token(current_user):
+    data = request.json
+    token = data.get('token')
+    if token:
+        current_user.push_token = token
+        db.session.commit()
+        return jsonify({"message": "Push token updated"}), 200
+    return jsonify({"error": "No token provided"}), 400
+
+@auth_api.route('/api/auth/notifications-preference', methods=['PUT'])
+@token_required
+def update_notifications_preference(current_user):
+    data = request.json
+    enabled = data.get('enabled')
+    if enabled is not None:
+        current_user.notifications_enabled = bool(enabled)
+        db.session.commit()
+        return jsonify({"message": f"Notifications {'enabled' if enabled else 'disabled'}"}), 200
+    return jsonify({"error": "Invalid payload"}), 400
+
+@auth_api.route('/api/auth/test-push', methods=['POST'])
+@token_required
+def test_push(current_user):
+    if not current_user.push_token:
+        return jsonify({"error": "No push token found for this user"}), 400
+        
+    if not current_user.notifications_enabled:
+        return jsonify({"error": "Notifications are disabled for this user"}), 400
+        
+    success = send_push_notification(
+        current_user.push_token,
+        "It works! 🎉 You have successfully configured push notifications.",
+        "Test Notification"
+    )
+    
+    if success:
+        return jsonify({"message": "Push notification sent!"}), 200
+    else:
+        return jsonify({"error": "Failed to send push notification"}), 500
 
 # -------------------- FAVORITES --------------------
 

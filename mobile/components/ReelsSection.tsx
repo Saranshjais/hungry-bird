@@ -1,34 +1,41 @@
-import React from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, Dimensions } from 'react-native';
-import { Play } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, Image, TouchableOpacity, Dimensions, Modal } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Play, X } from 'lucide-react-native';
+import { WebView } from 'react-native-webview';
 
 const { width } = Dimensions.get('window');
 
 const DUMMY_REELS = [
   {
     id: 1,
-    title: "The Ultimate Pav Bhaji Guide",
-    author: "StreetFoodKing",
+    title: "Must Try Street Food!",
+    author: "FoodieShorts",
     image: "https://images.unsplash.com/photo-1601050690597-df0568f70950?q=80&w=600&auto=format&fit=crop",
     views: "1.2M",
+    url: "https://www.youtube.com/embed/U3AqPVxCGxA?autoplay=1"
   },
   {
     id: 2,
-    title: "Hidden Chole Bhature Spot",
-    author: "DelhiDiaries",
+    title: "Spicy Indian Delights",
+    author: "SpiceLover",
     image: "https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=300&auto=format&fit=crop",
     views: "850K",
+    url: "https://www.youtube.com/embed/3NedVMwKNUI?autoplay=1"
   },
   {
     id: 3,
-    title: "Making of Traditional Ghewar",
-    author: "SweetTooth",
+    title: "Awesome Food Vlog",
+    author: "FoodVlogger",
     image: "https://images.unsplash.com/photo-1555126634-323283e090fa?q=80&w=300&auto=format&fit=crop",
     views: "2.1M",
+    url: "https://www.youtube.com/embed/KETrxXNjEXY?autoplay=1"
   }
 ];
 
 export default function ReelsSection() {
+  const [selectedVideo, setSelectedVideo] = useState(null);
+
   return (
     <View className="py-8 bg-stone-50 dark:bg-stone-950 mt-4 border-t border-stone-200 dark:border-stone-800">
       <View className="px-5 mb-5">
@@ -56,6 +63,7 @@ export default function ReelsSection() {
           <TouchableOpacity 
             key={reel.id} 
             activeOpacity={0.9}
+            onPress={() => setSelectedVideo(reel.url)}
             className={`w-[220px] h-[360px] rounded-3xl overflow-hidden bg-stone-900 relative ${idx !== DUMMY_REELS.length - 1 ? 'mr-4' : ''}`}
           >
             <Image 
@@ -88,6 +96,34 @@ export default function ReelsSection() {
           </TouchableOpacity>
         ))}
       </ScrollView>
+
+      {/* Video Modal */}
+      <Modal
+        visible={!!selectedVideo}
+        transparent={false}
+        animationType="slide"
+        onRequestClose={() => setSelectedVideo(null)}
+      >
+        <SafeAreaView className="flex-1 bg-black">
+          <View className="flex-row justify-end p-4 z-50 absolute top-10 right-0">
+            <TouchableOpacity 
+              onPress={() => setSelectedVideo(null)}
+              className="bg-black/50 p-2 rounded-full"
+            >
+              <X size={24} color="white" />
+            </TouchableOpacity>
+          </View>
+          
+          {selectedVideo && (
+            <WebView
+              source={{ uri: selectedVideo }}
+              style={{ flex: 1, backgroundColor: 'black' }}
+              allowsInlineMediaPlayback={true}
+              mediaPlaybackRequiresUserAction={false}
+            />
+          )}
+        </SafeAreaView>
+      </Modal>
     </View>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Users, Store, MapPin, TrendingUp } from "lucide-react";
+import { Users, Store, MapPin, TrendingUp, Play } from "lucide-react";
 import { motion } from "motion/react";
 
 export default function AdminDashboard() {
@@ -10,6 +10,7 @@ export default function AdminDashboard() {
     vendors: 0,
     submissions: 0,
     cities: 0,
+    reels: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -19,20 +20,23 @@ export default function AdminDashboard() {
         const token = sessionStorage.getItem("admin_token");
         const headers = { "Authorization": `Bearer ${token}` };
         
-        const [vRes, sRes, cRes] = await Promise.all([
+        const [vRes, sRes, cRes, rRes] = await Promise.all([
           fetch((process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000") + "/api/admin/vendors", { headers }),
           fetch((process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000") + "/api/admin/submissions", { headers }),
           fetch((process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000") + "/api/admin/cities", { headers }),
+          fetch((process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000") + "/api/admin/reels/pending", { headers }),
         ]);
         
         const vendors = await vRes.json();
         const submissions = await sRes.json();
         const cities = await cRes.json();
+        const reels = await rRes.json();
         
         setStats({
           vendors: vendors.vendors?.length || 0,
           submissions: submissions.submissions?.length || 0,
           cities: cities.cities?.length || 0,
+          reels: reels.reels?.length || 0,
         });
       } catch (err) {
         console.error("Failed to fetch stats", err);
@@ -128,6 +132,25 @@ export default function AdminDashboard() {
               <p className="admin-metric-label">Supported Cities</p>
               <Link href="/admin/cities" className="admin-metric-link text-blue">
                 Manage Regions <TrendingUp size={16} />
+              </Link>
+            </div>
+          </motion.div>
+
+          <motion.div custom={3} initial="hidden" animate="visible" variants={cardVariants}>
+            <div className="admin-metric-card group">
+              <div className="admin-metric-bg-circle bg-rose" />
+              <div className="admin-metric-header">
+                <div className="admin-metric-icon bg-rose">
+                  <Play size={24} />
+                </div>
+                <span className="admin-metric-badge bg-rose">
+                  Pending Review
+                </span>
+              </div>
+              <h3 className="admin-metric-value">{stats.reels}</h3>
+              <p className="admin-metric-label">Video Reels</p>
+              <Link href="/admin/reels" className="admin-metric-link text-rose">
+                Review Videos <TrendingUp size={16} />
               </Link>
             </div>
           </motion.div>

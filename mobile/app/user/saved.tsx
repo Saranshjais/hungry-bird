@@ -4,12 +4,13 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { ChevronLeft, MapPin, Star, Bookmark } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
+import axios from 'axios';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://172.29.129.85:8082';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.221.208.85:8082';
 
 export default function SavedScreen() {
   const router = useRouter();
-  const { token } = useAuth();
+  const { user } = useAuth();
   
   const [saved, setSaved] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,17 +23,10 @@ export default function SavedScreen() {
 
   const fetchSaved = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/saved`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setSaved(data.saved || []);
-      }
+      const res = await axios.get(`${API_URL}/api/saved`);
+      setSaved(res.data.saved_vendors || []);
     } catch (error) {
-      console.error("Error fetching saved:", error);
+      console.error("Error fetching saved vendors:", error);
     } finally {
       setLoading(false);
     }
@@ -41,14 +35,7 @@ export default function SavedScreen() {
   const removeSaved = async (vendorId) => {
     try {
       setSaved(prev => prev.filter(v => v.id !== vendorId));
-      await fetch(`${API_URL}/api/saved/toggle`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ vendor_id: vendorId })
-      });
+      await axios.post(`${API_URL}/api/saved/toggle`, { vendor_id: vendorId });
     } catch (error) {
       console.error("Error removing saved vendor:", error);
     }
