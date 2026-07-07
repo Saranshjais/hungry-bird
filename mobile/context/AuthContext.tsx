@@ -6,7 +6,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.221.208.85:8082';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.37:8082';
 
 const AuthContext = createContext();
 
