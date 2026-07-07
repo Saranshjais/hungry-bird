@@ -3,7 +3,7 @@ import { ScrollView, View, Text, Image, TouchableOpacity, ActivityIndicator } fr
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import axios from 'axios';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.221.208.85:8082';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://hungry-bird-jye4.onrender.com';
 
 export default function CityScreen() {
   const { slug } = useLocalSearchParams();
@@ -46,7 +46,7 @@ export default function CityScreen() {
     <ScrollView className="flex-1 bg-stone-50 dark:bg-stone-950" showsVerticalScrollIndicator={false}>
       <View className="w-full relative bg-stone-900" style={{ height: 250 }}>
         <Image 
-          source={{ uri: `http://10.221.208.85:8082/city-${city.slug}.png` }}
+          source={{ uri: `https://hungry-bird-jye4.onrender.com/city-${city.slug}.png` }}
           defaultSource={{ uri: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=800' }}
           className="absolute w-full h-full opacity-60"
           resizeMode="cover"
