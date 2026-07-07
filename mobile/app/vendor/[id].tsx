@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import MapView, { Marker } from 'react-native-maps';
 import { Alert } from 'react-native';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.221.208.85:8082';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://hungry-bird-jye4.onrender.com';
 
 export default function VendorScreen() {
   const { id } = useLocalSearchParams();
