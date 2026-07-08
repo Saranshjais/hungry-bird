@@ -219,22 +219,22 @@ export default function HomePage() {
           <div className="overflow-hidden relative w-full group py-4">
             <div className="flex gap-4 w-max animate-marquee group-hover:pause-animate">
               {[
-                { id: 1, title: 'Legendary Rolls', desc: 'Spiced charcoal grilled meats & chutney wraps.' },
-                { id: 2, title: 'Crispy Kachoris', desc: 'Flaky golden pastry filled with a spiced onion filling.' },
-                { id: 3, title: 'Signature Dal Baati', desc: 'Served with rich warm ghee and sweet churma.' },
-                { id: 4, title: 'Old Delhi Chole Bhature', desc: 'Fluffy fried bread with rich spicy chickpeas.' },
-                { id: 5, title: 'Tangy Golgappa Shots', desc: 'Crispy hollow puris filled with spicy mint water.' },
-                { id: 6, title: 'Traditional Rabri Ghewar', desc: 'Fragrant sweet disc soaked in saffron sugar syrup.' },
-                { id: 7, title: 'Tawa Pav Bhaji', desc: 'Spiced vegetable mash cooked on heavy griddles.' },
-                { id: 8, title: 'Charcoal Kebabs', desc: 'Assorted smoky meats roasted to perfection.' },
-                { id: 1, title: 'Legendary Rolls', desc: 'Spiced charcoal grilled meats & chutney wraps.' },
-                { id: 2, title: 'Crispy Kachoris', desc: 'Flaky golden pastry filled with a spiced onion filling.' },
-                { id: 3, title: 'Signature Dal Baati', desc: 'Served with rich warm ghee and sweet churma.' },
-                { id: 4, title: 'Old Delhi Chole Bhature', desc: 'Fluffy fried bread with rich spicy chickpeas.' },
-                { id: 5, title: 'Tangy Golgappa Shots', desc: 'Crispy hollow puris filled with spicy mint water.' },
-                { id: 6, title: 'Traditional Rabri Ghewar', desc: 'Fragrant sweet disc soaked in saffron sugar syrup.' },
-                { id: 7, title: 'Tawa Pav Bhaji', desc: 'Spiced vegetable mash cooked on heavy griddles.' },
-                { id: 8, title: 'Charcoal Kebabs', desc: 'Assorted smoky meats roasted to perfection.' }
+                { id: 1, title: 'Momos & Pav Bhaji', desc: 'Discover the Zaika hiding in every gully!' },
+                { id: 2, title: 'Street Food Social', desc: 'Gather your friends for a street food adventure.' },
+                { id: 3, title: 'South Indian Delights', desc: 'Indisputably the best street food in town!' },
+                { id: 4, title: 'Kachori & Samosa', desc: 'Taste the streets with local vendors.' },
+                { id: 5, title: 'Pani Puri & Samosa', desc: 'Find flavor on every corner with Hungry Bird.' },
+                { id: 6, title: 'Assorted Desi Snacks', desc: 'Every meal is a bird-tastic adventure!' },
+                { id: 7, title: 'Find Food Near You', desc: 'Discover delicious street food in your area.' },
+                { id: 8, title: 'Chole Bhature & Dosa', desc: 'Explore a maze of streets, flavours, and heat!' },
+                { id: 1, title: 'Momos & Pav Bhaji', desc: 'Discover the Zaika hiding in every gully!' },
+                { id: 2, title: 'Street Food Social', desc: 'Gather your friends for a street food adventure.' },
+                { id: 3, title: 'South Indian Delights', desc: 'Indisputably the best street food in town!' },
+                { id: 4, title: 'Kachori & Samosa', desc: 'Taste the streets with local vendors.' },
+                { id: 5, title: 'Pani Puri & Samosa', desc: 'Find flavor on every corner with Hungry Bird.' },
+                { id: 6, title: 'Assorted Desi Snacks', desc: 'Every meal is a bird-tastic adventure!' },
+                { id: 7, title: 'Find Food Near You', desc: 'Discover delicious street food in your area.' },
+                { id: 8, title: 'Chole Bhature & Dosa', desc: 'Explore a maze of streets, flavours, and heat!' }
               ].map((b, i) => (
                 <div
                   key={`${b.id}-${i}`}
