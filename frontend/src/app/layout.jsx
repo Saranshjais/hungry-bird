@@ -14,6 +14,30 @@ const jakarta = Plus_Jakarta_Sans({
 export const metadata = {
   title: 'HungryBird — Discover India\'s Best Street Food',
   description: 'Find hidden gems, legendary street stalls, and local favourites hand-picked by India\'s food community.',
+  keywords: ['street food', 'indian food', 'food delivery', 'hidden gems', 'chaat', 'food community'],
+  authors: [{ name: 'HungryBird Team' }],
+  openGraph: {
+    title: 'HungryBird — Discover India\'s Best Street Food',
+    description: 'Find hidden gems, legendary street stalls, and local favourites hand-picked by India\'s food community.',
+    url: 'https://hungrybird.com',
+    siteName: 'HungryBird',
+    images: [
+      {
+        url: '/app-mockup.png', 
+        width: 1200,
+        height: 630,
+        alt: 'HungryBird - Street Food Compass',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'HungryBird — Discover India\'s Best Street Food',
+    description: 'Find hidden gems, legendary street stalls, and local favourites hand-picked by India\'s food community.',
+    images: ['/app-mockup.png'],
+  },
 };
 
 import { AuthProvider } from '../context/AuthContext';

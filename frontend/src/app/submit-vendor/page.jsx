@@ -156,10 +156,10 @@ export default function SubmitVendorPage() {
   }
 
   return (
-    <div className="h-screen w-full relative flex flex-col md:flex-row pt-16 overflow-hidden bg-stone-100">
+    <div className="h-screen w-full relative overflow-hidden bg-stone-100">
       
       {/* Map Background Wrapper */}
-      <div className="absolute inset-0 z-0 pt-16">
+      <div className="absolute top-16 left-0 right-0 bottom-[55vh] md:bottom-0 z-0">
         <MapComponent 
           lat={lat} 
           lng={lng} 
@@ -169,7 +169,7 @@ export default function SubmitVendorPage() {
           }} 
         />
         {/* Fixed center pointer simulating map pin if MapComponent doesn't have it natively centered */}
-        <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10" style={{ marginTop: '-20px' }}>
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10 pb-6">
           <div className="flex flex-col items-center">
             <div className="w-5 h-5 bg-brand-500 rounded-full border-4 border-white shadow-md shadow-brand-500/40" />
             <div className="w-0.5 h-5 bg-stone-900 mt-0.5 shadow-sm" />
@@ -178,8 +178,8 @@ export default function SubmitVendorPage() {
       </div>
 
       {/* Unified Floating Panel */}
-      <div className="absolute top-[76px] left-4 right-4 md:right-auto md:w-[400px] md:bottom-6 z-20 flex flex-col pointer-events-none max-h-[calc(100vh-100px)]">
-        <div className="pointer-events-auto bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-stone-200 overflow-hidden flex flex-col h-full">
+      <div className="absolute bottom-0 left-0 right-0 h-[55vh] md:h-auto md:top-[84px] md:bottom-6 md:left-6 md:right-auto md:w-[400px] z-20 flex flex-col pointer-events-none md:max-h-[calc(100vh-108px)]">
+        <div className="pointer-events-auto bg-white/95 backdrop-blur-xl rounded-t-3xl md:rounded-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.08)] md:shadow-2xl border-t border-stone-200 md:border overflow-hidden flex flex-col h-full">
           
           {/* Header & Search */}
           <div className="p-5 border-b border-stone-100 bg-white">
