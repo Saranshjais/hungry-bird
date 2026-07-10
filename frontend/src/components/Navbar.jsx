@@ -49,6 +49,18 @@ export default function Navbar() {
     }
   }, [showSearch]);
 
+  // Prevent background scrolling when mobile menu is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [mobileOpen]);
+
   useMotionValueEvent(scrollY, 'change', v => setScrolled(v > 40));
 
   const isDarkHeaderPage = pathname === '/' || pathname?.startsWith('/city/');
