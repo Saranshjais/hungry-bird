@@ -261,7 +261,7 @@ export default function CityPage() {
   useEffect(() => {
     if (!slug) return;
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
-    axios.get(`${API_URL}/api/city/${slug}`)
+    axios.get(`${API_URL}/api/city/${slug}?t=${Date.now()}`)
       .then(r => setData(r.data))
       .catch(console.error)
       .finally(() => setLoading(false));

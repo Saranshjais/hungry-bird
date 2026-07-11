@@ -224,7 +224,7 @@ export default function JaipurPage() {
 
   useEffect(() => {
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
-    axios.get(`${API_URL}/api/city/jaipur`)
+    axios.get(`${API_URL}/api/city/jaipur?t=${Date.now()}`)
       .then(r => {
         setData(r.data);
         setSelectedVendor(r.data.vendors?.[0] || null);
