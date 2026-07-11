@@ -37,6 +37,7 @@ function Counter({ end, suffix = '', decimals = 0 }) {
 
 import { DestinationCard } from "@/components/ui/card-21";
 import ReelsSection from '@/components/ReelsSection';
+import StreetFoodCravings from '@/components/StreetFoodCravings';
 
 const THEME_COLORS = [
   "22 100% 50%", // Orange
@@ -153,6 +154,9 @@ export default function HomePage() {
         </div>
       </section>
 
+
+      {/* ══ STREET FOOD CRAVINGS ══ */}
+      <StreetFoodCravings />
 
       {/* ══ CITIES BENTO ══ */}
       <section id="cities" className="py-20 px-4 sm:px-6 lg:px-8 bg-stone-50 scroll-mt-20">
