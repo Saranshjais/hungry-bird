@@ -91,7 +91,7 @@ export default function StreetFoodCravings() {
   };
 
   return (
-    <section className="py-10 bg-white border-b border-stone-100">
+    <section className="py-10 border-y border-amber-100/60" style={{ background: 'transparent' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Header row */}
@@ -143,9 +143,9 @@ export default function StreetFoodCravings() {
                   width: 92,
                   height: 92,
                   background: food.bg,
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.09)',
-                  border: '4px solid #ffffff',
-                  outline: '1.5px solid #f0ede8',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.11)',
+                  border: '4px solid rgba(255,255,255,0.9)',
+                  outline: '1.5px solid rgba(234,88,12,0.1)',
                   padding: 4,
                 }}
               >
