@@ -52,6 +52,29 @@ def index():
 
     return jsonify({"cities": results})
 
+@main_bp.route("/seed", methods=["GET"])
+def seed_database():
+    try:
+        jaipur = City.query.filter_by(slug='jaipur').first()
+        if not jaipur:
+            jaipur = City(name='Jaipur', slug='jaipur', state='Rajasthan', country='India', lat=26.9124, lng=75.7873)
+            db.session.add(jaipur)
+
+        delhi = City.query.filter_by(slug='delhi').first()
+        if not delhi:
+            delhi = City(name='Delhi', slug='delhi', state='Delhi', country='India', lat=28.7041, lng=77.1025)
+            db.session.add(delhi)
+        
+        mumbai = City.query.filter_by(slug='mumbai').first()
+        if not mumbai:
+            mumbai = City(name='Mumbai', slug='mumbai', state='Maharashtra', country='India', lat=19.0760, lng=72.8777)
+            db.session.add(mumbai)
+
+        db.session.commit()
+        return jsonify({"message": "Database seeded successfully with Jaipur, Delhi, and Mumbai!"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 @main_bp.route("/home", methods=["GET"])
 def home_feed():
     cities = City.query.order_by(City.name).all()
