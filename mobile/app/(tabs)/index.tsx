@@ -113,11 +113,21 @@ export default function HomeScreen() {
   }
 
   const cravings = [
-    { name: "Chaat", img: "https://wsrv.nl/?url=images.unsplash.com/photo-1601050690597-df0568f70950&w=200&h=200&fit=cover&mask=circle" },
-    { name: "Sweets", img: "https://wsrv.nl/?url=images.unsplash.com/photo-1551024506-0bccd828d307&w=200&h=200&fit=cover&mask=circle" },
-    { name: "Spicy", img: "https://wsrv.nl/?url=images.unsplash.com/photo-1564671165093-20688ff1fffa&w=200&h=200&fit=cover&mask=circle" },
-    { name: "Snacks", img: "https://wsrv.nl/?url=images.unsplash.com/photo-1555126634-323283e090fa&w=200&h=200&fit=cover&mask=circle" },
-    { name: "Beverages", img: "https://wsrv.nl/?url=images.unsplash.com/photo-1544145945-f90425340c7e&w=200&h=200&fit=cover&mask=circle" },
+    { name: 'Golgappa',    img: 'https://wsrv.nl/?url=images.unsplash.com/photo-1601050690597-df0568f70950&w=200&h=200&fit=cover', bg: '#fff8ed' },
+    { name: 'Samosa',     img: 'https://wsrv.nl/?url=images.unsplash.com/photo-1527756928496-b3ffe3f46ceb&w=200&h=200&fit=cover', bg: '#fef9ee' },
+    { name: 'Pav Bhaji',  img: 'https://wsrv.nl/?url=images.unsplash.com/photo-1585937421612-70a008356fbe&w=200&h=200&fit=cover', bg: '#fef5ec' },
+    { name: 'Momos',      img: 'https://wsrv.nl/?url=images.unsplash.com/photo-1569050467447-ce54b3bbc37d&w=200&h=200&fit=cover', bg: '#f0fdf4' },
+    { name: 'Biryani',    img: 'https://wsrv.nl/?url=images.unsplash.com/photo-1563379091339-03b21ab4a4f8&w=200&h=200&fit=cover', bg: '#fffbeb' },
+    { name: 'Dosa',       img: 'https://wsrv.nl/?url=images.unsplash.com/photo-1589301760014-d4a9438fc3f3&w=200&h=200&fit=cover', bg: '#fffbeb' },
+    { name: 'Jalebi',     img: 'https://wsrv.nl/?url=images.unsplash.com/photo-1551024506-0bccd828d307&w=200&h=200&fit=cover', bg: '#fff7ed' },
+    { name: 'Kachori',    img: 'https://wsrv.nl/?url=images.unsplash.com/photo-1555126634-323283e090fa&w=200&h=200&fit=cover', bg: '#fef9ee' },
+    { name: 'Chole',      img: 'https://wsrv.nl/?url=images.unsplash.com/photo-1626132647523-66c4a0ddf577&w=200&h=200&fit=cover', bg: '#fef5ec' },
+    { name: 'Vada Pav',   img: 'https://wsrv.nl/?url=images.unsplash.com/photo-1567188040759-fb8a883dc6d8&w=200&h=200&fit=cover', bg: '#fffbeb' },
+    { name: 'Aloo Tikki', img: 'https://wsrv.nl/?url=images.unsplash.com/photo-1564671165093-20688ff1fffa&w=200&h=200&fit=cover', bg: '#fff8ed' },
+    { name: 'Lassi',      img: 'https://wsrv.nl/?url=images.unsplash.com/photo-1544145945-f90425340c7e&w=200&h=200&fit=cover', bg: '#f0f9ff' },
+    { name: 'Dal Baati',  img: 'https://wsrv.nl/?url=images.unsplash.com/photo-1574653853027-5382a3d23a15&w=200&h=200&fit=cover', bg: '#fef9ee' },
+    { name: 'Kulfi',      img: 'https://wsrv.nl/?url=images.unsplash.com/photo-1559304822-9eb2813c9240&w=200&h=200&fit=cover', bg: '#ecfdf5' },
+    { name: 'Masala Chai',img: 'https://wsrv.nl/?url=images.unsplash.com/photo-1571934811356-5cc061b6821f&w=200&h=200&fit=cover', bg: '#fef5ec' },
   ];
 
   // Filter vendors by the current location
@@ -225,17 +235,63 @@ export default function HomeScreen() {
             </View>
           ) : (
             /* ── Default Home Feed (Cravings) ── */
-            <View className="pt-4">
-              <Text className="px-4 text-stone-800 dark:text-stone-200 font-bold text-[16px] mb-3">WHAT'S ON YOUR MIND?</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-4" contentContainerStyle={{ paddingRight: 30 }}>
+            <View className="pt-4 pb-2">
+              <Text className="px-4 text-stone-900 dark:text-stone-100 font-extrabold text-[18px] mb-1">
+                What's On Your Mind?
+              </Text>
+              <Text className="px-4 text-stone-400 dark:text-stone-500 text-[12px] mb-4">
+                Tap any street food to explore nearby stalls
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 16, paddingRight: 24, gap: 20 }}
+              >
                 {cravings.map((item, idx) => (
-                  <TouchableOpacity key={idx} className="items-center mr-5">
-                    <Image 
-                      source={{ uri: item.img }}
-                      style={{ width: 75, height: 75, borderRadius: 40 }}
-                      className="bg-stone-100 dark:bg-stone-800 mb-2"
-                    />
-                    <Text className="text-stone-700 dark:text-stone-300 font-medium text-[13px]">{item.name}</Text>
+                  <TouchableOpacity
+                    key={idx}
+                    className="items-center"
+                    activeOpacity={0.75}
+                    style={{ width: 82 }}
+                  >
+                    {/* Plate container */}
+                    <View
+                      style={{
+                        width: 76,
+                        height: 76,
+                        borderRadius: 38,
+                        backgroundColor: item.bg,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.10,
+                        shadowRadius: 8,
+                        elevation: 4,
+                        borderWidth: 3,
+                        borderColor: '#ffffff',
+                        marginBottom: 8,
+                        overflow: 'hidden',
+                        padding: 3,
+                      }}
+                    >
+                      <Image
+                        source={{ uri: item.img }}
+                        style={{ width: '100%', height: '100%', borderRadius: 38 }}
+                        resizeMode="cover"
+                      />
+                    </View>
+                    {/* Name */}
+                    <Text
+                      numberOfLines={1}
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '600',
+                        color: '#57534e',
+                        textAlign: 'center',
+                        maxWidth: 80,
+                      }}
+                    >
+                      {item.name}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
