@@ -159,7 +159,7 @@ export default function HomePage() {
       <StreetFoodCravings />
 
       {/* ══ CITIES BENTO ══ */}
-      <section id="cities" className="py-20 px-4 sm:px-6 lg:px-8 bg-stone-50 scroll-mt-20">
+      <section id="cities" className="py-10 sm:py-20 px-4 sm:px-6 lg:px-8 scroll-mt-20">
         <motion.div 
           className="max-w-7xl mx-auto"
           initial={{ opacity: 0, y: 40 }}
@@ -198,7 +198,7 @@ export default function HomePage() {
 
       {/* ══ INTERACTIVE FOOD BANNERS CAROUSEL ══ */}
       <motion.section 
-        className="py-20 bg-stone-50 overflow-hidden"
+        className="py-10 sm:py-20 overflow-hidden"
         initial={{ opacity: 0, y: 40 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: false, margin: "-50px" }}
@@ -216,9 +216,9 @@ export default function HomePage() {
 
         {/* Scrolling Carousel Track */}
         <div className="relative">
-          {/* Fades on the edges for premium slider feel */}
-          <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-stone-50 to-transparent z-10 pointer-events-none" />
-          <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-stone-50 to-transparent z-10 pointer-events-none" />
+          {/* Subtle edge fades - reduced opacity so they don't look stark white */}
+          <div className="absolute left-0 top-0 bottom-0 w-10 bg-gradient-to-r from-[#fdfbf9]/90 to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-[#fdfbf9]/90 to-transparent z-10 pointer-events-none" />
           
           <div className="overflow-hidden relative w-full group py-4">
             <div className="flex gap-4 w-max animate-marquee group-hover:pause-animate">
@@ -238,7 +238,7 @@ export default function HomePage() {
               ].map((b, i) => (
                 <div
                   key={`${b.id}-${i}`}
-                  className="card bg-white w-72 flex flex-col h-full overflow-hidden shadow-sm flex-shrink-0 transition-transform duration-300 group/card hover:-translate-y-1"
+                  className="card bg-[#fffcf7] w-72 flex flex-col h-full overflow-hidden shadow-sm flex-shrink-0 transition-transform duration-300 group/card hover:-translate-y-1"
                 >
                   <div className="h-44 overflow-hidden relative shrink-0">
                     <img
