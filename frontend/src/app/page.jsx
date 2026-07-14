@@ -74,20 +74,39 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
-    // Use a timestamp to prevent the browser or Next.js from caching the empty result
-    axios.get(`${API_URL}/api/cities?t=${Date.now()}`)
-      .then(r => {
-        const list = r.data.cities || [];
+    let isMounted = true;
+    
+    async function fetchCities() {
+      try {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
+        // Use a timestamp to prevent the browser or Next.js from caching the empty result
+        const r = await axios.get(`${API_URL}/api/cities?t=${Date.now()}`, {
+          timeout: 5000 // 5 second timeout to prevent infinite loading
+        });
+        
+        if (!isMounted) return;
+        
+        const list = r.data?.cities || [];
         const jaipurIndex = list.findIndex(c => c.slug === 'jaipur');
         if (jaipurIndex > -1) {
           const jaipur = list.splice(jaipurIndex, 1)[0];
           list.unshift(jaipur);
         }
         setCities(list);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+      } catch (err) {
+        console.error('Error fetching cities:', err);
+        // On error, fallback to an empty array so loading spinner goes away
+        if (isMounted) setCities([]);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    fetchCities();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
 
