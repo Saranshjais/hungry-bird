@@ -236,10 +236,8 @@ export default function HomePage() {
 
         {/* Scrolling Carousel Track */}
         <div className="relative">
-          {/* Subtle edge fades - reduced opacity so they don't look stark white */}
-          <div className="absolute left-0 top-0 bottom-0 w-10 bg-gradient-to-r from-[#fdfbf9]/90 to-transparent z-10 pointer-events-none" />
-          <div className="absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-[#fdfbf9]/90 to-transparent z-10 pointer-events-none" />
-          
+          {/* Subtle edge fades removed as requested */}
+
           <div className="overflow-hidden relative w-full group py-4">
             <div className="flex gap-4 w-max animate-marquee group-hover:pause-animate">
               {[
@@ -258,7 +256,7 @@ export default function HomePage() {
               ].map((b, i) => (
                 <div
                   key={`${b.id}-${i}`}
-                  className="card bg-[#fffcf7] w-72 flex flex-col h-full overflow-hidden shadow-sm flex-shrink-0 transition-transform duration-300 group/card hover:-translate-y-1"
+                  className="card bg-[#fffcf7] w-72 flex flex-col h-[280px] overflow-hidden shadow-sm flex-shrink-0 transition-transform duration-300 group/card hover:-translate-y-1"
                 >
                   <div className="h-44 overflow-hidden relative shrink-0">
                     <img
