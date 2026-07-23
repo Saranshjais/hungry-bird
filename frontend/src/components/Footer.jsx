@@ -23,9 +23,9 @@ export default function Footer() {
           
           {/* Brand & Slogan (4 cols) */}
           <div className="lg:col-span-4 pr-4">
-            <h3 className="text-[28px] font-extrabold text-white tracking-tight leading-none mb-3">
-              Hungry<span className="text-brand-500">Bird</span>
-            </h3>
+            <Link href="/" className="inline-block mb-4 hover:scale-105 transition-transform">
+              <img src="/logo.png" alt="HungryBird Logo" className="h-20 w-auto object-contain drop-shadow-lg" />
+            </Link>
             <p className="text-stone-400 text-sm leading-[1.7] mb-6 max-w-sm">
               Connecting street food lovers with India's best hidden culinary gems. Hand-picked, verified, and community-driven.
             </p>

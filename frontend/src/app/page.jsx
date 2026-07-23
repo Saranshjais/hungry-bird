@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import axios from 'axios';
-import { Sparkles, ChevronRight, MapPin, Star, TrendingUp, Users, Award, ArrowDown, Flame } from 'lucide-react';
-
+import { Sparkles, ChevronRight, MapPin, Star, TrendingUp, Users, Award, ArrowDown, Flame, X, Camera } from 'lucide-react';
+import { DestinationCard } from "@/components/ui/card-21";
+import ReelsSection from '@/components/ReelsSection';
 function Counter({ end, suffix = '', decimals = 0 }) {
   const [val, setVal] = useState(0);
 
@@ -34,10 +35,6 @@ function Counter({ end, suffix = '', decimals = 0 }) {
 
   return <span>{val}{suffix}</span>;
 }
-
-import { DestinationCard } from "@/components/ui/card-21";
-import ReelsSection from '@/components/ReelsSection';
-
 
 const THEME_COLORS = [
   "22 100% 50%", // Orange
@@ -72,6 +69,27 @@ function CityCard({ city, index }) {
 export default function HomePage() {
   const [cities, setCities] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [videoLoaded, setVideoLoaded] = useState(false);
+  const [activeCategory, setActiveCategory] = useState('All');
+  const [lightboxImage, setLightboxImage] = useState(null);
+
+  const DISCOVER_ITEMS = [
+    { id: 1, name: 'Kalkatta Chat Bhandar', category: 'Chaat', price: '₹120', rating: '4.8', img: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=600' },
+    { id: 2, name: 'Amritsari Kulcha', category: 'Meals', price: '₹150', rating: '4.7', img: 'https://images.unsplash.com/photo-1626777552726-4c2810a41be7?q=80&w=600' },
+    { id: 3, name: 'Mumbai Vada Pav', category: 'Snacks', price: '₹40', rating: '4.9', img: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?q=80&w=600' },
+    { id: 4, name: 'Rabri Jalebi', category: 'Sweets', price: '₹90', rating: '4.6', img: 'https://images.unsplash.com/photo-1589301760014-d929f39ce9b1?q=80&w=600' },
+    { id: 5, name: 'Delhi Chole Bhature', category: 'Meals', price: '₹180', rating: '4.9', img: 'https://images.unsplash.com/photo-1631515243349-e0cb75fb8d3a?q=80&w=600' },
+    { id: 6, name: 'Pani Puri Shots', category: 'Chaat', price: '₹50', rating: '4.7', img: 'https://images.unsplash.com/photo-1584852077977-9cb267c7423e?q=80&w=600' },
+  ];
+
+  const filteredItems = activeCategory === 'All' ? DISCOVER_ITEMS : DISCOVER_ITEMS.filter(item => item.category === activeCategory);
+
+  const GALLERY_IMAGES = [
+    { id: 1, src: 'https://images.unsplash.com/photo-1555126634-323283e090fa?q=80&w=800', alt: 'Freshly made momos' },
+    { id: 2, src: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?q=80&w=800', alt: 'Spicy Pav Bhaji' },
+    { id: 3, src: 'https://images.unsplash.com/photo-1589301760014-d929f39ce9b1?q=80&w=800', alt: 'Sweet Jalebi' },
+    { id: 4, src: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=800', alt: 'Tangy Chaat' },
+  ];
 
   useEffect(() => {
     let isMounted = true;
@@ -94,7 +112,7 @@ export default function HomePage() {
         }
         setCities(list);
       } catch (err) {
-        console.error('Error fetching cities:', err);
+        console.warn('Backend offline - falling back to empty cities array.', err);
         // On error, fallback to an empty array so loading spinner goes away
         if (isMounted) setCities([]);
       } finally {
@@ -115,15 +133,16 @@ export default function HomePage() {
     <>
       {/* ══ HERO ══ */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-transparent">
-        {/* Full-vibrancy Background Video */}
-        <div className="absolute inset-0 z-[-1]">
+        {/* Full-vibrancy Background Video with Animated Mesh Fallback */}
+        <div className="absolute inset-0 z-[-1] bg-mesh-gradient">
           <video
             key="bg-video-flower"
             autoPlay
             loop
             muted
             playsInline
-            className="w-full h-full object-cover select-none"
+            onLoadedData={() => setVideoLoaded(true)}
+            className={`w-full h-full object-cover select-none transition-opacity duration-1000 ${videoLoaded ? 'opacity-100' : 'opacity-0'}`}
             src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.webm"
           />
           {/* Subtle dark vignette overlay to anchor the card */}
@@ -215,69 +234,134 @@ export default function HomePage() {
         <div className="glow-divider" />
       </div>
 
-      {/* ══ INTERACTIVE FOOD BANNERS CAROUSEL ══ */}
+      {/* ══ INTERACTIVE DISCOVER CATEGORIES ══ */}
       <motion.section 
-        className="py-10 sm:py-20 overflow-hidden"
+        className="py-10 sm:py-20 bg-white"
         initial={{ opacity: 0, y: 40 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: false, margin: "-50px" }}
         transition={{ duration: 0.7, ease: "easeOut" }}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
-          <span className="eyebrow mb-4 inline-flex"><Sparkles size={11} /> Visual Feast</span>
-          <h2 className="text-[36px] sm:text-[46px] font-extrabold text-stone-900 tracking-[-0.03em] leading-tight mb-2">
-            Legendary Specialties
-          </h2>
-          <p className="text-stone-500 text-sm max-w-sm">
-            Explore some of the most celebrated street foods in our guides.
-          </p>
-        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10">
+            <span className="eyebrow mb-4 inline-flex"><Flame size={11} className="mr-1" /> Discover the Best</span>
+            <h2 className="text-[36px] sm:text-[46px] font-extrabold text-stone-900 tracking-[-0.03em] leading-tight mb-2">
+              <span className="gradient-text">Legendary</span> Specialties
+            </h2>
+            <p className="text-stone-500 text-sm max-w-md mx-auto mb-8">
+              Explore the most celebrated street foods across categories. Hand-picked and community-verified.
+            </p>
 
-        {/* Scrolling Carousel Track */}
-        <div className="relative">
-          {/* Subtle edge fades removed as requested */}
-
-          <div className="overflow-hidden relative w-full group py-4">
-            <div className="flex gap-4 w-max animate-marquee group-hover:pause-animate">
-              {[
-                { id: 1, title: 'Signature Dal Baati', desc: 'Served with rich warm ghee and sweet churma.' },
-                { id: 2, title: 'Old Delhi Chole Bhature', desc: 'Fluffy fried bread with rich spicy chickpeas.' },
-                { id: 3, title: 'Crispy Kachoris', desc: 'Flaky golden pastry filled with a spiced onion filling.' },
-                { id: 4, title: 'Tawa Pav Bhaji', desc: 'Spiced vegetable mash cooked on heavy griddles.' },
-                { id: 5, title: 'Tangy Golgappa Shots', desc: 'Crispy hollow puris filled with spicy mint water.' },
-                { id: 6, title: 'Traditional Rabri Ghewar', desc: 'Fragrant sweet disc soaked in saffron sugar syrup.' },
-                { id: 1, title: 'Signature Dal Baati', desc: 'Served with rich warm ghee and sweet churma.' },
-                { id: 2, title: 'Old Delhi Chole Bhature', desc: 'Fluffy fried bread with rich spicy chickpeas.' },
-                { id: 3, title: 'Crispy Kachoris', desc: 'Flaky golden pastry filled with a spiced onion filling.' },
-                { id: 4, title: 'Tawa Pav Bhaji', desc: 'Spiced vegetable mash cooked on heavy griddles.' },
-                { id: 5, title: 'Tangy Golgappa Shots', desc: 'Crispy hollow puris filled with spicy mint water.' },
-                { id: 6, title: 'Traditional Rabri Ghewar', desc: 'Fragrant sweet disc soaked in saffron sugar syrup.' }
-              ].map((b, i) => (
-                <div
-                  key={`${b.id}-${i}`}
-                  className="card bg-[#fffcf7] w-72 flex flex-col h-[280px] overflow-hidden shadow-sm flex-shrink-0 transition-transform duration-300 group/card hover:-translate-y-1"
+            {/* Filter Buttons */}
+            <div className="flex flex-wrap justify-center gap-3 mb-10">
+              {['All', 'Chaat', 'Meals', 'Snacks', 'Sweets'].map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`chip ${activeCategory === cat ? 'active' : ''}`}
                 >
-                  <div className="h-44 overflow-hidden relative shrink-0">
-                    <img
-                      src={`/banner${b.id}.jpg`}
-                      alt={b.title}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-stone-900/60 to-transparent" />
-                    <span className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm text-stone-800 text-[9px] font-bold px-2 py-0.5 rounded-full">
-                      Specialty 0{b.id}
-                    </span>
-                  </div>
-                  <div className="p-5 flex-1 flex flex-col">
-                    <h4 className="font-extrabold text-stone-900 text-[15px] mb-1.5 leading-tight">{b.title}</h4>
-                    <p className="text-stone-400 text-xs leading-relaxed mt-auto">{b.desc}</p>
-                  </div>
-                </div>
+                  {cat}
+                </button>
               ))}
             </div>
           </div>
+
+          {/* Filterable Grid */}
+          <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <AnimatePresence>
+              {filteredItems.map(item => (
+                <motion.div
+                  key={item.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.3 }}
+                  className="card group cursor-pointer"
+                >
+                  <div className="relative h-48 overflow-hidden">
+                    <img src={item.img} alt={item.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-brand-600 font-bold px-3 py-1 rounded-full text-xs shadow-sm">
+                      {item.category}
+                    </div>
+                  </div>
+                  <div className="p-5">
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="font-extrabold text-stone-900 text-lg leading-tight">{item.name}</h4>
+                      <span className="star-badge">★ {item.rating}</span>
+                    </div>
+                    <div className="flex justify-between items-center mt-4 pt-3 border-t border-stone-100">
+                      <span className="text-stone-500 font-medium text-sm">Avg. Price</span>
+                      <span className="text-brand-600 font-bold">{item.price}</span>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
         </div>
       </motion.section>
+
+      {/* ══ INTERACTIVE GALLERY WITH LIGHTBOX ══ */}
+      <section className="py-10 sm:py-20 bg-stone-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-end mb-10">
+            <div>
+              <span className="eyebrow mb-3 inline-flex"><Camera size={11} className="mr-1"/> Visual Feast</span>
+              <h2 className="text-[32px] sm:text-[40px] font-extrabold text-stone-900 tracking-[-0.03em] leading-tight">
+                From the <span className="gradient-text">Streets</span>
+              </h2>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {GALLERY_IMAGES.map((img) => (
+              <div 
+                key={img.id} 
+                className="relative h-64 rounded-2xl overflow-hidden cursor-pointer group"
+                onClick={() => setLightboxImage(img)}
+              >
+                <img src={img.src} alt={img.alt} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                <div className="absolute inset-0 bg-brand-600/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <span className="text-white font-bold text-lg tracking-wide">{img.alt}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Lightbox Modal */}
+      <AnimatePresence>
+        {lightboxImage && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/95 p-4"
+            onClick={() => setLightboxImage(null)}
+          >
+            <motion.div 
+              initial={{ scale: 0.9 }} 
+              animate={{ scale: 1 }} 
+              exit={{ scale: 0.9 }}
+              className="relative max-w-5xl w-full max-h-[90vh]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button 
+                className="absolute -top-12 right-0 text-white hover:text-brand-400 transition-colors"
+                onClick={() => setLightboxImage(null)}
+              >
+                <X size={32} />
+              </button>
+              <img src={lightboxImage.src} alt={lightboxImage.alt} className="w-full h-full object-contain rounded-xl shadow-2xl" />
+              <div className="text-center mt-4 text-white font-medium text-lg">
+                {lightboxImage.alt}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <ReelsSection />
 

@@ -36,7 +36,7 @@ export default function Navbar() {
         const data = await res.json();
         setCities(data.cities || []);
       } catch (err) {
-        console.error("Failed to fetch cities", err);
+        console.warn("Backend offline - could not fetch cities for navbar");
       }
     };
     fetchCities();
@@ -141,16 +141,8 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-[64px]">
 
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 group outline-none z-10">
-            <div className="relative w-8 h-8 flex-shrink-0">
-              <div className="absolute inset-0 bg-brand-500 rounded-xl blur-md opacity-30 group-hover:opacity-50 transition-opacity" />
-              <div className="relative w-8 h-8 bg-gradient-to-br from-brand-400 to-brand-600 rounded-xl flex items-center justify-center shadow-md">
-                <UtensilsCrossed size={15} className="text-white" strokeWidth={2.5} />
-              </div>
-            </div>
-            <span className={`text-[17px] font-extrabold tracking-tight leading-none ${isDarkText || showSearch ? 'text-stone-900' : 'text-white'}`}>
-              Hungry<span className="gradient-text">Bird</span>
-            </span>
+          <Link href="/" className="flex items-center outline-none z-10 group">
+            <img src="/logo.png" alt="HungryBird Logo" className="h-10 sm:h-12 w-auto object-contain drop-shadow-md transition-transform group-hover:scale-105" />
           </Link>
 
           {/* Search Bar Expansion */}

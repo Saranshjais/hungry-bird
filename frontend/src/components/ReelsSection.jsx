@@ -57,7 +57,7 @@ export default function ReelsSection() {
           setReels([...data.reels, ...DUMMY_REELS]);
         }
       })
-      .catch(console.error);
+      .catch(() => console.warn("Failed to fetch reels from backend, using dummy data."));
   }, []);
 
   const handleUpload = async (e) => {
