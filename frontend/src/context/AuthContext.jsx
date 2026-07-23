@@ -37,7 +37,7 @@ export function AuthProvider({ children }) {
         setUser(null);
       }
     } catch (err) {
-      console.error('Auth check failed:', err);
+      console.warn('Backend offline - auth check failed');
       localStorage.removeItem('hb_token');
       setUser(null);
     } finally {
