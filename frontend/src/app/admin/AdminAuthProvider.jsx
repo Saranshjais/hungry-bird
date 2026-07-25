@@ -42,17 +42,35 @@ export default function AdminAuthProvider({ children }) {
           <Link href="/admin" className={`admin-nav-link ${pathname === '/admin' ? 'active' : ''}`}>
             Dashboard
           </Link>
+          <Link href="/admin/inbox" className={`admin-nav-link ${pathname === '/admin/inbox' ? 'active' : ''}`}>
+            Inbox
+          </Link>
+          <Link href="/admin/users" className={`admin-nav-link ${pathname === '/admin/users' ? 'active' : ''}`}>
+            Users
+          </Link>
           <Link href="/admin/submissions" className={`admin-nav-link ${pathname === '/admin/submissions' ? 'active' : ''}`}>
             Submissions
           </Link>
           <Link href="/admin/vendors" className={`admin-nav-link ${pathname === '/admin/vendors' ? 'active' : ''}`}>
             Vendors
           </Link>
+          <Link href="/admin/categories" className={`admin-nav-link ${pathname === '/admin/categories' ? 'active' : ''}`}>
+            Categories
+          </Link>
           <Link href="/admin/cities" className={`admin-nav-link ${pathname === '/admin/cities' ? 'active' : ''}`}>
             Cities
           </Link>
           <Link href="/admin/ratings" className={`admin-nav-link ${pathname === '/admin/ratings' ? 'active' : ''}`}>
             Ratings
+          </Link>
+          <Link href="/admin/reports" className={`admin-nav-link ${pathname === '/admin/reports' ? 'active' : ''}`}>
+            Reports
+          </Link>
+          <Link href="/admin/staff" className={`admin-nav-link ${pathname === '/admin/staff' ? 'active' : ''}`}>
+            Staff Admins
+          </Link>
+          <Link href="/admin/app-settings" className={`admin-nav-link ${pathname === '/admin/app-settings' ? 'active' : ''}`}>
+            App Settings
           </Link>
           <Link href="/" className="admin-nav-link back-to-site">
             ← Back to Site
