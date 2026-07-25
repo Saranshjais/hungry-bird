@@ -70,43 +70,57 @@ export default function DownloadPage() {
 
           </motion.div>
 
-          {/* Right Image */}
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="relative lg:h-[700px] flex items-center justify-center"
-          >
+          {/* Right Image Sequence */}
+          <div className="relative lg:h-[700px] flex items-center justify-center w-full mt-12 lg:mt-0">
             {/* Background decorative elements */}
             <div className="absolute inset-0 bg-gradient-to-tr from-brand-100 to-orange-50 rounded-[3rem] -rotate-3 scale-95 opacity-50"></div>
             <div className="absolute inset-0 bg-gradient-to-bl from-brand-200 to-transparent rounded-[3rem] rotate-3 scale-95 opacity-30"></div>
             
-            <motion.div
-              animate={{ 
-                y: [-10, 10, -10],
-              }}
-              transition={{
-                duration: 6,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-              className="relative z-10 w-full max-w-sm mx-auto"
-            >
-              <Image 
-                src="/app-mockup.png" 
-                alt="HungryBird Mobile App" 
-                width={800} 
-                height={1600} 
-                className="w-full h-auto drop-shadow-2xl rounded-[2.5rem] border-8 border-white/50"
-                priority
-              />
-            </motion.div>
+            <div className="relative z-10 w-full max-w-2xl mx-auto px-4 sm:px-0">
+              <div className="relative w-full overflow-hidden flex drop-shadow-2xl rounded-3xl">
+                {/* Hidden image to dictate correct aspect ratio dynamically */}
+                <img src="/3-phones-1.png" className="w-full h-auto opacity-0 invisible" aria-hidden="true" />
+                
+                {/* 3 Grid overlay for sliced animation */}
+                <div className="absolute inset-0 grid grid-cols-3">
+                  {/* Phone 1 (Left) */}
+                  <motion.div 
+                    initial={{ y: 100, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ duration: 0.8, delay: 0.2, type: "spring", bounce: 0.3 }}
+                    className="relative overflow-hidden w-full h-full"
+                  >
+                    <img src="/3-phones-1.png" className="absolute top-0 left-0 w-[300%] max-w-[300%] h-full object-cover" alt="App Screen 1" />
+                  </motion.div>
+
+                  {/* Phone 2 (Middle) */}
+                  <motion.div 
+                    initial={{ y: 100, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ duration: 0.8, delay: 0.4, type: "spring", bounce: 0.3 }}
+                    className="relative overflow-hidden w-full h-full"
+                  >
+                    <img src="/3-phones-1.png" className="absolute top-0 left-[-100%] w-[300%] max-w-[300%] h-full object-cover" alt="App Screen 2" />
+                  </motion.div>
+
+                  {/* Phone 3 (Right) */}
+                  <motion.div 
+                    initial={{ y: 100, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ duration: 0.8, delay: 0.6, type: "spring", bounce: 0.3 }}
+                    className="relative overflow-hidden w-full h-full"
+                  >
+                    <img src="/3-phones-1.png" className="absolute top-0 left-[-200%] w-[300%] max-w-[300%] h-full object-cover" alt="App Screen 3" />
+                  </motion.div>
+                </div>
+              </div>
+            </div>
             
             {/* Floating badges */}
             <motion.div 
               animate={{ y: [-5, 5, -5] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-              className="absolute top-1/4 -left-8 bg-white p-4 rounded-2xl shadow-xl flex items-center gap-3 z-20"
+              className="absolute top-1/4 -left-4 sm:-left-8 bg-white p-4 rounded-2xl shadow-xl flex items-center gap-3 z-20"
             >
               <div className="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
                 <Download size={20} />
@@ -117,7 +131,7 @@ export default function DownloadPage() {
               </div>
             </motion.div>
             
-          </motion.div>
+          </div>
           
         </div>
       </div>

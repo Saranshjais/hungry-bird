@@ -132,63 +132,114 @@ export default function HomePage() {
   return (
     <>
       {/* ══ HERO ══ */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-transparent">
-        {/* Full-vibrancy Background Video with Animated Mesh Fallback */}
-        <div className="absolute inset-0 z-[-1] bg-mesh-gradient">
-          <video
-            key="bg-video-flower"
-            autoPlay
-            loop
-            muted
-            playsInline
-            onLoadedData={() => setVideoLoaded(true)}
-            className={`w-full h-full object-cover select-none transition-opacity duration-1000 ${videoLoaded ? 'opacity-100' : 'opacity-0'}`}
-            src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.webm"
-          />
-          {/* Subtle dark vignette overlay to anchor the card */}
-          <div className="absolute inset-0 bg-stone-950/40" />
-        </div>
+      <section className="relative w-full overflow-hidden bg-[#FDF8EE] font-jakarta pb-24 lg:min-h-screen flex items-center justify-center">
+        {/* Texture / Ambient Background */}
+        <div className="absolute inset-0 z-0 opacity-40 mix-blend-multiply pointer-events-none" style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")' }} />
+        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-brand-500/10 rounded-full blur-[120px] pointer-events-none" />
 
-        {/* Content Panel — Floating Glass panel container */}
-        <div className="relative z-10 max-w-4xl mx-auto px-6 py-12 sm:py-16 sm:px-12 text-center rounded-[2.5rem] bg-white border border-slate-100 shadow-[0_24px_64px_-16px_rgba(28,25,23,0.08)] mx-4 sm:mx-6 transition-all duration-500 animate-fadeIn">
-          {/* Slogan Eyebrow */}
-          <div className="flex justify-center mb-6">
-            <span className="eyebrow bg-brand-50/90 border-brand-200/60 shadow-sm">
-              <Sparkles size={11} className="text-brand-600" />
-              Bhaiya! HungryBird Pe Ho Kya?
-            </span>
+        {/* Decorative Dotted Path & Pins */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none z-0 opacity-30 stroke-brand-500 hidden md:block" viewBox="0 0 1440 800" fill="none">
+          <path d="M 400 600 C 600 600, 500 300, 700 300 C 900 300, 800 500, 1000 500" strokeWidth="3" strokeDasharray="12 12" />
+        </svg>
+
+        <div className="relative w-full max-w-7xl mx-auto px-4 pt-24 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center z-10">
+          
+          {/* Left Column: Text & Signposts */}
+          <div className="flex flex-col items-start pt-10">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+            >
+              <h1 className="font-kalam font-bold text-6xl md:text-8xl leading-[1.1] text-[#2C2825] mb-6">
+                Discover. <br/>
+                <span className="text-brand-500">Explore.</span> <br/>
+                Eat Local.
+              </h1>
+              
+              <p className="text-xl md:text-2xl text-stone-700 font-medium mb-2">
+                Find hidden street food gems around you.
+              </p>
+              <p className="text-xl md:text-2xl text-stone-700 font-medium mb-12">
+                <span className="text-brand-500 font-bold">Real</span> food. <span className="text-brand-500 font-bold">Real</span> people. <span className="text-brand-500 font-bold">Real</span> stories.
+              </p>
+            </motion.div>
+
+            {/* Signpost Badges */}
+            <motion.div 
+              initial={{ opacity: 0, x: -50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="flex flex-col gap-4 relative"
+            >
+              <div className="absolute left-6 top-0 bottom-[-40px] w-4 bg-[#C1A27A] rounded border-x border-[#8A6A4B]" />
+              <div className="flex items-center gap-2 relative z-10 translate-x-4">
+                <div className="bg-[#EAE0D0] border-2 border-[#8A6A4B] text-[#5C452C] font-bold px-6 py-2 rounded-sm shadow-md flex items-center justify-between min-w-[200px]">
+                  LOCAL FLAVORS <ChevronRight size={16} />
+                </div>
+              </div>
+              <div className="flex items-center gap-2 relative z-10 -translate-x-2">
+                <div className="bg-[#EAE0D0] border-2 border-[#8A6A4B] text-[#5C452C] font-bold px-6 py-2 rounded-sm shadow-md flex items-center justify-between min-w-[200px]">
+                  <ChevronRight size={16} className="rotate-180" /> HIDDEN GEMS
+                </div>
+              </div>
+              <div className="flex items-center gap-2 relative z-10 translate-x-8">
+                <div className="bg-[#EAE0D0] border-2 border-[#8A6A4B] text-[#5C452C] font-bold px-6 py-2 rounded-sm shadow-md flex items-center justify-between min-w-[200px]">
+                  GOOD VIBES <ChevronRight size={16} />
+                </div>
+              </div>
+            </motion.div>
           </div>
 
-          {/* Headline */}
-          <div className="mb-6">
-            <h1 className="text-[44px] sm:text-[56px] md:text-[68px] lg:text-[80px] font-extrabold text-stone-900 leading-[0.95] tracking-[-0.04em]">
-              The Streets
-              <br />
-              <span className="gradient-text">Feed the Soul</span>
-            </h1>
-          </div>
+          {/* Right Column: Collage */}
+          <div className="relative h-[550px] w-full mt-12 lg:mt-0">
+            
+            {/* Phone Mockup */}
+            <motion.div 
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1, delay: 0.2 }}
+              className="absolute top-0 right-10 md:right-32 w-64 md:w-72 h-[500px] bg-white rounded-[3rem] p-3 shadow-2xl border-[12px] border-stone-800 z-20 overflow-hidden transform rotate-6"
+            >
+              {/* Phone Screen content - Map image */}
+              <div className="w-full h-full rounded-[2rem] overflow-hidden relative">
+                <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=400&auto=format&fit=crop" className="w-full h-full object-cover" alt="Map" />
+                {/* Overlay map pins */}
+                <MapPin className="absolute top-1/4 left-1/4 text-brand-500 fill-brand-500 drop-shadow-md" size={32} />
+                <MapPin className="absolute top-1/2 left-2/3 text-brand-500 fill-brand-500 drop-shadow-md" size={32} />
+                <MapPin className="absolute bottom-1/3 left-1/3 text-brand-500 fill-brand-500 drop-shadow-md" size={32} />
+              </div>
+            </motion.div>
 
-          {/* Subtext */}
-          <p className="text-stone-500 text-[14px] sm:text-[16px] max-w-lg mx-auto mb-10 font-normal leading-[1.65] tracking-[0.01em]">
-            Discover hidden gems, legendary street food, and local favourites
-            — hand-picked by India's street food community.
-          </p>
+            {/* Food Platter 1: Panipuri */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.6 }}
+              className="absolute bottom-10 left-0 md:-left-10 w-64 h-64 rounded-full border-[6px] border-[#FDF8EE] overflow-hidden shadow-2xl z-30"
+            >
+              <img src="https://images.unsplash.com/photo-1626777552726-4c2810a41be7?q=80&w=600&auto=format&fit=crop" className="w-full h-full object-cover" alt="Pani Puri" />
+            </motion.div>
 
-          {/* CTAs */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-            <Link href="#cities" className="btn-orange gap-2 px-8 text-[0.875rem]" style={{ minHeight: 50 }}>
-              <Flame size={16} /> Explore Cities
-            </Link>
-            <Link href="/submit-vendor" className="btn-ghost gap-2 px-8 text-[0.875rem] border-stone-300" style={{ minHeight: 50 }}>
-              Add a Hidden Stall <ChevronRight size={14} />
-            </Link>
-          </div>
-        </div>
+            {/* Food Platter 2: Samosa */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.8 }}
+              className="absolute bottom-0 right-0 w-56 h-56 rounded-full border-[6px] border-[#FDF8EE] overflow-hidden shadow-2xl z-40 transform rotate-12"
+            >
+              <img src="https://images.unsplash.com/photo-1601050690597-df0568f70950?q=80&w=600&auto=format&fit=crop" className="w-full h-full object-cover" alt="Samosa" />
+            </motion.div>
 
-        {/* Scroll hint indicator */}
-        <div className="absolute bottom-8 left-0 right-0 z-10 flex justify-center pointer-events-none">
-          <div className="w-9 h-9 rounded-full bg-white/80 backdrop-blur-sm border border-stone-200/50 flex items-center justify-center shadow-sm animate-bounce">
-            <ArrowDown size={15} className="text-stone-500" />
+            {/* Large Map Pin graphic */}
+            <motion.div
+              animate={{ y: [0, -10, 0] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute top-10 left-20 z-10"
+            >
+               <MapPin className="text-brand-500 fill-brand-500 drop-shadow-xl" size={100} />
+            </motion.div>
+            
           </div>
         </div>
       </section>
@@ -302,66 +353,7 @@ export default function HomePage() {
         </div>
       </motion.section>
 
-      {/* ══ INTERACTIVE GALLERY WITH LIGHTBOX ══ */}
-      <section className="py-10 sm:py-20 bg-stone-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-end mb-10">
-            <div>
-              <span className="eyebrow mb-3 inline-flex"><Camera size={11} className="mr-1"/> Visual Feast</span>
-              <h2 className="text-[32px] sm:text-[40px] font-extrabold text-stone-900 tracking-[-0.03em] leading-tight">
-                From the <span className="gradient-text">Streets</span>
-              </h2>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {GALLERY_IMAGES.map((img) => (
-              <div 
-                key={img.id} 
-                className="relative h-64 rounded-2xl overflow-hidden cursor-pointer group"
-                onClick={() => setLightboxImage(img)}
-              >
-                <img src={img.src} alt={img.alt} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                <div className="absolute inset-0 bg-brand-600/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <span className="text-white font-bold text-lg tracking-wide">{img.alt}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* Lightbox Modal */}
-      <AnimatePresence>
-        {lightboxImage && (
-          <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/95 p-4"
-            onClick={() => setLightboxImage(null)}
-          >
-            <motion.div 
-              initial={{ scale: 0.9 }} 
-              animate={{ scale: 1 }} 
-              exit={{ scale: 0.9 }}
-              className="relative max-w-5xl w-full max-h-[90vh]"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button 
-                className="absolute -top-12 right-0 text-white hover:text-brand-400 transition-colors"
-                onClick={() => setLightboxImage(null)}
-              >
-                <X size={32} />
-              </button>
-              <img src={lightboxImage.src} alt={lightboxImage.alt} className="w-full h-full object-contain rounded-xl shadow-2xl" />
-              <div className="text-center mt-4 text-white font-medium text-lg">
-                {lightboxImage.alt}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <ReelsSection />
 
