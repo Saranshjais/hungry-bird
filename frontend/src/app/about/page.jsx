@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import { UtensilsCrossed, Star, MapPin, Heart, ArrowRight, Sun, MessageSquareQuote, Smile, ThumbsUp } from 'lucide-react';
 import Link from 'next/link';
-
+import { FinancialHero } from '@/components/ui/hero-section';
 const TEAM = [
   {
     name: "Saransh Jaiswal",
@@ -70,13 +70,13 @@ export default function AboutPage() {
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-stone-50 overflow-hidden pt-16">
+    <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-orange-100 via-orange-50 to-amber-200 overflow-hidden pt-16 relative">
+      {/* Colorful Mesh Gradient Glows */}
+      <div className="absolute top-[-10%] left-[-10%] w-[800px] h-[800px] bg-brand-400/40 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[800px] h-[800px] bg-amber-400/50 rounded-full blur-[120px] pointer-events-none" />
       
       {/* ── 1. Dynamic Collage Hero (Hello Sunbeam Inspired) ── */}
       <section className="relative min-h-[85vh] flex flex-col items-center pt-20 pb-16 px-4">
-        {/* Ambient background blur */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-brand-500/10 rounded-full blur-[120px] pointer-events-none" />
-        
         <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
           
           <motion.div style={{ y: y1, opacity }} className="max-w-xl">
@@ -112,7 +112,7 @@ export default function AboutPage() {
               transition={{ duration: 0.8, delay: 0.3 }}
               className="absolute top-20 right-0 w-[22rem] h-64 rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white z-10"
             >
-              <img src="https://images.unsplash.com/photo-1626777552726-4c2810a41be7?q=80&w=600&auto=format&fit=crop" className="w-full h-full object-cover" alt="Chaat" />
+              <img src="https://images.unsplash.com/photo-1601050690597-df0568f70950?q=80&w=600&auto=format&fit=crop" className="w-full h-full object-cover" alt="Chaat" />
             </motion.div>
 
             <motion.div 
@@ -212,7 +212,7 @@ export default function AboutPage() {
               <img 
                 data-pic-name="carts" 
                 className={activePic === 'carts' ? 'active' : ''}
-                src="https://images.unsplash.com/photo-1626777552726-4c2810a41be7?q=80&w=1000&auto=format&fit=crop" 
+                src="https://images.unsplash.com/photo-1601050690597-df0568f70950?q=80&w=1000&auto=format&fit=crop" 
                 alt="Late-night Carts" 
               />
               {/* Image 3: Alleys */}
@@ -261,19 +261,19 @@ export default function AboutPage() {
       </section>
 
       {/* ── Call to Action ── */}
-      <section className="py-24 px-4 bg-brand-500 text-center">
-        <div className="max-w-3xl mx-auto flex flex-col items-center">
-          <MapPin size={48} className="text-stone-950 mb-6" />
-          <h2 className="text-4xl md:text-5xl font-black text-stone-950 mb-6 leading-tight">
-            Ready to start exploring?
-          </h2>
-          <div className="flex flex-col sm:flex-row gap-4 mt-8">
-            <Link href="/" className="bg-stone-950 hover:bg-stone-900 text-white px-8 py-4 rounded-full font-extrabold text-lg transition-all hover:-translate-y-1 shadow-xl shadow-stone-900/20">
-              Explore Cities
-            </Link>
-          </div>
-        </div>
-      </section>
+      <FinancialHero
+        title={
+          <>
+            Ready to Transform Your <br />
+            <span className="text-brand-500">Street Food Experience?</span>
+          </>
+        }
+        description="Experience the future of discovery with our cutting-edge app. Start optimizing your culinary adventures today!"
+        buttonText="Download app"
+        buttonLink="/download"
+        imageUrl1="https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=900&auto=format&fit=crop"
+        imageUrl2="https://images.unsplash.com/photo-1601050690597-df0568f70950?q=80&w=900&auto=format&fit=crop"
+      />
       
     </div>
   );

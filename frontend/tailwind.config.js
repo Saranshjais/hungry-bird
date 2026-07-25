@@ -31,6 +31,7 @@ export default {
       },
       fontFamily: {
         jakarta: ['var(--font-jakarta)', 'system-ui', 'sans-serif'],
+        kalam: ['var(--font-kalam)', 'cursive'],
       }
     },
   },

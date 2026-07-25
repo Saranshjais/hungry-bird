@@ -63,7 +63,7 @@ export default function Navbar() {
 
   useMotionValueEvent(scrollY, 'change', v => setScrolled(v > 40));
 
-  const isDarkHeaderPage = pathname === '/' || pathname?.startsWith('/city/');
+  const isDarkHeaderPage = pathname?.startsWith('/city/');
   const isDarkText = scrolled || !isDarkHeaderPage;
 
   if (pathname && pathname.startsWith('/admin')) {
@@ -131,55 +131,24 @@ export default function Navbar() {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled || showSearch
-          ? 'bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-sm'
-          : 'bg-transparent'
-      }`}
+      className="fixed top-0 sm:top-4 left-0 right-0 z-50 transition-all duration-300 flex justify-center px-4"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-[64px]">
+      <div className={`w-full max-w-5xl px-4 sm:px-6 lg:px-8 transition-all duration-300 ${
+        scrolled || showSearch
+          ? 'bg-white/95 backdrop-blur-md border border-stone-200/80 shadow-md rounded-[2rem]'
+          : 'bg-transparent'
+      }`}>
+        <div className="flex items-center justify-between h-[76px]">
 
-          {/* Logo */}
-          <Link href="/" className="flex items-center outline-none z-10 group">
-            <img src="/logo.png" alt="HungryBird Logo" className="h-10 sm:h-12 w-auto object-contain drop-shadow-md transition-transform group-hover:scale-105" />
-          </Link>
+          {/* Left Side: Logo & Main Nav */}
+          <div className="flex items-center gap-6 lg:gap-10">
+            {/* Logo */}
+            <Link href="/" className="flex items-center outline-none z-10 group">
+              <img src="/logo.png" alt="HungryBird Logo" className="h-12 sm:h-16 w-auto object-contain drop-shadow-md transition-transform group-hover:scale-105" />
+            </Link>
 
-          {/* Search Bar Expansion */}
-          {showSearch && (
-            <div className="absolute inset-0 flex items-center justify-center px-4 bg-white/95 backdrop-blur-md z-0">
-              <form onSubmit={handleSearch} className="w-full max-w-2xl relative flex items-center">
-                <Search size={20} className="absolute left-4 text-stone-400" />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search for Chole Bhature, Momos, or your favorite stall..."
-                  className="w-full bg-stone-100 text-stone-900 border-none rounded-full py-2.5 pl-12 pr-12 focus:ring-2 focus:ring-brand-500 outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowSearch(false)}
-                  className="absolute right-4 p-1 rounded-full text-stone-400 hover:text-stone-600 hover:bg-stone-200"
-                >
-                  <X size={20} />
-                </button>
-              </form>
-            </div>
-          )}
-
-          {/* Desktop Navigation */}
-          {!showSearch && (
-            <div className="hidden md:flex items-center gap-6">
-              <button 
-                onClick={() => setShowSearch(true)}
-                className={`p-2 rounded-full transition-colors ${isDarkText ? 'text-stone-600 hover:bg-stone-100' : 'text-white/80 hover:bg-white/10 hover:text-white'}`}
-                aria-label="Search"
-              >
-                <Search size={18} />
-              </button>
-
+            {/* Desktop Navigation Links */}
+            <div className="hidden md:flex items-center gap-6 z-10">
               {/* Home Link */}
               <Link href="/" className={`text-[13px] font-bold transition-colors ${isDarkText ? 'text-stone-600 hover:text-brand-500' : 'text-white/80 hover:text-white'}`}>
                 Home
@@ -237,7 +206,11 @@ export default function Navbar() {
               <Link href="/download" className={`text-[13px] font-bold transition-colors ${isDarkText ? 'text-brand-500 hover:text-brand-600' : 'text-brand-300 hover:text-brand-200'} flex items-center gap-1`}>
                 <Smartphone size={14} /> Get App
               </Link>
+            </div>
+          </div>
 
+          {/* Right Side: Auth & Actions */}
+          <div className="hidden md:flex items-center gap-4 z-10">
               {/* User Profile / Login */}
               {user ? (
                 <div className="relative">
@@ -290,7 +263,6 @@ export default function Navbar() {
                 Add Stall
               </Link>
             </div>
-          )}
 
           {/* Mobile toggle */}
           <button

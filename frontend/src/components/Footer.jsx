@@ -12,7 +12,7 @@ export default function Footer() {
   }
 
   return (
-    <footer className="bg-stone-950 text-stone-300 pt-20 pb-10 relative overflow-hidden border-t border-stone-800">
+    <footer className="bg-stone-950 text-stone-300 pt-12 md:pt-16 pb-10 relative overflow-hidden border-t border-stone-800">
       {/* Background ambient glow */}
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand-500/5 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-amber-500/5 rounded-full blur-[120px] pointer-events-none" />
@@ -23,8 +23,8 @@ export default function Footer() {
           
           {/* Brand & Slogan (4 cols) */}
           <div className="lg:col-span-4 pr-4">
-            <Link href="/" className="inline-block mb-4 hover:scale-105 transition-transform">
-              <img src="/logo.png" alt="HungryBird Logo" className="h-20 w-auto object-contain drop-shadow-lg" />
+            <Link href="/" className="inline-block mb-2 hover:scale-105 transition-transform">
+              <img src="/logo.png" alt="HungryBird Logo" className="h-36 md:h-48 w-auto object-contain drop-shadow-lg -mt-12 md:-mt-20 -mb-10 md:-mb-16" />
             </Link>
             <p className="text-stone-400 text-sm leading-[1.7] mb-6 max-w-sm">
               Connecting street food lovers with India's best hidden culinary gems. Hand-picked, verified, and community-driven.
