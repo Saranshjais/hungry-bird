@@ -157,6 +157,62 @@ export default function AdminDashboard() {
 
         </div>
       )}
+
+      {!loading && (
+        <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 admin-card">
+            <h3 className="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2">
+              <TrendingUp size={18} className="text-brand-500" /> Recent Platform Activity
+            </h3>
+            <div className="flex flex-col gap-4">
+              {[
+                { time: "10 mins ago", action: "New user registered", detail: "Priya Desai joined the platform", icon: <Users size={16}/>, color: "text-blue-600 bg-blue-50" },
+                { time: "1 hour ago", action: "New vendor submission", detail: "Raju Fast Food submitted a request", icon: <Store size={16}/>, color: "text-amber-600 bg-amber-50" },
+                { time: "3 hours ago", action: "Report filed", detail: "A review was flagged for inappropriate language", icon: <TrendingUp size={16}/>, color: "text-rose-600 bg-rose-50" },
+                { time: "5 hours ago", action: "New video reel", detail: "A 15s reel was uploaded in Mumbai", icon: <Play size={16}/>, color: "text-purple-600 bg-purple-50" },
+              ].map((act, i) => (
+                <div key={i} className="flex items-start gap-4 p-3 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-colors">
+                  <div className={`p-2 rounded-full ${act.color}`}>
+                    {act.icon}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-slate-800 text-sm m-0">{act.action}</h4>
+                    <p className="text-xs text-slate-500 mt-0.5">{act.detail}</p>
+                  </div>
+                  <span className="text-xs font-medium text-slate-400 whitespace-nowrap">{act.time}</span>
+                </div>
+              ))}
+            </div>
+            <button className="w-full mt-4 py-2 text-sm font-semibold text-brand-600 hover:text-brand-700 bg-brand-50 hover:bg-brand-100 rounded-lg transition-colors">
+              View All Activity
+            </button>
+          </div>
+
+          <div className="admin-card">
+            <h3 className="font-bold text-lg text-slate-800 mb-4">Quick Actions</h3>
+            <div className="flex flex-col gap-2">
+              <Link href="/admin/inbox" className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-brand-500 hover:bg-brand-50 transition-colors group">
+                <div className="w-8 h-8 rounded-full bg-slate-100 group-hover:bg-brand-100 flex items-center justify-center text-slate-500 group-hover:text-brand-600">
+                  <Users size={14} />
+                </div>
+                <span className="font-semibold text-sm text-slate-700 group-hover:text-brand-700">Check Support Inbox</span>
+              </Link>
+              <Link href="/admin/reports" className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-rose-500 hover:bg-rose-50 transition-colors group">
+                <div className="w-8 h-8 rounded-full bg-slate-100 group-hover:bg-rose-100 flex items-center justify-center text-slate-500 group-hover:text-rose-600">
+                  <TrendingUp size={14} />
+                </div>
+                <span className="font-semibold text-sm text-slate-700 group-hover:text-rose-700">Review Flagged Content</span>
+              </Link>
+              <Link href="/admin/categories" className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-amber-500 hover:bg-amber-50 transition-colors group">
+                <div className="w-8 h-8 rounded-full bg-slate-100 group-hover:bg-amber-100 flex items-center justify-center text-slate-500 group-hover:text-amber-600">
+                  <Store size={14} />
+                </div>
+                <span className="font-semibold text-sm text-slate-700 group-hover:text-amber-700">Manage Cuisines</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
