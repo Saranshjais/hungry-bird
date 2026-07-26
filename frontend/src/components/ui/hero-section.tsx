@@ -9,8 +9,6 @@ interface FinancialHeroProps {
   description: string;
   buttonText: string;
   buttonLink: string;
-  imageUrl1: string;
-  imageUrl2: string;
   className?: string;
 }
 
@@ -58,8 +56,6 @@ export const FinancialHero = ({
   description,
   buttonText,
   buttonLink,
-  imageUrl1,
-  imageUrl2,
   className,
 }: FinancialHeroProps) => {
   const gridBackgroundStyle = {
