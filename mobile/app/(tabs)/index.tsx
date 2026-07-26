@@ -10,6 +10,7 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://hungry-bird-jye4.onr
 export default function HomeScreen() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [longLoading, setLongLoading] = useState(false);
   const [locationName, setLocationName] = useState('Locating...');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -40,10 +41,19 @@ export default function HomeScreen() {
 
   useEffect(() => {
     fetchLocation();
+    
+    // Timer to detect long loads (Render cold start)
+    const timer = setTimeout(() => {
+      setLongLoading(true);
+    }, 5000);
+
     axios.get(`${API_URL}/api/home`)
       .then(res => setData(res.data))
       .catch(err => console.error("Home feed error:", err.message))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        clearTimeout(timer);
+        setLoading(false);
+      });
   }, []);
 
   const handleSearch = (text: string) => {
@@ -73,6 +83,11 @@ export default function HomeScreen() {
     return (
       <View className="flex-1 bg-[#F7F7F9] items-center justify-center">
         <ActivityIndicator size="large" color="#FF5A5F" />
+        {longLoading && (
+          <Text className="mt-4 font-manrope-medium text-gray-500 text-center px-8">
+            Waking up the server...{'\n'}This can take up to 50 seconds on the first load.
+          </Text>
+        )}
       </View>
     );
   }
