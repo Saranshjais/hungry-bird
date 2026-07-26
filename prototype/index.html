@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HungryBird - Premium Discovery</title>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Rounded" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #FF5A5F; /* Vibrant Coral Red */
+            --primary-hover: #FC642D;
+            --bg-color: #F7F7F9;
+            --surface: #FFFFFF;
+            --text-dark: #222222;
+            --text-gray: #717171;
+            --border-color: #EBEBEB;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+            --shadow-md: 0 6px 16px rgba(0,0,0,0.12);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Manrope', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* ------------------ NAVIGATION (DESKTOP & MOBILE) ------------------ */
+        .top-nav {
+            background: var(--surface);
+            padding: 16px 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--primary);
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .search-bar-container {
+            flex: 1;
+            max-width: 650px;
+            margin: 0 24px;
+        }
+
+        .search-bar {
+            display: flex;
+            align-items: center;
+            background: var(--surface);
+            border: 1px solid #E5E7EB;
+            border-radius: 40px;
+            padding: 8px 10px 8px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+            transition: all 0.2s ease;
+        }
+
+        .search-bar:hover, .search-bar:focus-within {
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+            border-color: #D1D5DB;
+        }
+
+        .search-bar input {
+            border: none;
+            outline: none;
+            padding: 4px 16px;
+            width: 100%;
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-dark);
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        
+        .search-bar input::placeholder {
+            color: #9CA3AF;
+        }
+
+        .search-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            min-width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background 0.2s, transform 0.2s;
+        }
+        
+        .search-btn:hover { 
+            background: var(--primary-hover); 
+            transform: scale(1.05);
+        }
+
+        .user-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .desktop-add-btn {
+            background: var(--surface);
+            border: 1px solid var(--border-color);
+            padding: 10px 20px;
+            border-radius: 24px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .desktop-add-btn:hover { background: #F7F7F9; }
+
+        .profile-menu {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid var(--border-color);
+            padding: 6px 6px 6px 12px;
+            border-radius: 24px;
+            cursor: pointer;
+            transition: box-shadow 0.2s;
+        }
+        .profile-menu:hover { box-shadow: var(--shadow-sm); }
+        .profile-menu img { width: 32px; height: 32px; border-radius: 50%; }
+
+        /* Mobile Bottom Nav (Hidden on desktop) */
+        .mobile-bottom-nav {
+            display: none;
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid var(--border-color);
+            padding: 12px 24px 24px;
+            z-index: 100;
+        }
+        
+        .mobile-nav-items {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .mobile-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-gray);
+            text-decoration: none;
+        }
+        .mobile-nav-item.active { color: var(--primary); }
+        .mobile-nav-item span.label { font-size: 11px; font-weight: 600; }
+        
+        /* ------------------ BANNERS ------------------ */
+        .banner-scroll {
+            display: flex;
+            gap: 16px;
+            overflow-x: auto;
+            padding: 24px 5% 8px;
+            scrollbar-width: none;
+        }
+        .banner-scroll::-webkit-scrollbar { display: none; }
+        
+        .banner {
+            min-width: 300px;
+            height: 140px;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 24px;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .banner:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        .banner-bg {
+            position: absolute; inset: 0; z-index: 0;
+            background-size: cover; background-position: center;
+        }
+        .banner-bg::after {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(90deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.1) 100%);
+        }
+        .banner-content { position: relative; z-index: 1; }
+        .banner-title { font-size: 20px; font-weight: 800; margin-bottom: 4px; letter-spacing: -0.5px; }
+        .banner-subtitle { font-size: 13px; font-weight: 600; opacity: 0.9; }
+
+        /* ------------------ CATEGORY FILTERS ------------------ */
+        .category-scroll {
+            background: var(--surface);
+            padding: 16px 5%;
+            display: flex;
+            gap: 32px;
+            overflow-x: auto;
+            border-bottom: 1px solid var(--border-color);
+            scrollbar-width: none;
+            position: sticky;
+            top: 73px;
+            z-index: 90;
+        }
+        .category-scroll::-webkit-scrollbar { display: none; }
+
+        .cat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-gray);
+            cursor: pointer;
+            min-width: max-content;
+            opacity: 0.7;
+            transition: all 0.2s;
+            padding-bottom: 8px;
+            border-bottom: 2px solid transparent;
+        }
+        .cat-item:hover { opacity: 1; color: var(--text-dark); }
+        .cat-item.active {
+            opacity: 1;
+            color: var(--text-dark);
+            border-bottom-color: var(--text-dark);
+        }
+        .cat-item .material-symbols-rounded { font-size: 28px; }
+        .cat-item span { font-size: 14px; font-weight: 600; }
+
+        /* ------------------ MAIN CONTENT & GRID ------------------ */
+        .main-content {
+            padding: 32px 5%;
+            flex: 1;
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 24px;
+            color: var(--text-dark);
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+        }
+
+        /* ------------------ VENDOR CARD ------------------ */
+        .card {
+            background: var(--surface);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+            border: 1px solid rgba(0,0,0,0.02);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .card-image-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4/3;
+            overflow: hidden;
+        }
+
+        .card-image-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover .card-image-wrapper img {
+            transform: scale(1.05);
+        }
+
+        .badge-fav {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-dark);
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .badge-fav:hover { transform: scale(1.1); }
+        .badge-fav.active { color: var(--primary); }
+        
+        .badge-time {
+            position: absolute;
+            bottom: 16px;
+            left: 16px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 700;
+            backdrop-filter: blur(4px);
+        }
+
+        .card-body {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 4px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-dark);
+            line-height: 1.2;
+        }
+
+        .card-rating {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 700;
+            font-size: 15px;
+        }
+        .card-rating .material-symbols-rounded {
+            font-size: 16px;
+            color: var(--text-dark);
+            font-variation-settings: 'FILL' 1;
+        }
+
+        .card-desc {
+            color: var(--text-gray);
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .card-footer {
+            margin-top: auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .loc-text {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-gray);
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .go-btn {
+            background: var(--bg-color);
+            color: var(--text-dark);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .card:hover .go-btn {
+            background: var(--text-dark);
+            color: white;
+        }
+
+        /* ------------------ RESPONSIVE BREAKPOINTS ------------------ */
+        @media (max-width: 768px) {
+            .top-nav {
+                padding: 12px 16px;
+            }
+            .search-bar-container { margin: 0; flex: 1; }
+            .desktop-add-btn, .profile-menu { display: none; } /* Hide desktop actions */
+            
+            .brand { display: none; } /* Show search full width */
+            
+            .category-scroll {
+                top: 65px; /* Adjust for smaller header */
+                padding: 12px 16px;
+                gap: 24px;
+            }
+
+            .main-content {
+                padding: 24px 16px 100px; /* Extra bottom padding for mobile nav */
+            }
+
+            .grid-container {
+                grid-template-columns: 1fr; /* 1 column on mobile */
+                gap: 20px;
+            }
+
+            .mobile-bottom-nav {
+                display: block; /* Show bottom nav on mobile */
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOP NAVIGATION -->
+    <nav class="top-nav">
+        <div class="brand">
+            <span class="material-symbols-rounded" style="font-size: 28px;">location_on</span>
+            HungryBird
+        </div>
+        
+        <div class="search-bar-container">
+            <div class="search-bar">
+                <div class="location-selector" style="display:flex; align-items:center; gap:4px; padding-right:12px; border-right:1px solid var(--border-color); margin-right:12px; cursor:pointer;">
+                    <span class="material-symbols-rounded" style="color: var(--primary); font-size:20px; font-variation-settings: 'FILL' 1;">near_me</span>
+                    <span style="font-size:14px; font-weight:700; color:var(--text-dark); white-space:nowrap;">Connaught Place</span>
+                    <span class="material-symbols-rounded" style="font-size:18px; color:var(--text-gray);">arrow_drop_down</span>
+                </div>
+                <input type="text" placeholder="Search for Chaat, Vada Pav...">
+                <button class="search-btn">
+                    <span class="material-symbols-rounded" style="font-size: 18px;">search</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="user-actions">
+            <button class="desktop-add-btn">
+                <span class="material-symbols-rounded">add_circle</span>
+                Submit a Gem
+            </button>
+            <div class="profile-menu">
+                <span class="material-symbols-rounded">menu</span>
+                <img src="https://wsrv.nl/?url=images.unsplash.com/photo-1534528741775-53994a69daeb&w=100&h=100&fit=crop" alt="Profile">
+            </div>
+        </div>
+    </nav>
+
+    <!-- PROMO BANNERS -->
+    <div class="banner-scroll">
+        <div class="banner">
+            <div class="banner-bg" style="background-image: url('https://wsrv.nl/?url=images.unsplash.com/photo-1601050690597-df0568f70950&w=600&fit=cover');"></div>
+            <div class="banner-content">
+                <h3 class="banner-title">Spicy Weekends</h3>
+                <p class="banner-subtitle">Explore the best Chaat near you</p>
+            </div>
+        </div>
+        <div class="banner">
+            <div class="banner-bg" style="background-image: url('https://wsrv.nl/?url=images.unsplash.com/photo-1555126634-323283e090fa&w=600&fit=cover');"></div>
+            <div class="banner-content">
+                <h3 class="banner-title">Top Rated Vendors</h3>
+                <p class="banner-subtitle">Discover community favorites</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CATEGORY FILTERS -->
+    <div class="category-scroll">
+        <div class="cat-item active">
+            <span class="material-symbols-rounded">local_fire_department</span>
+            <span>Trending</span>
+        </div>
+        <div class="cat-item">
+            <span class="material-symbols-rounded">fastfood</span>
+            <span>Street Snacks</span>
+        </div>
+        <div class="cat-item">
+            <span class="material-symbols-rounded">local_cafe</span>
+            <span>Beverages</span>
+        </div>
+        <div class="cat-item">
+            <span class="material-symbols-rounded">bakery_dining</span>
+            <span>Desserts</span>
+        </div>
+        <div class="cat-item">
+            <span class="material-symbols-rounded">kebab_dining</span>
+            <span>Kebabs</span>
+        </div>
+        <div class="cat-item">
+            <span class="material-symbols-rounded">icecream</span>
+            <span>Cold Treats</span>
+        </div>
+    </div>
+
+    <!-- MAIN GRID CONTENT -->
+    <main class="main-content">
+        <h2 class="section-title">Hidden Gems in Delhi</h2>
+        
+        <div class="grid-container">
+            <!-- Card 1 -->
+            <div class="card">
+                <div class="card-image-wrapper">
+                    <img src="https://wsrv.nl/?url=images.unsplash.com/photo-1567188040759-fb8a883dc6d8&w=800&fit=cover" alt="Vada Pav">
+                    <button class="badge-fav"><span class="material-symbols-rounded">favorite_border</span></button>
+                    <div class="badge-time">500m</div>
+                </div>
+                <div class="card-body">
+                    <div class="card-header">
+                        <h3 class="card-title">Raju's Vada Pav</h3>
+                        <div class="card-rating">
+                            <span class="material-symbols-rounded">star</span> 4.9
+                        </div>
+                    </div>
+                    <p class="card-desc">Authentic Mumbai Style Vada Pav</p>
+                    <div class="card-footer">
+                        <div class="loc-text">
+                            <span class="material-symbols-rounded" style="font-size: 16px; color: var(--primary);">location_on</span>
+                            Opposite Metro Gate 3
+                        </div>
+                        <button class="go-btn">Navigate <span class="material-symbols-rounded" style="font-size: 16px;">arrow_forward</span></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="card">
+                <div class="card-image-wrapper">
+                    <img src="https://wsrv.nl/?url=images.unsplash.com/photo-1601050690597-df0568f70950&w=800&fit=cover" alt="Panipuri">
+                    <button class="badge-fav"><span class="material-symbols-rounded">favorite_border</span></button>
+                    <div class="badge-time">1.2km</div>
+                </div>
+                <div class="card-body">
+                    <div class="card-header">
+                        <h3 class="card-title">Gupta Ji Golgappe</h3>
+                        <div class="card-rating">
+                            <span class="material-symbols-rounded">star</span> 4.5
+                        </div>
+                    </div>
+                    <p class="card-desc">Spicy Panipuri & Bhalla Papdi</p>
+                    <div class="card-footer">
+                        <div class="loc-text">
+                            <span class="material-symbols-rounded" style="font-size: 16px; color: var(--primary);">location_on</span>
+                            Main Market Square
+                        </div>
+                        <button class="go-btn">Navigate <span class="material-symbols-rounded" style="font-size: 16px;">arrow_forward</span></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="card">
+                <div class="card-image-wrapper">
+                    <img src="https://wsrv.nl/?url=images.unsplash.com/photo-1589301760014-d4a9438fc3f3&w=800&fit=cover" alt="Dosa">
+                    <button class="badge-fav active"><span class="material-symbols-rounded" style="font-variation-settings: 'FILL' 1;">favorite</span></button>
+                    <div class="badge-time">2.5km</div>
+                </div>
+                <div class="card-body">
+                    <div class="card-header">
+                        <h3 class="card-title">Anna's Dosa Cart</h3>
+                        <div class="card-rating">
+                            <span class="material-symbols-rounded">star</span> 4.8
+                        </div>
+                    </div>
+                    <p class="card-desc">Crispy butter dosa & fresh chutney</p>
+                    <div class="card-footer">
+                        <div class="loc-text">
+                            <span class="material-symbols-rounded" style="font-size: 16px; color: var(--primary);">location_on</span>
+                            IT Park Road
+                        </div>
+                        <button class="go-btn">Navigate <span class="material-symbols-rounded" style="font-size: 16px;">arrow_forward</span></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 4 -->
+            <div class="card">
+                <div class="card-image-wrapper">
+                    <img src="https://wsrv.nl/?url=images.unsplash.com/photo-1574653853027-5382a3d23a15&w=800&fit=cover" alt="Chaat">
+                    <button class="badge-fav"><span class="material-symbols-rounded">favorite_border</span></button>
+                    <div class="badge-time">3.1km</div>
+                </div>
+                <div class="card-body">
+                    <div class="card-header">
+                        <h3 class="card-title">Sharma Chaat Bhandar</h3>
+                        <div class="card-rating">
+                            <span class="material-symbols-rounded">star</span> 4.3
+                        </div>
+                    </div>
+                    <p class="card-desc">Famous Aloo Tikki & Papdi Chaat</p>
+                    <div class="card-footer">
+                        <div class="loc-text">
+                            <span class="material-symbols-rounded" style="font-size: 16px; color: var(--primary);">location_on</span>
+                            Sector 15 Market
+                        </div>
+                        <button class="go-btn">Navigate <span class="material-symbols-rounded" style="font-size: 16px;">arrow_forward</span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- MOBILE BOTTOM NAVIGATION (Hidden on Desktop) -->
+    <div class="mobile-bottom-nav">
+        <div class="mobile-nav-items">
+            <a href="#" class="mobile-nav-item active">
+                <span class="material-symbols-rounded" style="font-variation-settings: 'FILL' 1;">explore</span>
+                <span class="label">Explore</span>
+            </a>
+            <a href="#" class="mobile-nav-item">
+                <span class="material-symbols-rounded">favorite</span>
+                <span class="label">Saved</span>
+            </a>
+            <a href="#" class="mobile-nav-item" style="color: var(--primary);">
+                <span class="material-symbols-rounded" style="font-size: 32px; font-variation-settings: 'FILL' 1;">add_circle</span>
+                <span class="label">Submit</span>
+            </a>
+            <a href="#" class="mobile-nav-item">
+                <span class="material-symbols-rounded">map</span>
+                <span class="label">Map</span>
+            </a>
+            <a href="#" class="mobile-nav-item">
+                <span class="material-symbols-rounded">person</span>
+                <span class="label">Profile</span>
+            </a>
+        </div>
+    </div>
+
+</body>
+</html>

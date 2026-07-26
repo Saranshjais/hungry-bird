@@ -9,11 +9,12 @@ if (typeof global.DOMException === 'undefined') {
 
 import { useFonts } from 'expo-font';
 import {
-  Poppins_400Regular,
-  Poppins_600SemiBold,
-  Poppins_700Bold,
-  Poppins_800ExtraBold,
-} from '@expo-google-fonts/poppins';
+  Manrope_400Regular,
+  Manrope_500Medium,
+  Manrope_600SemiBold,
+  Manrope_700Bold,
+  Manrope_800ExtraBold,
+} from '@expo-google-fonts/manrope';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -45,10 +46,11 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-    Poppins_400Regular,
-    Poppins_600SemiBold,
-    Poppins_700Bold,
-    Poppins_800ExtraBold,
+    Manrope_400Regular,
+    Manrope_500Medium,
+    Manrope_600SemiBold,
+    Manrope_700Bold,
+    Manrope_800ExtraBold,
   });
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
@@ -82,6 +84,7 @@ function RootLayoutNav() {
           <Stack.Screen name="auth/register" options={{ headerShown: false }} />
           <Stack.Screen name="city/[slug]" options={{ headerShown: true, headerTitle: 'City', headerTransparent: true, headerTintColor: '#fff' }} />
           <Stack.Screen name="vendor/[id]" options={{ headerShown: true, headerTitle: '', headerTransparent: true, headerTintColor: '#fff' }} />
+          <Stack.Screen name="submit-vendor" options={{ presentation: 'modal', title: 'Submit a Gem' }} />
         </Stack>
       </AuthProvider>
     </ThemeProvider>
