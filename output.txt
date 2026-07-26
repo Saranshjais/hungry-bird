@@ -1,0 +1,379 @@
+TagIn
+Screen-by-Screen Feature Map & Overall Flow
+Which page holds which feature, and how a user (and admin) moves through the app.
+
+Product:  TagIn — Kayease Global Solutions LLP
+Source:  Feature Inventory & Implementation Reference v1.0 (23 Jul 2026)
+Admin:  https://tagin.kayease.com/admin
+Prepared for:  QA / Product — screen mapping
+How to read this document
+TagIn currently exists in two realities: the running Squads model, and a redesign that is largely still on paper. Every feature below carries a status so no one tests something that isn't built yet.
+LIVE
+Built and running in production — test this now.
+PARTIAL
+Built, but a sub-behaviour is still unconfirmed — confirm before finalising cases.
+PLANNED
+In the redesign only — NOT built. Do not test yet.
+PROPOSED
+QA suggestion, not signed off.
+
+1.  The Overall Flow
+1.1  User journey (first launch → rating)
+①  Launch as guest  —  app opens straight to Home; onboarding slides show on first launch. Browsing is open — no login needed to look around.
+②  Try to participate  —  the moment a guest tries to join/host/chat, login is enforced.
+③  Log in  —  phone number → 4-digit OTP by SMS. If an MPIN was set earlier, MPIN replaces OTP on later logins.
+④  Set up profile  —  name, interests/sports, skill level, availability. DOB is required to unlock Full access.
+⑤  Access level applied  —  Read = browse only · Full = host + join + chat (needs DOB on file). Admin can adjust this.
+⑥  (Optional) Get verified  —  submit an identity selfie → admin approves in Verifications → verified badge on profile.
+⑦  Discover  —  area-based event feed, category + date filters, popular strip, and search (events / squads / users).
+⑧  Join OR Host  —  Join via open (instant), request-approval, or as a whole squad. Host: create event → pick a verified venue or drop a map pin → set capacity + join mode → publishes instantly.
+⑨  Check-in on arrival  —  GPS 'destination reached' confirms attendance. PLANNED — not built yet.
+⑩  Rate  —  after the event, rate players / host / event. Ratings are live; attendance-gating still TBD.
+⑪  Stay connected  —  event & squad chat threads, notifications, and squads that re-fill the same game weekly. Follow/friends + DMs are planned.
+1.2  Access gate (the key branch)
+Guest → can browse Home & event cards only.  Read access → browse everything, but cannot participate.  Full access → host + join + chat, and requires DOB on file. This DOB requirement is the single most important gate to test.
+1.3  Admin flow
+①  Log in  —  email + password; per-person invited accounts; every action is audit-logged.
+②  Dashboard  —  metric cards (users/events/messages/reports), 30-day growth chart, events-by-status donut, moderation counters.
+③  Branch into work  —  Community Management (users · events · venues · categories · squads) · Moderation (chats · reports · appeals · verifications · ratings · broadcast) · System (admins · audit · settings · maintenance).
+④  Everything logged  —  the audit log keeps a read-only, actor-attributed history of all admin actions.
+Note: Categories are the only entity admins create. Users self-register; events, venues and squads are user-generated and only managed (verified / cancelled / archived) by admins.
+
+2.  User App — What each screen holds
+2.1.  Splash & Onboarding
+First thing a new user sees.
+Feature / element on this screen
+Status
+How it works
+Onboarding slides
+PARTIAL
+Shown at first launch. Skippability / first-launch-only behaviour still TBD.
+
+2.2.  Login / Signup
+Phone is the only credential — no email or social login.
+Feature / element on this screen
+Status
+How it works
+Phone login / signup
+LIVE
+Phone number is the sole credential.
+OTP verification
+LIVE
+4-digit OTP via real SMS (no test bypass). Expiry / resend / attempt limits not yet confirmed.
+MPIN login
+LIVE
+4-digit MPIN; once set, used instead of OTP on later logins.
+Forgot MPIN
+PARTIAL
+Reset via OTP; exact flow unconfirmed.
+
+2.3.  Profile Setup
+Captured at signup; gates access level.
+Feature / element on this screen
+Status
+How it works
+Profile fields
+PARTIAL
+Name, interests/sports, skill level, availability.
+DOB capture
+PARTIAL
+DOB required for Full access. Exact point in the flow where DOB is captured is undefined.
+
+2.4.  Home / Discovery
+The landing feed; works for guests too.
+Feature / element on this screen
+Status
+How it works
+Guest browsing
+LIVE
+Home opens to a guest; login only enforced on participation.
+Area-based event feed
+LIVE
+Events for the user's area; city/area is changeable.
+Event cards
+LIVE
+Name · host · ★rating · date · venue · spots-left · thumbnail.
+Category filter
+LIVE
+Filters by the admin-managed category system.
+Date filter
+LIVE
+Narrows the feed to a date / range.
+Popular / tagged strip
+PARTIAL
+Highlighted strip; ranking logic (algorithmic vs curated) TBD.
+
+2.5.  Search
+Global search across the app.
+Feature / element on this screen
+Status
+How it works
+Search
+PARTIAL
+Events, communities/squads, users. Placement + guest access TBD.
+
+2.6.  Event Detail
+Everything a joiner sees about one event.
+Feature / element on this screen
+Status
+How it works
+Event statuses
+LIVE
+Open · Full · Live · Completed · Cancelled.
+Capacity / spots-left
+LIVE
+Full = join blocked. No waitlist.
+Join — open
+LIVE
+Instant join while spots remain.
+Join — request-approval
+LIVE
+Request → host approves/rejects → requester notified.
+Join as squad / group
+LIVE
+Whole group joins in one action if size ≤ spots; blocked entirely if larger.
+Event media gallery
+LIVE
+Thumbnail + gallery uploaded by host.
+Event rating
+LIVE
+Players / hosts / events. Attendance-gating + window TBD.
+Check-in on arrival
+PLANNED
+GPS 'destination reached' → confirm attendance. Radius/window/anti-spoofing undefined. Not built.
+
+2.7.  Create Event (Host)
+Full-access users only. Publishes instantly — no pre-approval.
+Feature / element on this screen
+Status
+How it works
+Create event
+LIVE
+Name, category, date/time, venue, capacity, join mode, media.
+Venue selection (2 paths)
+LIVE
+Pick a verified venue, OR drop a new map pin ('loose pin') that runs immediately.
+Set capacity
+LIVE
+Host sets max participants; feed shows spots-left.
+Set join mode
+LIVE
+Open or request-approval.
+Upload media
+LIVE
+Thumbnail + gallery.
+
+2.8.  Host Management
+The host's control panel for their own event.
+Feature / element on this screen
+Status
+How it works
+Manage joiners
+PARTIAL
+View joiners, approve/reject requests. Edit/cancel-own-event and kick-joiner rules TBD.
+Event chat
+PARTIAL
+Thread for participants; auto-creation rules TBD.
+
+2.9.  Venues / Map
+Where venues live and get discovered.
+Feature / element on this screen
+Status
+How it works
+User venue pins
+LIVE
+Users drop map pins → become 'loose pins' pending admin curation.
+Venue availability
+LIVE
+Verified venues show taken/free per scheduled slot.
+Map discovery view
+PLANNED
+Browsing events/venues on a map — deferred to build 2.
+
+2.10.  Squads / Communities
+Group layer. Live app = Squads; redesign adds the rest.
+Feature / element on this screen
+Status
+How it works
+Squads (recurring groups)
+LIVE
+'The regulars' — re-fill the same game weekly. Owner + members; Public / Invite-Only.
+Communities (clans)
+PLANNED
+Persistent spaces w/ member-only events + chat; admin approval to go live. Not built.
+Friend groups
+PLANNED
+Squads that join events as one unit (redesign framing). Not built.
+Event groups
+PLANNED
+An event's own chat window for participants. Not built.
+
+2.11.  Chats
+Messaging. Live = event/squad threads.
+Feature / element on this screen
+Status
+How it works
+Chat system
+LIVE
+Threads tied to events / squads.
+Chat buckets (community/DM/group)
+PARTIAL
+3-bucket layout is redesign framing; live system has event/squad threads.
+Direct messages
+PARTIAL
+1:1 DMs from profile/friends list; who-can-DM rules TBD.
+Media / edit / delete in chat
+PROPOSED
+Not confirmed.
+
+2.12.  Posts (Social Feed)
+Threads-style feed. Redesign only — none of this is built.
+Feature / element on this screen
+Status
+How it works
+Posts feed
+PLANNED
+Standalone or event show-off posts; text/images/video; instant publish. Not built.
+Likes · repost · follow-feed
+PLANNED
+Interactions + follow-based personalisation. Not built.
+Comments
+PROPOSED
+Product decision, not confirmed.
+
+2.13.  Profile
+The user's own page + social graph.
+Feature / element on this screen
+Status
+How it works
+Profile
+LIVE
+Details, activity (hosted/joined), rating, DOB, last-seen.
+Verified badge
+LIVE
+Granted after admin approves the identity selfie.
+Follow / friends
+PLANNED
+Follow → mutual = friends → enables DMs. Not built.
+Achievements
+PLANNED
+Unlocked + soon-to-unlock; list/criteria undefined. Not built.
+
+2.14.  Settings
+Account controls.
+Feature / element on this screen
+Status
+How it works
+Settings
+PARTIAL
+MPIN change, notifications, privacy, account deletion — exact contents TBD.
+
+2.15.  Notifications
+The bell centre.
+Feature / element on this screen
+Status
+How it works
+Push + in-app notifications
+LIVE
+Bell centre + push. SMS only for OTP.
+Admin broadcasts
+LIVE
+Users receive platform announcements with deep links.
+
+
+3.  Admin Panel — What each page holds
+The entire admin panel is LIVE and verified. Every list page also carries the universal controls: search · filters · column toggle · export / export-all · refresh · pagination.
+3.1  Access & Dashboard
+Page
+What it does
+Admin login
+Email + password; per-person invited accounts; all actions audit-logged.
+Roles
+Admin + Superadmin. Only Superadmin manages admins. Admins are disabled, never deleted; can't act on own row.
+Dashboard
+Metric cards (users/events/messages/reports w/ 30-day deltas), growth chart, events-by-status donut, recent-activity feed, moderation counters, refresh + broadcast.
+
+3.2  Community Management
+Page
+What it does
+Users
+View profile/activity; set access Read↔Full; suspend/restore; bulk suspend; export. No admin-create (self-register).
+Events
+View all + statuses; Cancel + Refund; bulk; export. Field-edit undetermined; no create.
+Venues
+Verify (incl. loose-pin curation); archive; export. Loose-pin backlog observed.
+Categories
+Full CRUD — the only admin-created entity. Type (Team/Partner), assets, skill-levels toggle, feed order.
+Squads
+View; archive; show archived; export. No create.
+
+3.3  Moderation
+Page
+What it does
+Chats
+View event/squad threads; lock/unlock; export metadata only (not content); no message delete.
+Reports
+Queue: Open → Reviewed → Actioned/Dismissed; warn/suspend reported user; bulk; export.
+Appeals
+View → Reject (uphold) or Restore user (reverse); export.
+Verifications
+Identity-selfie queue → Approve (grant badge) / Reject; export.
+Ratings
+View; remove abusive/fraudulent ratings; export. (Page unobserved — to confirm.)
+Notifications / Broadcast
+Compose (title ≤60, body ≤160); audience Everyone / Active-30d; allow-listed deep links; live preview; send; history. No edit/schedule/recall after send.
+
+3.4  System
+Page
+What it does
+Admins
+(Superadmin) invite, reset credentials, promote/demote, disable, export.
+Audit log
+Read-only, timestamped, actor-attributed history of all admin actions.
+Settings
+Platform config — fees/commissions, cities, feature flags (details TBD).
+Maintenance
+Ops controls — maintenance mode, cache/reindex (details TBD).
+My profile
+Edit own account; change password.
+
+
+4.  Category Catalog (LIVE)
+14 admin-managed categories power the Home category filter. Each has a type, assets, a skill-level toggle and a feed order.
+Type
+Categories
+Skill levels
+Team
+Basketball · Cricket · Football · Volleyball
+On
+Team
+Yoga · Trekking
+Off
+Partner (2-person)
+Badminton · Cycling · Swimming · Running
+On
+Partner
+Walking
+Off
+Below fold (confirm)
+Table Tennis · Coffee · Meetup
+TBD
+
+5.  Build Status at a Glance
+Status
+Count
+Meaning for QA
+LIVE
+~40
+Testable now against the live system / admin panel.
+PARTIAL
+~12
+Testable, but confirm the open sub-behaviour before finalising cases.
+PLANNED
+~10
+Redesign only — do NOT test; not built.
+PROPOSED
+~3
+QA recommendations awaiting sign-off.
+Critical caveat
+The live features run the Squads model. The PLANNED features belong to the redesign (Communities / Posts / follow-friends). Until the product owner reconciles the two (Master Guide OQ-38), the boundary between 'keep' and 'replace' is not final — treat the PLANNED set as proposed direction, not committed scope.

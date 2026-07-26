@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
+import { ArrowRight, User, Mail, Lock } from 'lucide-react-native';
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
@@ -33,7 +34,7 @@ export default function RegisterScreen() {
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      className="flex-1 bg-stone-50 dark:bg-stone-950"
+      className="flex-1 bg-[#F7F7F9]"
     >
       <ScrollView 
         contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 48 }}
@@ -41,82 +42,91 @@ export default function RegisterScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View className="items-center mb-10">
-          <Text className="text-4xl font-extrabold text-stone-900 dark:text-white tracking-tight mb-2">
+          <Text className="text-4xl font-manrope-extrabold text-gray-900 tracking-tight mb-2">
             Join <Text className="text-brand-500">HungryBird</Text>
           </Text>
-          <Text className="text-stone-500 dark:text-stone-400 font-medium">Discover hidden gems together!</Text>
+          <Text className="text-gray-500 font-manrope-medium text-center">Discover hidden gems together!</Text>
         </View>
 
-        <View className="bg-white dark:bg-stone-900 p-6 rounded-3xl shadow-sm border border-stone-200 dark:border-stone-800">
+        <View className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100" style={{ elevation: 2 }}>
             {error ? (
-              <View className="bg-red-50 dark:bg-red-900/20 p-3 rounded-xl mb-4 border border-red-100 dark:border-red-800/30">
-                <Text className="text-red-500 text-sm font-medium text-center">{error}</Text>
+              <View className="bg-red-50 p-3 rounded-xl mb-4 border border-red-100">
+                <Text className="text-red-500 text-sm font-manrope-bold text-center">{error}</Text>
               </View>
             ) : null}
 
             <View className="mb-4">
-              <Text className="text-stone-700 dark:text-stone-300 font-bold mb-2 ml-1 text-sm">Full Name</Text>
-              <TextInput
-                className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-xl px-4 py-3.5 text-stone-900 dark:text-white focus:border-brand-500 focus:bg-white dark:focus:bg-stone-900 transition-colors"
-                placeholder="John Doe"
-                placeholderTextColor="#9ca3af"
-                value={name}
-                onChangeText={setName}
-                autoCapitalize="words"
-                textContentType="name"
-                autoComplete="name"
-                importantForAutofill="yes"
-              />
+              <Text className="text-gray-900 font-manrope-bold mb-2 ml-1 text-sm">Full Name</Text>
+              <View className="flex-row items-center bg-gray-50 border border-gray-200 rounded-2xl px-4 focus:border-brand-500 focus:bg-white h-14">
+                <User size={20} color="#9CA3AF" />
+                <TextInput
+                  className="flex-1 font-manrope-medium text-[15px] text-gray-900 ml-3 h-full"
+                  placeholder="John Doe"
+                  placeholderTextColor="#9CA3AF"
+                  value={name}
+                  onChangeText={setName}
+                  autoCapitalize="words"
+                  textContentType="name"
+                  autoComplete="name"
+                />
+              </View>
             </View>
 
             <View className="mb-4">
-              <Text className="text-stone-700 dark:text-stone-300 font-bold mb-2 ml-1 text-sm">Email Address</Text>
-              <TextInput
-                className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-xl px-4 py-3.5 text-stone-900 dark:text-white focus:border-brand-500 focus:bg-white dark:focus:bg-stone-900 transition-colors"
-                placeholder="you@example.com"
-                placeholderTextColor="#9ca3af"
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                textContentType="emailAddress"
-                autoComplete="email"
-                importantForAutofill="yes"
-              />
+              <Text className="text-gray-900 font-manrope-bold mb-2 ml-1 text-sm">Email Address</Text>
+              <View className="flex-row items-center bg-gray-50 border border-gray-200 rounded-2xl px-4 focus:border-brand-500 focus:bg-white h-14">
+                <Mail size={20} color="#9CA3AF" />
+                <TextInput
+                  className="flex-1 font-manrope-medium text-[15px] text-gray-900 ml-3 h-full"
+                  placeholder="you@example.com"
+                  placeholderTextColor="#9CA3AF"
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  textContentType="emailAddress"
+                  autoComplete="email"
+                />
+              </View>
             </View>
 
             <View className="mb-6">
-              <Text className="text-stone-700 dark:text-stone-300 font-bold mb-2 ml-1 text-sm">Password</Text>
-              <TextInput
-                className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-xl px-4 py-3.5 text-stone-900 dark:text-white focus:border-brand-500 focus:bg-white dark:focus:bg-stone-900 transition-colors"
-                placeholder="••••••••"
-                placeholderTextColor="#9ca3af"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                textContentType="password"
-                autoComplete="password"
-                importantForAutofill="yes"
-              />
+              <Text className="text-gray-900 font-manrope-bold mb-2 ml-1 text-sm">Password</Text>
+              <View className="flex-row items-center bg-gray-50 border border-gray-200 rounded-2xl px-4 focus:border-brand-500 focus:bg-white h-14">
+                <Lock size={20} color="#9CA3AF" />
+                <TextInput
+                  className="flex-1 font-manrope-medium text-[15px] text-gray-900 ml-3 h-full"
+                  placeholder="••••••••"
+                  placeholderTextColor="#9CA3AF"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  textContentType="password"
+                  autoComplete="password"
+                />
+              </View>
             </View>
 
             <TouchableOpacity 
               onPress={handleRegister}
               disabled={loading}
-              className="w-full bg-brand-500 py-3.5 rounded-xl flex-row justify-center items-center opacity-100 active:opacity-80"
+              className="w-full bg-brand-500 py-4 rounded-2xl flex-row justify-center items-center shadow-md shadow-brand-500/30"
             >
               {loading ? (
                 <ActivityIndicator color="white" />
               ) : (
-                <Text className="text-white font-bold text-base">Sign Up</Text>
+                <>
+                  <Text className="text-white font-manrope-bold text-base">Sign Up</Text>
+                  <ArrowRight size={18} color="#FFFFFF" className="ml-2" />
+                </>
               )}
             </TouchableOpacity>
           </View>
 
         <View className="flex-row justify-center mt-8">
-          <Text className="text-stone-500 dark:text-stone-400 font-medium">Already have an account? </Text>
+          <Text className="text-gray-500 font-manrope-medium">Already have an account? </Text>
           <TouchableOpacity onPress={() => router.push('/auth/login')}>
-            <Text className="text-brand-500 font-bold">Sign In</Text>
+            <Text className="text-brand-500 font-manrope-bold">Sign In</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

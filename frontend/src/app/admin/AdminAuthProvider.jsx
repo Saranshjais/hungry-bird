@@ -35,8 +35,8 @@ export default function AdminAuthProvider({ children }) {
   return (
     <div className="admin-layout">
       <aside className="admin-sidebar">
-        <div className="admin-sidebar-header">
-          <h2>HB Admin</h2>
+        <div className="admin-sidebar-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <img src="/logo.png" alt="HungryBird Logo" style={{ width: '100%', maxWidth: '180px', height: 'auto', objectFit: 'contain' }} />
         </div>
         <nav className="admin-nav">
           <Link href="/admin" className={`admin-nav-link ${pathname === '/admin' ? 'active' : ''}`}>

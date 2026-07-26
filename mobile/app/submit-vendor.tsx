@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Platform, Dimensions, KeyboardAvoidingView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Platform, Dimensions, KeyboardAvoidingView, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import * as Location from 'expo-location';
-import { Search, ArrowRight, Crosshair, Star } from 'lucide-react-native';
+import { Search, ArrowRight, Crosshair, Star, CheckCircle } from 'lucide-react-native';
 import MapView, { Marker } from 'react-native-maps';
 
 const { width, height } = Dimensions.get('window');
@@ -13,7 +13,7 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://hungry-bird-jye4.onr
 export default function SubmitVendorScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const mapRef = useRef(null);
+  const mapRef = useRef<MapView | null>(null);
   
   // Form State
   const [stallName, setStallName] = useState('');
@@ -26,14 +26,13 @@ export default function SubmitVendorScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [gettingLocation, setGettingLocation] = useState(false);
   const [region, setRegion] = useState({
-    latitude: 26.9124, // Default to Jaipur
-    longitude: 75.7873,
+    latitude: 28.6139, // Default to Delhi
+    longitude: 77.2090,
     latitudeDelta: 0.05,
     longitudeDelta: 0.05,
   });
 
   useEffect(() => {
-    // Try to get initial location quietly
     (async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status === 'granted') {
@@ -52,21 +51,17 @@ export default function SubmitVendorScreen() {
     setGettingLocation(true);
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        alert('Permission to access location was denied');
-        return;
+      if (status === 'granted') {
+        let location = await Location.getCurrentPositionAsync({});
+        const newRegion = {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+          latitudeDelta: 0.005,
+          longitudeDelta: 0.005,
+        };
+        setRegion(newRegion);
+        mapRef.current?.animateToRegion(newRegion, 1000);
       }
-      let location = await Location.getCurrentPositionAsync({});
-      const newRegion = {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        latitudeDelta: 0.005,
-        longitudeDelta: 0.005,
-      };
-      setRegion(newRegion);
-      mapRef.current?.animateToRegion(newRegion, 1000);
-    } catch (error) {
-      alert('Error fetching location.');
     } finally {
       setGettingLocation(false);
     }
@@ -85,11 +80,9 @@ export default function SubmitVendorScreen() {
         };
         setRegion(newRegion);
         mapRef.current?.animateToRegion(newRegion, 1000);
-      } else {
-        alert("Location not found");
       }
     } catch (e) {
-      alert("Error searching location");
+      console.warn("Error searching location", e);
     }
   };
 
@@ -105,7 +98,6 @@ export default function SubmitVendorScreen() {
     let resolvedAddress = `${region.latitude.toFixed(4)}, ${region.longitude.toFixed(4)}`;
 
     try {
-      // Reverse geocode on the fly
       let reverseGeocode = await Location.reverseGeocodeAsync({
         latitude: region.latitude,
         longitude: region.longitude
@@ -144,8 +136,8 @@ export default function SubmitVendorScreen() {
 
   if (Platform.OS === 'web' || !MapView) {
     return (
-      <View className="flex-1 bg-white items-center justify-center p-6">
-        <Text className="text-xl font-bold mb-4">Map not supported on Web</Text>
+      <View className="flex-1 bg-[#F7F7F9] items-center justify-center p-6">
+        <Text className="text-xl font-manrope-bold mb-4 text-gray-900">Map not supported on Web</Text>
       </View>
     );
   }
@@ -154,18 +146,17 @@ export default function SubmitVendorScreen() {
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
       style={{ flex: 1 }}
-      className="bg-white dark:bg-stone-950"
+      className="bg-[#F7F7F9]"
     >
       {message ? (
-        <View className={`absolute top-28 left-4 right-4 z-50 p-4 rounded-xl shadow-lg ${message.includes('successfully') ? 'bg-emerald-50 border border-emerald-100' : 'bg-red-50 border border-red-100'}`}>
-          <Text className={`${message.includes('successfully') ? 'text-emerald-600' : 'text-red-500'} text-sm font-bold text-center`}>
-            {message}
-          </Text>
+        <View className="absolute top-12 left-5 right-5 z-50 p-4 rounded-2xl bg-gray-900 shadow-xl flex-row items-center justify-center">
+          {message.includes('successfully') ? <CheckCircle size={20} color="#34D399" /> : null}
+          <Text className="text-white font-manrope-bold text-[15px] ml-2">{message}</Text>
         </View>
       ) : null}
 
-      {/* Map Section (flex-1 so it takes remaining space) */}
-      <View className="flex-1 relative m-4 rounded-3xl overflow-hidden border border-stone-200 dark:border-stone-800 shadow-sm bg-stone-100 dark:bg-stone-900">
+      {/* Map Section */}
+      <View className="flex-1 relative border-b border-gray-200">
         <MapView
           ref={mapRef}
           style={{ flex: 1 }}
@@ -174,20 +165,18 @@ export default function SubmitVendorScreen() {
           showsUserLocation={true}
           showsMyLocationButton={false}
         />
-        {/* Fixed center pointer simulating map pin */}
-        <View className="absolute inset-0 items-center justify-center pointer-events-none">
-          <View className="w-5 h-5 bg-[#3b82f6] rounded-full border-[3px] border-white dark:border-stone-950 shadow-md" />
-          <View className="w-[2px] h-4 bg-stone-800 dark:bg-white mt-1" />
+        <View className="absolute inset-0 items-center justify-center pointer-events-none pb-8">
+          <View className="w-5 h-5 bg-brand-500 rounded-full border-[3px] border-white shadow-lg" />
+          <View className="w-[2px] h-6 bg-brand-500 mt-1 shadow-sm" />
         </View>
 
-        {/* Top Search Bar (Floating over map) */}
-        <View className="absolute top-4 left-4 right-4 z-10 flex-row items-center">
-          <View className="flex-1 bg-white dark:bg-stone-900 rounded-full flex-row items-center px-4 py-3 shadow-sm border border-stone-100 dark:border-stone-800 elevation-2">
-            <Search size={20} color="#9ca3af" />
+        <View className="absolute top-12 left-5 right-5 z-10 flex-row items-center">
+          <View className="flex-1 bg-white rounded-full flex-row items-center px-4 py-3 shadow-md border border-gray-100">
+            <Search size={20} color="#9CA3AF" />
             <TextInput 
-              className="flex-1 ml-2 text-[15px] text-stone-800 dark:text-white"
+              className="flex-1 ml-3 font-manrope-medium text-[15px] text-gray-900 h-6"
               placeholder="Search place or address"
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor="#9CA3AF"
               value={searchQuery}
               onChangeText={setSearchQuery}
               onSubmitEditing={handleSearch}
@@ -197,44 +186,41 @@ export default function SubmitVendorScreen() {
           <TouchableOpacity 
             onPress={handleAutoLocate}
             disabled={gettingLocation}
-            className="ml-3 w-12 h-12 bg-[#eb6e4b] rounded-full items-center justify-center shadow-sm elevation-2"
+            className="ml-3 w-12 h-12 bg-white rounded-full items-center justify-center shadow-md border border-gray-100"
           >
-            {gettingLocation ? <ActivityIndicator color="white" /> : <Crosshair size={22} color="white" />}
+            {gettingLocation ? <ActivityIndicator color="#FF5A5F" /> : <Crosshair size={22} color="#FF5A5F" />}
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Bottom Form Section (Normal Document Flow) */}
-      <ScrollView 
-        className="bg-white dark:bg-stone-900 px-6 pt-6 pb-8 rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] elevation-10 border-t border-stone-100 dark:border-stone-800"
-        style={{ flexShrink: 1 }}
-        keyboardShouldPersistTaps="handled"
-        bounces={false}
-      >
-        <Text className="text-stone-700 dark:text-stone-300 font-bold mb-2 ml-1 text-sm">Vendor Name</Text>
+      {/* Form Section */}
+      <View className="bg-white px-6 pt-6 pb-10 shadow-lg border-t border-gray-100 rounded-t-3xl -mt-6">
+        <View className="w-12 h-1 bg-gray-200 rounded-full self-center mb-6" />
+        
+        <Text className="font-manrope-bold text-gray-900 mb-2 ml-1 text-sm">Vendor Name</Text>
         <TextInput
-          className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-xl px-4 py-3 text-stone-900 dark:text-white focus:border-[#eb6e4b] focus:bg-white dark:focus:bg-stone-900 mb-4"
+          className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 font-manrope-medium text-[15px] text-gray-900 focus:border-brand-500 focus:bg-white mb-4"
           placeholder="e.g. Sharma Ji Chole Bhature"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor="#9CA3AF"
           value={stallName}
           onChangeText={setStallName}
         />
 
-        <Text className="text-stone-700 dark:text-stone-300 font-bold mb-2 ml-1 text-sm">Cuisine Type</Text>
+        <Text className="font-manrope-bold text-gray-900 mb-2 ml-1 text-sm">Cuisine Type</Text>
         <TextInput
-          className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-xl px-4 py-3 text-stone-900 dark:text-white focus:border-[#eb6e4b] focus:bg-white dark:focus:bg-stone-900 mb-4"
+          className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 font-manrope-medium text-[15px] text-gray-900 focus:border-brand-500 focus:bg-white mb-6"
           placeholder="e.g. North Indian, Snacks"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor="#9CA3AF"
           value={cuisineType}
           onChangeText={setCuisineType}
         />
 
-        <View className="flex-row items-center justify-between ml-1 mb-6">
-          <Text className="text-stone-700 dark:text-stone-300 font-bold text-sm">Your Rating</Text>
+        <View className="flex-row items-center justify-between mb-8 px-1">
+          <Text className="font-manrope-bold text-gray-900 text-[15px]">Your Rating</Text>
           <View className="flex-row">
             {[1, 2, 3, 4, 5].map((star) => (
-              <TouchableOpacity key={star} onPress={() => setRating(star)} className="p-1">
-                <Star size={24} color={star <= rating ? "#f59e0b" : "#d6d3d1"} fill={star <= rating ? "#f59e0b" : "transparent"} />
+              <TouchableOpacity key={star} onPress={() => setRating(star)} className="px-1">
+                <Star size={28} color={star <= rating ? "#F59E0B" : "#D1D5DB"} fill={star <= rating ? "#F59E0B" : "transparent"} />
               </TouchableOpacity>
             ))}
           </View>
@@ -243,18 +229,17 @@ export default function SubmitVendorScreen() {
         <TouchableOpacity 
           onPress={handleDirectSubmit}
           disabled={loading || !stallName}
-          className={`w-full py-4 rounded-full flex-row justify-center items-center shadow-sm elevation-2 ${stallName ? 'bg-[#eb6e4b]' : 'bg-stone-300 dark:bg-stone-700'}`}
+          className={`w-full py-4 rounded-full flex-row justify-center items-center shadow-md ${stallName ? 'bg-brand-500 shadow-brand-500/30' : 'bg-gray-200'}`}
         >
           {loading ? (
             <ActivityIndicator color="white" />
           ) : (
             <>
-              <Text className="text-white font-bold text-[16px] ml-2">Submit Vendor</Text>
-              <ArrowRight size={20} color="white" style={{ marginLeft: 8 }} />
+              <Text className="text-white font-manrope-bold text-[16px]">Submit Gem</Text>
             </>
           )}
         </TouchableOpacity>
-      </ScrollView>
+      </View>
     </KeyboardAvoidingView>
   );
 }
