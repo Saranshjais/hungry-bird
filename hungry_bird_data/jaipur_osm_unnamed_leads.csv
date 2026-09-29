@@ -1,0 +1,134 @@
+﻿osm_id,osm_type,lat,lon,tags,source_url
+1466911306,node,26.9152206,75.8099046,"{""amenity"": ""fast_food""}",https://www.openstreetmap.org/node/1466911306
+4464789989,node,26.9170942,75.8200153,"{""amenity"": ""restaurant"", ""name:en"": ""Sweet Dreams Hotel Rooftop Restaurant"", ""tourism"": ""hotel""}",https://www.openstreetmap.org/node/4464789989
+4537269090,node,26.8930025,75.8320808,"{""amenity"": ""restaurant"", ""cuisine"": ""indian"", ""name:en"": ""Harishankar""}",https://www.openstreetmap.org/node/4537269090
+4562817902,node,26.921112,75.796593,"{""addr:postcode"": ""302001"", ""addr:street"": ""Station Road"", ""amenity"": ""cafe"", ""name:en"": ""Rawat Misthan Bhandar"", ""opening_hours"": ""Mo-Su 11:00-23:00""}",https://www.openstreetmap.org/node/4562817902
+4706796989,node,26.8978763,75.8147386,"{""amenity"": ""restaurant"", ""name:en"": ""Bar palladio""}",https://www.openstreetmap.org/node/4706796989
+4706947494,node,26.9196661,75.7913021,"{""amenity"": ""restaurant"", ""name:en"": ""Peshawri""}",https://www.openstreetmap.org/node/4706947494
+4743392521,node,26.9157551,75.8101207,"{""amenity"": ""restaurant"", ""cuisine"": ""chinese;ice_cream;pizza;indian;local"", ""name:de"": ""The Door's Restaurant"", ""name:en"": ""The Door's Restaurant"", ""phone"": ""+911414024597""}",https://www.openstreetmap.org/node/4743392521
+4759741309,node,26.89131,75.7590683,"{""amenity"": ""restaurant"", ""cuisine"": ""indian;local"", ""diet:vegetarian"": ""yes"", ""name:en"": ""Green Chili"", ""name:fr"": ""Green Chili""}",https://www.openstreetmap.org/node/4759741309
+4793756923,node,26.917149,75.8145028,"{""amenity"": ""cafe"", ""name:en"": ""indian coffe house""}",https://www.openstreetmap.org/node/4793756923
+4795736622,node,26.9122319,75.8037901,"{""amenity"": ""restaurant"", ""name:en"": ""Mughal Rasoi Restaurant""}",https://www.openstreetmap.org/node/4795736622
+4798048921,node,26.9192989,75.8171771,"{""name:en"": ""sweet house"", ""shop"": ""bakery""}",https://www.openstreetmap.org/node/4798048921
+4811264442,node,26.916173,75.8106707,"{""amenity"": ""cafe"", ""email"": ""v2cafelounge@gmail.com"", ""internet_access"": ""wlan"", ""name:en"": ""V2 Cafe Lounge""}",https://www.openstreetmap.org/node/4811264442
+4849657022,node,26.9201285,75.795381,"{""amenity"": ""fast_food"", ""name:en"": ""Talk of the Town""}",https://www.openstreetmap.org/node/4849657022
+4895063322,node,26.9198326,75.824478,"{""amenity"": ""restaurant"", ""name:en"": ""Khandelwal""}",https://www.openstreetmap.org/node/4895063322
+4895076721,node,26.9195222,75.8255987,"{""addr:full"": ""98-99, Johari Bazar, Jaipur 302003"", ""name:en"": ""LMB"", ""phone"": ""+919024609609"", ""shop"": ""confectionery"", ""url"": ""https://lmbsweets.com/""}",https://www.openstreetmap.org/node/4895076721
+4925893021,node,26.9247396,75.7895873,"{""addr:housenumber"": ""D-160"", ""addr:postcode"": ""302016"", ""addr:street"": ""Kabir Marg"", ""amenity"": ""restaurant"", ""cuisine"": ""indian"", ""email"": ""chitchat7@hotmail.com"", ""name:en"": ""Chit Chat Restaurant"", ""phone"": ""+911412201899"", ""website"": ""http://www.chitchatjaipur.com""}",https://www.openstreetmap.org/node/4925893021
+4959447121,node,26.9867182,75.8503449,"{""addr:street"": ""Amer Road"", ""amenity"": ""restaurant"", ""cuisine"": ""indian;asian"", ""diet:vegetarian"": ""yes"", ""name:en"": ""1153 AD"", ""opening_hours"": ""Mo-Su 09:00-22:30""}",https://www.openstreetmap.org/node/4959447121
+4959451821,node,26.9130736,75.7853986,"{""addr:street"": ""Jacob Road"", ""amenity"": ""restaurant"", ""cuisine"": ""italian_pizza;italian"", ""diet:vegan"": ""yes"", ""name:en"": ""Giardino"", ""opening_hours"": ""Mo-Su 07:00-23:00""}",https://www.openstreetmap.org/node/4959451821
+4959487622,node,26.8978423,75.8079481,"{""amenity"": ""restaurant"", ""name:en"": ""Suvarna Mahal""}",https://www.openstreetmap.org/node/4959487622
+5033546322,node,26.8149712,75.8628121,"{""addr:postcode"": ""302017"", ""amenity"": ""cafe"", ""name:en"": ""chai ki thadi""}",https://www.openstreetmap.org/node/5033546322
+5033618123,node,26.8131969,75.8640629,"{""addr:housenumber"": ""plot no 112"", ""addr:postcode"": ""302017"", ""amenity"": ""fast_food"", ""name:en"": ""gulmohar park-1,plot no 112,jagatpur,jaipur,302017""}",https://www.openstreetmap.org/node/5033618123
+5043363421,node,26.9163632,75.8105086,"{""name:en"": ""Surya mahal"", ""shop"": ""bakery""}",https://www.openstreetmap.org/node/5043363421
+5074567726,node,26.942206,75.8374738,"{""amenity"": ""restaurant"", ""name:en"": ""Jal Mahal""}",https://www.openstreetmap.org/node/5074567726
+5144379721,node,26.9050829,75.7946411,"{""addr:housenumber"": ""E-145 First"", ""addr:postcode"": ""302001"", ""addr:street"": ""Ramesh Marg"", ""amenity"": ""cafe"", ""internet_access"": ""wlan"", ""name:en"": ""Poppin Organic Café"", ""opening_hours"": ""Mo-Su 11:00-22:00"", ""phone"": ""+91 97996 28666"", ""website"": ""https://poppin-organic-cafe.business.site/""}",https://www.openstreetmap.org/node/5144379721
+5144800321,node,26.8945386,75.7683878,"{""addr:street"": ""Janpath"", ""amenity"": ""restaurant"", ""name:en"": ""Food court Indian/Belgium""}",https://www.openstreetmap.org/node/5144800321
+5147754221,node,26.9060714,75.795372,"{""amenity"": ""restaurant"", ""name:en"": ""Thank god it's healthy""}",https://www.openstreetmap.org/node/5147754221
+5197727421,node,26.9163958,75.8179421,"{""amenity"": ""ice_cream""}",https://www.openstreetmap.org/node/5197727421
+5225682023,node,26.923806,75.8273105,"{""amenity"": ""restaurant"", ""cuisine"": ""indian;local;coffee_shop"", ""name:en"": ""The Tatto Cafe""}",https://www.openstreetmap.org/node/5225682023
+5226323124,node,26.9212149,75.7969429,"{""amenity"": ""fast_food"", ""name:en"": ""Rawat Kachori""}",https://www.openstreetmap.org/node/5226323124
+5240550722,node,26.9857405,75.8542783,"{""amenity"": ""cafe"", ""name:en"": ""The Stag Rooftop Cafe & Lounge""}",https://www.openstreetmap.org/node/5240550722
+5242384122,node,26.922995,75.8257091,"{""amenity"": ""ice_cream"", ""name:en"": ""Ramchandra Kulfi Bhandar""}",https://www.openstreetmap.org/node/5242384122
+5249142721,node,26.8951343,75.8290109,"{""amenity"": ""restaurant"", ""name:en"": ""Nand’s and Chawla’s""}",https://www.openstreetmap.org/node/5249142721
+5320578522,node,26.8239279,75.6541984,"{""amenity"": ""cafe"", ""cuisine"": ""indian"", ""name:en"": ""Sadda adda""}",https://www.openstreetmap.org/node/5320578522
+5344986724,node,26.9214607,75.790038,"{""amenity"": ""fast_food"", ""name:ru"": ""Улица Ресторанчиков""}",https://www.openstreetmap.org/node/5344986724
+5393075823,node,26.9169628,75.8053859,"{""addr:housenumber"": ""151"", ""addr:street"": ""Mirza Ismail Road"", ""amenity"": ""restaurant"", ""name:en"": ""Old Kebab Shop"", ""opening_hours"": ""Mo-Su 16:00-23:00""}",https://www.openstreetmap.org/node/5393075823
+5435708321,node,26.9023809,75.8015211,"{""amenity"": ""fast_food"", ""name:en"": ""Street Thali""}",https://www.openstreetmap.org/node/5435708321
+5579575445,node,26.9342829,75.8253191,"{""amenity"": ""cafe"", ""name:en"": ""Nice Cafe (it's the name)""}",https://www.openstreetmap.org/node/5579575445
+5579575531,node,26.930591,75.8278325,"{""amenity"": ""restaurant"", ""cuisine"": ""chinese;indian"", ""name:en"": ""Venus Restaurant""}",https://www.openstreetmap.org/node/5579575531
+5792264353,node,26.9334401,75.8347763,"{""amenity"": ""restaurant""}",https://www.openstreetmap.org/node/5792264353
+5806062553,node,26.9247436,75.7906405,"{""amenity"": ""restaurant"", ""name:en"": ""Shahi mumal restaurant""}",https://www.openstreetmap.org/node/5806062553
+5940047485,node,26.9157256,75.7963116,"{""addr:housenumber"": ""64"", ""addr:postcode"": ""302001"", ""addr:street"": ""64 हरिकिशन सोमानी मार्ग हैथ्रई किला अजमेर रोड जयपुर"", ""amenity"": ""restaurant"", ""internet_access"": ""wlan"", ""name:en"": ""Chillout Jaipur"", ""phone"": ""+9191161111146"", ""website"": ""https://www.hathroi.com/""}",https://www.openstreetmap.org/node/5940047485
+6029009694,node,26.9396438,75.8369237,"{""amenity"": ""restaurant"", ""internet_access"": ""wlan"", ""name:en"": ""green pigeon""}",https://www.openstreetmap.org/node/6029009694
+6029038599,node,26.9397212,75.8370234,"{""amenity"": ""restaurant""}",https://www.openstreetmap.org/node/6029038599
+6062908585,node,26.9871861,75.8545361,"{""amenity"": ""cafe"", ""name:en"": ""Kokum Bistro""}",https://www.openstreetmap.org/node/6062908585
+6177748786,node,26.9288163,75.82832,"{""amenity"": ""fast_food"", ""name:en"": ""Street food - Samosas""}",https://www.openstreetmap.org/node/6177748786
+6183444886,node,26.9162394,75.8112696,"{""amenity"": ""restaurant"", ""cuisine"": ""indian"", ""name:en"": ""Surya Mahal Restaurant""}",https://www.openstreetmap.org/node/6183444886
+6254109685,node,26.9455632,75.840143,"{""addr:street"": ""Jamwa Ramgarh Road"", ""amenity"": ""restaurant"", ""cuisine"": ""indian"", ""name:en"": ""Shree Khandelwal Pavitra Bhojanalaya (2nd floor)"", ""opening_hours"": ""Mo-Su 10:00-23:00""}",https://www.openstreetmap.org/node/6254109685
+6255764985,node,26.9865438,75.8502464,"{""amenity"": ""cafe"", ""name:en"": ""Café coffee day""}",https://www.openstreetmap.org/node/6255764985
+6255765085,node,26.9237416,75.8268257,"{""amenity"": ""cafe"", ""name:en"": ""Café coffee day""}",https://www.openstreetmap.org/node/6255765085
+6262869885,node,26.9263484,75.8276354,"{""addr:housenumber"": ""97"", ""addr:street"": ""Hawa Mahal Road"", ""amenity"": ""restaurant"", ""cuisine"": ""chinese"", ""name:en"": ""Marky Momos"", ""phone"": ""+919783640555"", ""website"": ""https://www.markymomos.in/""}",https://www.openstreetmap.org/node/6262869885
+6367033085,node,26.9248726,75.8147176,"{""name:he"": ""כוס ב150"", ""shop"": ""bakery""}",https://www.openstreetmap.org/node/6367033085
+6848303186,node,26.9398195,75.8165576,"{""amenity"": ""cafe"", ""name:en"": ""Hot & cold""}",https://www.openstreetmap.org/node/6848303186
+6855397988,node,26.9174489,75.8185448,"{""amenity"": ""restaurant"", ""name:en"": ""Mohan Restaurant""}",https://www.openstreetmap.org/node/6855397988
+7000754687,node,26.9165311,75.8095597,"{""amenity"": ""restaurant"", ""name:en"": ""Barbeque Nation - 1st floor""}",https://www.openstreetmap.org/node/7000754687
+7023771785,node,26.9297256,75.8025622,"{""addr:housenumber"": ""28"", ""addr:street"": ""SC Rd"", ""amenity"": ""restaurant"", ""cuisine"": ""indian"", ""name:en"": ""Barng (Amazing thali only 70 rupees)""}",https://www.openstreetmap.org/node/7023771785
+7041300286,node,26.9932521,75.8753694,"{""amenity"": ""restaurant"", ""name:en"": ""Rawat (very good little Dabha)""}",https://www.openstreetmap.org/node/7041300286
+7043495385,node,26.929569,75.7886838,"{""amenity"": ""restaurant"", ""name:en"": ""Gulati Nagari""}",https://www.openstreetmap.org/node/7043495385
+7085598169,node,26.8973569,75.7392878,"{""shop"": ""tea""}",https://www.openstreetmap.org/node/7085598169
+7113996999,node,26.8978764,75.8150251,"{""amenity"": ""restaurant"", ""name:en"": ""Shikaar Bagh""}",https://www.openstreetmap.org/node/7113996999
+7248042885,node,26.9053514,75.7949791,"{""amenity"": ""restaurant"", ""cuisine"": ""indian"", ""name:en"": ""Deststahn - Homemade Desi Food""}",https://www.openstreetmap.org/node/7248042885
+8071848420,node,26.9142475,75.7379941,"{""amenity"": ""fast_food""}",https://www.openstreetmap.org/node/8071848420
+8071848422,node,26.9143082,75.7380258,"{""amenity"": ""fast_food"", ""cuisine"": ""juice""}",https://www.openstreetmap.org/node/8071848422
+8084816342,node,26.901191,75.7807994,"{""shop"": ""tea""}",https://www.openstreetmap.org/node/8084816342
+8137399270,node,26.9075297,75.815063,"{""amenity"": ""cafe"", ""outdoor_seating"": ""yes""}",https://www.openstreetmap.org/node/8137399270
+8903980728,node,26.9049935,75.8036996,"{""shop"": ""dairy""}",https://www.openstreetmap.org/node/8903980728
+10013086817,node,26.9053547,75.794676,"{""amenity"": ""cafe"", ""internet_access"": ""wlan"", ""name:en"": ""Coffee Sutra""}",https://www.openstreetmap.org/node/10013086817
+10015685917,node,26.9103022,75.8035336,"{""amenity"": ""cafe"", ""name:en"": ""Cafe Earnest""}",https://www.openstreetmap.org/node/10015685917
+10015695217,node,26.9154568,75.8015928,"{""addr:city"": ""Jaipur"", ""addr:housenumber"": ""9th Floor, International Business Centre, Malviya Marg, C Scheme, Jaipur, Rajasthan 302001"", ""addr:street"": ""Ashok Marg"", ""amenity"": ""restaurant"", ""internet_access"": ""wlan"", ""name:en"": ""Matti Indian Cafe House""}",https://www.openstreetmap.org/node/10015695217
+10020311919,node,26.8512734,75.8104302,"{""amenity"": ""cafe"", ""internet_access"": ""wlan"", ""name:en"": ""Ministry of Roasters"", ""opening_hours"": ""Mo-Su 10:00-22:00""}",https://www.openstreetmap.org/node/10020311919
+10075161117,node,26.9170949,75.8192314,"{""amenity"": ""cafe"", ""name:en"": ""Lassi Kachori""}",https://www.openstreetmap.org/node/10075161117
+10240017409,node,26.9914732,75.8669355,"{""addr:postcode"": ""302028"", ""addr:street"": ""Amer Road"", ""amenity"": ""restaurant"", ""cuisine"": ""chinese;indian;italian"", ""name:en"": ""The Burning bites (non veg)"", ""opening_hours"": ""Mo-Su 09:00-22:00"", ""phone"": ""+91 8076135082""}",https://www.openstreetmap.org/node/10240017409
+10574350310,node,26.9223163,75.8224376,"{""amenity"": ""restaurant"", ""cuisine"": ""local"", ""name:en"": ""Shree Gopi Bhojnalaya (Cheap and good Vegetarian Food)""}",https://www.openstreetmap.org/node/10574350310
+10748345405,node,26.9223252,75.8208457,"{""addr:street"": ""Lalji Sand Ka Rasta"", ""name:en"": ""Bhanwar Lal Kailash Chandra Halwai"", ""shop"": ""confectionery""}",https://www.openstreetmap.org/node/10748345405
+10904668786,node,26.9151658,75.8099241,"{""addr:housenumber"": ""Silver Square Mall, Shop No. 15,16,17, C-18, Cinema Bhagwandas Marg, near Raj Mandir, C Scheme, Jaipur, Rajasthan 302001"", ""amenity"": ""cafe""}",https://www.openstreetmap.org/node/10904668786
+10969317262,node,26.899658,75.8590105,"{""amenity"": ""restaurant""}",https://www.openstreetmap.org/node/10969317262
+11100921705,node,26.9369262,75.8322312,"{""addr:housenumber"": ""2"", ""addr:postcode"": ""302002"", ""addr:street"": ""Amer Road"", ""amenity"": ""restaurant"", ""cuisine"": ""breakfast;coffee_shop;diner;indian;international;local;regional"", ""email"": ""chillouthoteljaipur@gmail.com"", ""name:en"": ""chillout"", ""opening_hours"": ""Mo-Su 07:00-22:00"", ""phone"": ""+919116111146"", ""website"": ""https://www.chilloutindia.com/""}",https://www.openstreetmap.org/node/11100921705
+11260402237,node,26.9073874,75.7954138,"{""addr:housenumber"": ""F 31"", ""addr:postcode"": ""302001"", ""addr:street"": ""Azad Marg"", ""amenity"": ""cafe"", ""cuisine"": ""american;coffee_shop;international"", ""internet_access"": ""wlan"", ""name:en"": ""Half Light Coffee Roasters"", ""opening_hours"": ""Su-Sa 08:00-22:00"", ""phone"": ""9602602849"", ""website"": ""https://halflightcoffee.com/""}",https://www.openstreetmap.org/node/11260402237
+11527985769,node,26.9113223,75.8196136,"{""amenity"": ""cafe"", ""name:en"": ""Heeralal's""}",https://www.openstreetmap.org/node/11527985769
+11533709369,node,26.9239758,75.8155246,"{""amenity"": ""cafe"", ""name:en"": ""The Pizza Unlimited""}",https://www.openstreetmap.org/node/11533709369
+12358211505,node,26.925014,75.7905416,"{""amenity"": ""fast_food""}",https://www.openstreetmap.org/node/12358211505
+12361795411,node,26.9216613,75.7900876,"{""amenity"": ""fast_food""}",https://www.openstreetmap.org/node/12361795411
+12361795503,node,26.9248476,75.8167048,"{""amenity"": ""restaurant""}",https://www.openstreetmap.org/node/12361795503
+12361796103,node,26.924985,75.7905473,"{""amenity"": ""restaurant""}",https://www.openstreetmap.org/node/12361796103
+12361796203,node,26.9215478,75.7900794,"{""amenity"": ""restaurant""}",https://www.openstreetmap.org/node/12361796203
+12361796302,node,26.9215409,75.7899902,"{""amenity"": ""restaurant""}",https://www.openstreetmap.org/node/12361796302
+12361796303,node,26.9216327,75.7899951,"{""amenity"": ""restaurant""}",https://www.openstreetmap.org/node/12361796303
+12361796304,node,26.9217378,75.790092,"{""amenity"": ""fast_food""}",https://www.openstreetmap.org/node/12361796304
+12365120007,node,26.9343608,75.817633,"{""amenity"": ""fast_food""}",https://www.openstreetmap.org/node/12365120007
+12365223404,node,26.933742,75.8077109,"{""shop"": ""bakery""}",https://www.openstreetmap.org/node/12365223404
+12365223409,node,26.9323592,75.8037233,"{""shop"": ""confectionery""}",https://www.openstreetmap.org/node/12365223409
+12365223410,node,26.9322438,75.8037149,"{""shop"": ""confectionery""}",https://www.openstreetmap.org/node/12365223410
+12365223608,node,26.9329111,75.8038117,"{""shop"": ""pastry""}",https://www.openstreetmap.org/node/12365223608
+12365223802,node,26.9325276,75.8051602,"{""amenity"": ""restaurant""}",https://www.openstreetmap.org/node/12365223802
+12365223803,node,26.9326626,75.805048,"{""amenity"": ""fast_food""}",https://www.openstreetmap.org/node/12365223803
+12365223805,node,26.9320958,75.8036979,"{""shop"": ""confectionery""}",https://www.openstreetmap.org/node/12365223805
+12365224001,node,26.9320583,75.8059259,"{""amenity"": ""restaurant""}",https://www.openstreetmap.org/node/12365224001
+12367918004,node,26.9231,75.8004776,"{""amenity"": ""fast_food""}",https://www.openstreetmap.org/node/12367918004
+12367918006,node,26.9231728,75.8252349,"{""amenity"": ""ice_cream""}",https://www.openstreetmap.org/node/12367918006
+12367921601,node,26.9230523,75.8003477,"{""amenity"": ""fast_food""}",https://www.openstreetmap.org/node/12367921601
+12369816605,node,26.921957,75.7874144,"{""amenity"": ""restaurant""}",https://www.openstreetmap.org/node/12369816605
+12369816607,node,26.920586,75.7889612,"{""amenity"": ""restaurant""}",https://www.openstreetmap.org/node/12369816607
+12369816608,node,26.921734,75.7899982,"{""amenity"": ""restaurant""}",https://www.openstreetmap.org/node/12369816608
+12369822803,node,26.9227264,75.7879904,"{""amenity"": ""restaurant""}",https://www.openstreetmap.org/node/12369822803
+12369822805,node,26.9205585,75.7894701,"{""amenity"": ""restaurant""}",https://www.openstreetmap.org/node/12369822805
+12369822806,node,26.9216858,75.7899975,"{""amenity"": ""restaurant""}",https://www.openstreetmap.org/node/12369822806
+12369822902,node,26.9215132,75.787464,"{""amenity"": ""restaurant""}",https://www.openstreetmap.org/node/12369822902
+12369823002,node,26.9205665,75.7895717,"{""amenity"": ""restaurant""}",https://www.openstreetmap.org/node/12369823002
+12369823004,node,26.9202667,75.7897862,"{""amenity"": ""restaurant""}",https://www.openstreetmap.org/node/12369823004
+12373658125,node,26.9164407,75.8612012,"{""amenity"": ""restaurant""}",https://www.openstreetmap.org/node/12373658125
+12373714202,node,26.9257211,75.8078159,"{""amenity"": ""restaurant""}",https://www.openstreetmap.org/node/12373714202
+12376556603,node,26.9222337,75.7982649,"{""amenity"": ""restaurant""}",https://www.openstreetmap.org/node/12376556603
+12376556608,node,26.9219696,75.8003686,"{""amenity"": ""restaurant""}",https://www.openstreetmap.org/node/12376556608
+12376556609,node,26.9219484,75.7974906,"{""amenity"": ""restaurant""}",https://www.openstreetmap.org/node/12376556609
+12376557304,node,26.9217506,75.796719,"{""shop"": ""confectionery""}",https://www.openstreetmap.org/node/12376557304
+12376560101,node,26.9229525,75.7973011,"{""shop"": ""confectionery""}",https://www.openstreetmap.org/node/12376560101
+12379232201,node,26.9212647,75.7937801,"{""shop"": ""confectionery""}",https://www.openstreetmap.org/node/12379232201
+12379232202,node,26.9193192,75.7997258,"{""amenity"": ""fast_food""}",https://www.openstreetmap.org/node/12379232202
+12379232701,node,26.9194052,75.7997562,"{""amenity"": ""fast_food""}",https://www.openstreetmap.org/node/12379232701
+12596380997,node,26.813269,75.7637914,"{""amenity"": ""cafe""}",https://www.openstreetmap.org/node/12596380997
+12596427880,node,26.8356221,75.7783902,"{""amenity"": ""fast_food"", ""fast_food"": ""cafeteria""}",https://www.openstreetmap.org/node/12596427880
+12596450118,node,26.847614,75.7772712,"{""amenity"": ""fast_food"", ""fast_food"": ""cafeteria""}",https://www.openstreetmap.org/node/12596450118
+12596454202,node,26.8476238,75.7768204,"{""amenity"": ""fast_food"", ""fast_food"": ""cafeteria""}",https://www.openstreetmap.org/node/12596454202
+12596491720,node,26.8410838,75.7725838,"{""amenity"": ""cafe""}",https://www.openstreetmap.org/node/12596491720
+12596503476,node,26.8144197,75.7698722,"{""shop"": ""bakery""}",https://www.openstreetmap.org/node/12596503476
+13602800747,node,26.9227725,75.8010294,"{""amenity"": ""restaurant"", ""diet:vegetarian"": ""yes""}",https://www.openstreetmap.org/node/13602800747
+706564402,way,26.9510938,75.8007411,"{""building"": ""yes"", ""shop"": ""dairy""}",https://www.openstreetmap.org/way/706564402
+758347909,way,26.847155,75.8600609,"{""amenity"": ""fast_food"", ""building"": ""yes""}",https://www.openstreetmap.org/way/758347909
+758849240,way,26.9027796,75.7409262,"{""amenity"": ""cafe"", ""building"": ""yes"", ""cuisine"": ""fast_food""}",https://www.openstreetmap.org/way/758849240
+863456615,way,26.917982,75.7878793,"{""amenity"": ""cafe"", ""building"": ""yes""}",https://www.openstreetmap.org/way/863456615
+865107581,way,26.9237285,75.7623152,"{""amenity"": ""fast_food"", ""building"": ""yes""}",https://www.openstreetmap.org/way/865107581
+962290374,way,26.8383914,75.8271871,"{""addr:city"": ""jagatpura"", ""amenity"": ""restaurant"", ""building"": ""yes""}",https://www.openstreetmap.org/way/962290374
+962294266,way,26.8626392,75.7962873,"{""amenity"": ""restaurant"", ""building"": ""yes""}",https://www.openstreetmap.org/way/962294266
+962295860,way,26.8628748,75.7956866,"{""amenity"": ""cafe"", ""building"": ""yes""}",https://www.openstreetmap.org/way/962295860

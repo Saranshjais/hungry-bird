@@ -59,8 +59,8 @@ class Vendor(db.Model):
     specialty_dish = db.Column(db.String(150))  # e.g. "Butter Pav Bhaji"
     opening_hours = db.Column(db.String(150))  # free-text, e.g. "6 PM - 1 AM"
 
-    lat = db.Column(db.Float, nullable=False)
-    lng = db.Column(db.Float, nullable=False)
+    lat = db.Column(db.Float, nullable=True)
+    lng = db.Column(db.Float, nullable=True)
 
     source = db.Column(db.String(50), default="user")
     verified_status = db.Column(db.String(20), default="verified")  # "pending", "verified", "rejected"
@@ -70,6 +70,79 @@ class Vendor(db.Model):
     place_id = db.Column(db.String(200))
     photo_reference = db.Column(db.String(500))
     image_url = db.Column(db.String(500))
+
+    # Hungry Bird Data Schema Extensions
+    vendor_code = db.Column(db.String(50), unique=True, nullable=True) # HB-DOC-0001, HB-OSM-*
+    vendor_type = db.Column(db.String(80), nullable=True)
+    locality = db.Column(db.String(100), nullable=True)
+    market = db.Column(db.String(100), nullable=True)
+    street = db.Column(db.String(150), nullable=True)
+    landmark = db.Column(db.String(150), nullable=True)
+    food_category = db.Column(db.String(80), nullable=True)
+    food_subcategories = db.Column(db.String(300), nullable=True)
+    price_min = db.Column(db.Float, nullable=True)
+    price_max = db.Column(db.Float, nullable=True)
+    price_currency = db.Column(db.String(10), default="INR")
+    opening_time = db.Column(db.String(20), nullable=True)
+    closing_time = db.Column(db.String(20), nullable=True)
+    closed_days = db.Column(db.String(60), nullable=True)
+    phone = db.Column(db.String(50), nullable=True)
+    website = db.Column(db.String(300), nullable=True)
+    instagram = db.Column(db.String(150), nullable=True)
+    source_url = db.Column(db.String(500), nullable=True)
+    source_type = db.Column(db.String(50), nullable=True)
+    source_name = db.Column(db.String(200), nullable=True)
+    verification_status = db.Column(db.String(30), default="VERIFIED")
+    verification_level = db.Column(db.String(60), default="LEVEL_0_UNVERIFIED")
+    last_verified_at = db.Column(db.String(30), nullable=True)
+    verified_location = db.Column(db.Boolean, default=False)
+    verified_business = db.Column(db.Boolean, default=False)
+    verified_food_type = db.Column(db.Boolean, default=False)
+    hidden_gem_candidate = db.Column(db.Boolean, default=False)
+    hidden_gem_score = db.Column(db.Float, nullable=True)
+    hidden_gem_score_status = db.Column(db.String(50), nullable=True)
+    data_confidence = db.Column(db.String(20), default="MEDIUM")
+    notes = db.Column(db.Text, nullable=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "vendor_code": self.vendor_code or f"HB-VND-{self.id}",
+            "name": self.name,
+            "vendor_type": self.vendor_type or "street_food",
+            "city_id": self.city_id,
+            "city_name": self.city.name if self.city else "Jaipur",
+            "cuisine_type": self.cuisine_type or self.food_category or "Street Food",
+            "food_category": self.food_category or self.cuisine_type or "Street Food",
+            "food_subcategories": self.food_subcategories.split(";") if self.food_subcategories else [],
+            "specialty_dish": self.specialty_dish or "Local Specialty",
+            "is_hidden_gem": self.is_hidden_gem or self.hidden_gem_candidate,
+            "hidden_gem_score": self.hidden_gem_score,
+            "hidden_gem_score_status": self.hidden_gem_score_status or ("PENDING_CURATOR_REVIEW" if self.hidden_gem_candidate else None),
+            "is_famous": self.is_famous,
+            "avg_rating": self.avg_rating or 4.5,
+            "total_ratings": self.total_ratings or 0,
+            "price_level": self.price_level or ("₹" if self.price_min and self.price_min <= 50 else "₹₹"),
+            "price_min": self.price_min,
+            "price_max": self.price_max,
+            "address_text": self.address_text or self.street or self.area or "Jaipur",
+            "area": self.area or "Jaipur",
+            "locality": self.locality,
+            "landmark": self.landmark,
+            "description": self.description or "Authentic Jaipur food discovery spot.",
+            "opening_hours": self.opening_hours or (f"{self.opening_time} - {self.closing_time}" if self.opening_time else "Open Daily"),
+            "lat": self.lat,
+            "lng": self.lng,
+            "verified_status": self.verified_status,
+            "verification_level": self.verification_level or "LEVEL_3_BUSINESS_VERIFIED",
+            "image_url": self.image_url or self.photo_reference or "https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=600",
+            "website": self.website,
+            "phone": self.phone,
+            "source_type": self.source_type,
+            "source_name": self.source_name,
+            "data_confidence": self.data_confidence or "HIGH"
+        }
+
 
 
 class VendorSubmission(db.Model):

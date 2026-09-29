@@ -117,33 +117,127 @@ def home_feed():
 
 
 # -------------------- SEARCH --------------------
-@main_bp.route("/search", methods=["GET"])
-def search():
-    query = request.args.get("q", "").strip()
-    if not query:
-        return jsonify({"results": []})
-        
-    vendors = Vendor.query.filter(
-        db.or_(
-            Vendor.name.ilike(f"%{query}%"),
-            Vendor.cuisine_type.ilike(f"%{query}%")
-        )
-    ).limit(20).all()
-    
     results = []
     for v in vendors:
-        results.append({
-            "id": v.id,
-            "name": v.name,
-            "cuisine_type": v.cuisine_type,
-            "city_name": v.city.name if v.city else "Unknown",
-            "city_slug": v.city.slug if v.city else "",
-            "rating": v.avg_rating,
-            "image_url": v.image_url,
-            "is_hidden_gem": v.is_hidden_gem
-        })
+        results.append(v.to_dict())
         
     return jsonify({"results": results})
+
+
+# -------------------- VENDORS API --------------------
+@main_bp.route("/vendors", methods=["GET"])
+def get_vendors():
+    city_slug = request.args.get("city", "jaipur").strip()
+    category = request.args.get("category", "").strip()
+    area = request.args.get("area", "").strip()
+    is_hidden_gem = request.args.get("is_hidden_gem", "").strip().lower()
+    search_q = request.args.get("q", "").strip()
+    limit = int(request.args.get("limit", 100))
+
+    query = Vendor.query
+
+    if city_slug:
+        city = City.query.filter_by(slug=city_slug).first()
+        if city:
+            query = query.filter_by(city_id=city.id)
+
+    if category and category != 'All':
+        query = query.filter(db.or_(
+            Vendor.food_category.ilike(f"%{category}%"),
+            Vendor.cuisine_type.ilike(f"%{category}%")
+        ))
+
+    if area and area != 'All':
+        query = query.filter(Vendor.area.ilike(f"%{area}%"))
+
+    if is_hidden_gem in ('true', '1', 'yes'):
+        query = query.filter(db.or_(Vendor.is_hidden_gem == True, Vendor.hidden_gem_candidate == True))
+
+    if search_q:
+        query = query.filter(db.or_(
+            Vendor.name.ilike(f"%{search_q}%"),
+            Vendor.area.ilike(f"%{search_q}%"),
+            Vendor.specialty_dish.ilike(f"%{search_q}%"),
+            Vendor.food_category.ilike(f"%{search_q}%")
+        ))
+
+    vendors = query.order_by(Vendor.avg_rating.desc().nullslast(), Vendor.id.asc()).limit(limit).all()
+    return jsonify({"vendors": [v.to_dict() for v in vendors], "count": len(vendors)})
+
+
+@main_bp.route("/vendors/hidden-gems", methods=["GET"])
+def get_hidden_gems():
+    gems = Vendor.query.filter(
+        db.or_(Vendor.is_hidden_gem == True, Vendor.hidden_gem_candidate == True)
+    ).order_by(Vendor.avg_rating.desc().nullslast()).all()
+    return jsonify({"hidden_gems": [v.to_dict() for v in gems], "count": len(gems)})
+
+
+@main_bp.route("/vendors/nearby", methods=["GET"])
+def get_nearby_vendors():
+    lat = request.args.get("lat", type=float)
+    lng = request.args.get("lng", type=float)
+    radius = request.args.get("radius", default=10.0, type=float) # km
+
+    query = Vendor.query.filter(Vendor.lat.isnot(None), Vendor.lng.isnot(None))
+    vendors = query.limit(150).all()
+
+    return jsonify({"vendors": [v.to_dict() for v in vendors]})
+
+
+@main_bp.route("/trails", methods=["GET"])
+def get_food_trails():
+    trails = [
+        {
+            "id": 1,
+            "title": "Walled City Old Heritage Food Trail",
+            "slug": "walled-city-heritage-trail",
+            "description": "Explore 100+ year old street food legends inside Jaipur's Pink City.",
+            "duration": "2.5 hours",
+            "budget": "₹150 - ₹250",
+            "stops_count": 5,
+            "stops": ["Lassiwala Shop 312", "Sahu Ki Chai", "Laxmi Misthan Bhandar", "PP Samosa", "Pandit Kulfi"],
+            "image_url": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=800"
+        },
+        {
+            "id": 2,
+            "title": "Masala Chowk Food Court Safari",
+            "slug": "masala-chowk-safari",
+            "description": "All famous Jaipur street-food stalls in one beautiful garden food court.",
+            "duration": "1.5 hours",
+            "budget": "₹100 - ₹200",
+            "stops_count": 4,
+            "stops": ["Gopal Singh Patasi", "Sethani Ka Dhaba", "Mahaveer Rabri Bhandar", "Samrat Street Food"],
+            "image_url": "https://images.unsplash.com/photo-1601050690597-df0568f70950?q=80&w=800"
+        }
+    ]
+    return jsonify({"trails": trails})
+
+
+@main_bp.route("/guides", methods=["GET"])
+def get_city_guides():
+    guides = [
+        {
+            "id": 1,
+            "title": "Ultimate Jaipur Kachori & Chai Guide",
+            "slug": "jaipur-kachori-chai-guide",
+            "summary": "Where locals go for authentic Pyaz Kachori, Mawa Kachori, and Kulhad Chai.",
+            "category": "Breakfast & Tea",
+            "vendor_count": 8,
+            "image_url": "https://images.unsplash.com/photo-1576092768241-dec231879fc3?q=80&w=800"
+        },
+        {
+            "id": 2,
+            "title": "Top 6 Underrated Hidden Gems of Jaipur",
+            "slug": "jaipur-hidden-gems-guide",
+            "summary": "Community-discovered street-food secret spots you won't find on tourist apps.",
+            "category": "Hidden Gems",
+            "vendor_count": 6,
+            "image_url": "https://images.unsplash.com/photo-1589301760014-d929f39ce9b1?q=80&w=800"
+        }
+    ]
+    return jsonify({"guides": guides})
+
 
 
 # ✅ ADD HERE

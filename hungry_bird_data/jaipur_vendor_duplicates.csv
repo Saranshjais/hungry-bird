@@ -1,0 +1,7 @@
+﻿duplicate_group,vendor_id,vendor_name,latitude,longitude,source_url,reason,action
+DUP-001,HB-OSM-N5249299221,The Tattoo Cafe,26.923806,75.827314,https://www.openstreetmap.org/node/5249299221,same normalized name within 300m (or distance unknown),KEEP_SEPARATE_UNTIL_VERIFIED
+DUP-001,HB-OSM-N11693090731,tattoo cafe,26.922633,75.827839,https://www.openstreetmap.org/node/11693090731,same normalized name within 300m (or distance unknown),KEEP_SEPARATE_UNTIL_VERIFIED
+DUP-002,HB-OSM-W758546144,Saras Dairy,26.9018314,75.7365719,https://www.openstreetmap.org/way/758546144,same normalized name within 300m (or distance unknown),KEEP_SEPARATE_UNTIL_VERIFIED
+DUP-002,HB-OSM-W758646777,Saras Dairy,26.9021084,75.7387878,https://www.openstreetmap.org/way/758646777,same normalized name within 300m (or distance unknown),KEEP_SEPARATE_UNTIL_VERIFIED
+DUP-003,HB-OSM-N12379294501,rooftop,26.9161718,75.7959976,https://www.openstreetmap.org/node/12379294501,same normalized name within 300m (or distance unknown),KEEP_SEPARATE_UNTIL_VERIFIED
+DUP-003,HB-OSM-N12379294701,rooftop,26.9156803,75.7959173,https://www.openstreetmap.org/node/12379294701,same normalized name within 300m (or distance unknown),KEEP_SEPARATE_UNTIL_VERIFIED

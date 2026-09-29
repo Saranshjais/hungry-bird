@@ -19,7 +19,7 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     cache.init_app(app, config={'CACHE_TYPE': 'FileSystemCache', 'CACHE_DIR': 'instance/cache'})
-    cors.init_app(app, resources={r"/api/*": {"origins": "*"}})
+    CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
     socketio.init_app(app)
 
     # import blueprints

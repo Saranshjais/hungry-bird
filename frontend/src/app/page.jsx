@@ -68,64 +68,84 @@ function CityCard({ city, index }) {
 
 export default function HomePage() {
   const [cities, setCities] = useState([]);
+  const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [videoLoaded, setVideoLoaded] = useState(false);
   const [activeCategory, setActiveCategory] = useState('All');
   const [lightboxImage, setLightboxImage] = useState(null);
-
-  const DISCOVER_ITEMS = [
-    { id: 1, name: 'Kalkatta Chat Bhandar', category: 'Chaat', price: '₹120', rating: '4.8', img: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=600' },
-    { id: 2, name: 'Amritsari Kulcha', category: 'Meals', price: '₹150', rating: '4.7', img: 'https://images.unsplash.com/photo-1626777552726-4c2810a41be7?q=80&w=600' },
-    { id: 3, name: 'Mumbai Vada Pav', category: 'Snacks', price: '₹40', rating: '4.9', img: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?q=80&w=600' },
-    { id: 4, name: 'Rabri Jalebi', category: 'Sweets', price: '₹90', rating: '4.6', img: 'https://images.unsplash.com/photo-1589301760014-d929f39ce9b1?q=80&w=600' },
-    { id: 5, name: 'Delhi Chole Bhature', category: 'Meals', price: '₹180', rating: '4.9', img: 'https://images.unsplash.com/photo-1631515243349-e0cb75fb8d3a?q=80&w=600' },
-    { id: 6, name: 'Pani Puri Shots', category: 'Chaat', price: '₹50', rating: '4.7', img: 'https://images.unsplash.com/photo-1584852077977-9cb267c7423e?q=80&w=600' },
-  ];
-
-  const filteredItems = activeCategory === 'All' ? DISCOVER_ITEMS : DISCOVER_ITEMS.filter(item => item.category === activeCategory);
-
-  const GALLERY_IMAGES = [
-    { id: 1, src: 'https://images.unsplash.com/photo-1555126634-323283e090fa?q=80&w=800', alt: 'Freshly made momos' },
-    { id: 2, src: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?q=80&w=800', alt: 'Spicy Pav Bhaji' },
-    { id: 3, src: 'https://images.unsplash.com/photo-1589301760014-d929f39ce9b1?q=80&w=800', alt: 'Sweet Jalebi' },
-    { id: 4, src: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=800', alt: 'Tangy Chaat' },
-  ];
 
   useEffect(() => {
     let isMounted = true;
     
-    async function fetchCities() {
+    async function fetchData() {
       try {
         const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
-        // Use a timestamp to prevent the browser or Next.js from caching the empty result
-        const r = await axios.get(`${API_URL}/api/cities?t=${Date.now()}`, {
-          timeout: 5000 // 5 second timeout to prevent infinite loading
-        });
         
+        const [citiesRes, vendorsRes] = await Promise.all([
+          axios.get(`${API_URL}/api/cities?t=${Date.now()}`, { timeout: 5000 }).catch(() => null),
+          axios.get(`${API_URL}/api/vendors?city=jaipur&limit=18`, { timeout: 5000 }).catch(() => null)
+        ]);
+
         if (!isMounted) return;
-        
-        const list = r.data?.cities || [];
-        const jaipurIndex = list.findIndex(c => c.slug === 'jaipur');
-        if (jaipurIndex > -1) {
-          const jaipur = list.splice(jaipurIndex, 1)[0];
-          list.unshift(jaipur);
+
+        if (citiesRes?.data?.cities) {
+          const list = citiesRes.data.cities;
+          const jaipurIndex = list.findIndex(c => c.slug === 'jaipur');
+          if (jaipurIndex > -1) {
+            const jaipur = list.splice(jaipurIndex, 1)[0];
+            list.unshift(jaipur);
+          }
+          setCities(list);
         }
-        setCities(list);
+
+        if (vendorsRes?.data?.vendors) {
+          setVendors(vendorsRes.data.vendors);
+        }
       } catch (err) {
-        console.warn('Backend offline - falling back to empty cities array.', err);
-        // On error, fallback to an empty array so loading spinner goes away
-        if (isMounted) setCities([]);
+        console.warn('Backend offline - falling back to default view state.', err);
       } finally {
         if (isMounted) setLoading(false);
       }
     }
 
-    fetchCities();
+    fetchData();
 
     return () => {
       isMounted = false;
     };
   }, []);
+
+  const mapCategory = (cat) => {
+    if (!cat) return 'Snacks';
+    const c = cat.toLowerCase();
+    if (c.includes('chaat') || c.includes('patashi')) return 'Chaat';
+    if (c.includes('sweet') || c.includes('ghewar') || c.includes('kulfi') || c.includes('lassi')) return 'Sweets';
+    if (c.includes('eatery') || c.includes('traditional') || c.includes('meal')) return 'Meals';
+    if (c.includes('chai') || c.includes('tea') || c.includes('snack') || c.includes('samosa') || c.includes('kachori')) return 'Snacks';
+    return 'Snacks';
+  };
+
+  const formattedVendors = vendors.length > 0 
+    ? vendors.map(v => ({
+        id: v.id,
+        name: v.name,
+        category: mapCategory(v.food_category || v.cuisine_type),
+        rawCategory: v.food_category || v.cuisine_type,
+        price: v.price_min ? `₹${v.price_min}${v.price_max ? ' - ₹' + v.price_max : ''}` : (v.price_level || '₹'),
+        rating: v.avg_rating ? v.avg_rating.toFixed(1) : '4.8',
+        img: v.image_url || 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=600',
+        area: v.area || 'Jaipur'
+      }))
+    : [
+        { id: 1, name: 'Rawat Misthan Bhandar', category: 'Snacks', price: '₹30 - ₹40', rating: '4.9', img: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?q=80&w=600', area: 'Sindhi Camp' },
+        { id: 2, name: 'Lassiwala (Shop 312)', category: 'Sweets', price: '₹30 - ₹60', rating: '4.9', img: 'https://images.unsplash.com/photo-1571006682862-3cd6145277d1?q=80&w=600', area: 'MI Road' },
+        { id: 3, name: 'Laxmi Misthan Bhandar (LMB)', category: 'Sweets', price: '₹50 - ₹150', rating: '4.8', img: 'https://images.unsplash.com/photo-1589301760014-d929f39ce9b1?q=80&w=600', area: 'Johari Bazaar' },
+        { id: 4, name: 'Gulab Ji Chai Wale', category: 'Snacks', price: '₹20', rating: '4.8', img: 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?q=80&w=600', area: 'MI Road' },
+        { id: 5, name: 'Sahu Chaiwala', category: 'Snacks', price: '₹20', rating: '4.7', img: 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?q=80&w=600', area: 'Chandpole' },
+        { id: 6, name: 'Pandit Kulfi', category: 'Sweets', price: '₹40 - ₹80', rating: '4.8', img: 'https://images.unsplash.com/photo-1560008511-11c63416e52d?q=80&w=600', area: 'Hawa Mahal' }
+      ];
+
+  const filteredItems = activeCategory === 'All' ? formattedVendors : formattedVendors.filter(item => item.category === activeCategory);
+
 
 
 
