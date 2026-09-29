@@ -1,0 +1,28 @@
+area_name,area_type,zone,ward,notes
+C-Scheme,commercial,,,"Research area; official zone/ward to be filled from municipal records only"
+MI Road,commercial,,,
+Raja Park,commercial_residential,,,
+Bapu Bazaar,bazaar,,,"Walled-city market"
+Johari Bazaar,bazaar,,,"Walled-city market; heritage zone"
+Ramganj,bazaar_residential,,,"Walled city"
+Mansarovar,residential,,,
+Malviya Nagar,residential_commercial,,,
+Vaishali Nagar,residential_commercial,,,
+Vidyadhar Nagar,residential,,,
+Jhotwara,residential_industrial,,,
+Adarsh Nagar,residential,,,
+Sanganer,town_suburb,,,"Known for airport and printing industry"
+Tonk Road,arterial_corridor,,,"Linear corridor, not a locality centroid"
+Gopalpura,residential_commercial,,,
+Pratap Nagar,residential,,,
+Jagatpura,residential,,,
+Amer,heritage,,,"Amer Fort tourist zone"
+Shastri Nagar,residential,,,
+Chandpole,bazaar_heritage,,,"Walled-city gate market"
+Tripolia Bazaar,bazaar_heritage,,,"Walled-city market"
+Kishanpole Bazaar,bazaar_heritage,,,"Walled-city market"
+Sindhi Camp,transit_hub,,,"Main bus stand area"
+Jawahar Nagar,residential,,,
+Civil Lines,residential_administrative,,,
+Durgapura,residential,,,
+Sodala,residential_commercial,,,

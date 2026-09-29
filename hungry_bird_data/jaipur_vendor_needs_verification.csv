@@ -1,0 +1,285 @@
+﻿vendor_id,vendor_name,area,latitude,longitude,verification_priority,missing_fields,verification_notes,assigned_to,status
+HB-OSM-N566815520,Natraj vegetarian Restaurant,MI Road,26.9161855,75.8109776,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N691261875,Anokhi Cafe,C-Scheme,26.9106803,75.7985655,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N2583229954,Ganesh Restaurant,Bapu Bazaar,26.9168711,75.8201955,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N2684721077,Spice Court,Civil Lines,26.9108905,75.7889678,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N2684968689,Laxmi Mishthan Bhandar,Johari Bazaar,26.9196343,75.8254983,MEDIUM,signature_dish;price_min;opening_time,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N2777043235,Old Green Tandori Dhaba,Sindhi Camp,26.9173942,75.8046009,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N3076106633,Saras Parlur,Malviya Nagar,26.8619406,75.8065239,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N3078036947,Hotel Raj Style Inn,Mansarovar,26.8499173,75.7686683,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N3078036948,Neelam Dhaba,Mansarovar,26.8481625,75.770165,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N3078038139,Mahadev Dhaba,Mansarovar,26.847881,75.7702746,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N3081602535,Saras Parlour,Malviya Nagar,26.8624615,75.8063864,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N3209386497,Chitra Café,Sindhi Camp,26.9206156,75.8041948,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N3476221910,Kanha,Malviya Nagar,26.8544337,75.8082444,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N3685074596,Nibs,Sindhi Camp,26.915555,75.7949393,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N3747116986,nimmu chai dukan,,27.0142879,75.7530237,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N3788605554,Vitthal's Kitchen,Gopalpura,26.8808849,75.7980181,MEDIUM,signature_dish;price_min;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N3830464220,"Doodh Misthana Bhandar , Jaipur",Sindhi Camp,26.9313342,75.800266,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N3830464221,Shree Ganesh Namkeen Bhandar,Sindhi Camp,26.9311763,75.8004455,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N3842344276,Yo China,MI Road,26.9164285,75.8094487,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N3875761989,Corner 10,Vaishali Nagar,26.9170881,75.743631,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N3912110531,Kanyi Restaurant,Sindhi Camp,26.9216983,75.7968445,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N4226406593,"Cheel Gadi, Sanganer",Sanganer,26.8219982,75.8109285,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N4348672497,Mohan Restaurant,Sindhi Camp,26.9198945,75.7987261,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N4466075493,Kailash Restaurant,Tripolia Bazaar,26.9270367,75.8281377,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N4486242089,bella italia,Sindhi Camp,26.9209213,75.8039303,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N4537365003,Jaighar,Amer,26.983062,75.8444611,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N4547443698,"Rainbow Cafe, Jaipur",,26.9483121,75.8404444,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N4579745989,Peacock rooftop restaurant,Sindhi Camp,26.9163329,75.7956078,MEDIUM,signature_dish;price_min;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N4580149089,Jal Mahal Ice Cream Parlour,MI Road,26.9162117,75.811188,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N4716648089,Shree Jagannath gajak bhandar,Johari Bazaar,26.919787,75.826617,MEDIUM,signature_dish;price_min,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N4744500823,India Coffe House,Kishanpole Bazaar,26.9171606,75.8145919,MEDIUM,signature_dish;price_min;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N4744578221,coffey Day,Sindhi Camp,26.9164507,75.7991333,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N4798056521,V2 FINE DINING,MI Road,26.9078828,75.8126688,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N4826369122,Cheap food places,Civil Lines,26.9120381,75.7920659,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N4830934021,Dhaba,C-Scheme,26.9063152,75.7966924,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N4877294175,Hotel Marc Inn,Vaishali Nagar,26.9110124,75.7421695,MEDIUM,signature_dish;price_min;opening_time,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N4900113521,Green Restaurant Pure Vegetarian,Sindhi Camp,26.9170712,75.8047235,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N4959426923,"Samode Haveli , Jaipur",Ramganj,26.9331035,75.8372573,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N4959496421,Copper Chimney,Sindhi Camp,26.9169731,75.80407,MEDIUM,signature_dish;price_min;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N4959540921,"Tapri Central , JAIPUR",C-Scheme,26.9056742,75.8111596,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N5016200924,Parampara,Ramganj,26.9408543,75.8384138,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N5074575922,Midtown Multicuisine Restaurant,Tripolia Bazaar,26.9237826,75.820574,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N5213122428,Lazy Mozo Backpackers,Civil Lines,26.9069676,75.789381,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N5227030921,"RESTAURANT , JAIPUR",,26.9498381,75.8421508,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N5249183922,Gulab Ji Chai,Sindhi Camp,26.9194326,75.7997638,MEDIUM,signature_dish;price_min;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N5249299221,The Tattoo Cafe,Tripolia Bazaar,26.923806,75.827314,MEDIUM,signature_dish;price_min,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N5283298222,Hawk View Roof Top Restaurant,Tripolia Bazaar,26.9304622,75.8283513,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N5340747922,Shama Bhojnyala,Sindhi Camp,26.9244566,75.78773,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N5342932521,"Maggie rooftop restaurant , Jaipur",Sindhi Camp,26.9241359,75.7897529,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N5344204721,Street food and chai corner,Chandpole,26.925004,75.8159025,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N5344535321,Wind view cafe,Tripolia Bazaar,26.9237491,75.8272853,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N5419597998,CIP Lounge Airport Jaipur,Sanganer,26.8279302,75.8062494,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N5419597999,Airr Toast,Sanganer,26.8277778,75.8061437,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N5422169221,Curious Life Coffee Roasters,C-Scheme,26.9042168,75.7969605,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N5579686421,Royal Sheritan Rooftop Bar,Tripolia Bazaar,26.9304449,75.8284459,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N5603023822,"Restaurant , Jaipur",,26.94956,75.837543,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N5717785320,Umaid Bhawan,Sindhi Camp,26.9284344,75.7923832,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N5953407587,Jaipur modern,Sindhi Camp,26.9140104,75.7987636,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N6029038596,Green pigeon,Ramganj,26.9397188,75.8369813,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N6132079085,Lassiwara,MI Road,26.9164866,75.8111981,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N6132611585,Pandit Kulfi,Tripolia Bazaar,26.9267387,75.8277588,HIGH,signature_dish;price_min;opening_time,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N6158494085,CHANMAN,Gopalpura,26.8615784,75.7956052,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N6249028885,Kalyan Rooftop Restaurant,Sindhi Camp,26.9162022,75.7958659,MEDIUM,signature_dish;price_min,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N6477759985,dasaprakash,MI Road,26.9163003,75.8080015,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N6479937688,Shri Krishna Restaurant,Sindhi Camp,26.9242783,75.7883111,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N6509321886,Atithiya,Sindhi Camp,26.9253797,75.7909073,MEDIUM,signature_dish;price_min;opening_time,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N6718124385,Sahu Ki Chai,Johari Bazaar,26.9183926,75.8213095,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N6728959764,Amul Cafe,,26.9347868,75.9233302,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N6728990941,Bazingaa,,26.9346954,75.9233219,MEDIUM,signature_dish;price_min;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N6728990942,Food Barn,,26.9347409,75.9234112,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N6766661285,Nibs Restaurant Cafe,Civil Lines,26.9024904,75.7943953,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N6780596585,Tasty King,Tripolia Bazaar,26.9214409,75.8192213,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N6815891298,Amarnath Café,Malviya Nagar,26.8549744,75.8054398,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N6908274785,Brown Bites bakes and cafe,C-Scheme,26.9053917,75.7943144,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N6966458471,Royal Bakery JTM mall,Jagatpura,26.8367694,75.8341023,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N6966530621,Venus Bakery,Vaishali Nagar,26.902208,75.7537728,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N6968230707,Kanha Restaurant,Vaishali Nagar,26.9034635,75.7531462,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N6976031004,Indian Sweets shop,Vaishali Nagar,26.905766,75.7391259,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N6976031031,Jodhpur Sweets,Vaishali Nagar,26.9123293,75.7381331,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N6976031039,The Crust,Vaishali Nagar,26.9112249,75.7440669,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N6976031040,Royal Bakery,Vaishali Nagar,26.9104383,75.7440869,MEDIUM,signature_dish;price_min;opening_time,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7007860485,Surabhi,Ramganj,26.932025,75.8313405,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7030319490,Aanandam,Ramganj,26.9388107,75.8379353,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7030319497,Grab A Coffee,Gopalpura,26.8631143,75.7916013,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7030319501,Tan-Sukh,Gopalpura,26.8645183,75.7966356,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7041264656,Chanakya,Vaishali Nagar,26.8931734,75.7393253,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7041677429,Sankalp,Vaishali Nagar,26.8968558,75.7519657,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7046290870,Virasat Heritage Restaurant,Civil Lines,26.899449,75.7929487,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7066243311,Jodhpur sweets,Jagatpura,26.8350018,75.8348815,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7068572485,Masala Chowk,Bapu Bazaar,26.9102996,75.8205896,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7084199742,Chai Chaskaa,Vaishali Nagar,26.9011834,75.7342422,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7084199743,Kullad - The Teafe',Vaishali Nagar,26.9011858,75.7363862,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7084199746,Shree Radhe,Vaishali Nagar,26.9016025,75.7358029,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7084199747,Tempties,Vaishali Nagar,26.9004765,75.7364033,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7084199748,Cafe 48,Vaishali Nagar,26.9002805,75.7363985,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7084199767,North West Corner,Vaishali Nagar,26.9017683,75.7368578,MEDIUM,signature_dish;price_min;opening_time,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7085549777,The Royal Ship,Vaishali Nagar,26.9209197,75.7533318,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7085550075,Kebabs & Curries Company,Vaishali Nagar,26.8987716,75.7387686,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7085550076,GoPure Natural Icecreams,Vaishali Nagar,26.8988344,75.7364888,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7085550081,Kesar Kanha,Vaishali Nagar,26.8991232,75.7385392,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7086493586,map Acres,Tripolia Bazaar,26.9289947,75.8252613,MEDIUM,signature_dish;price_min;opening_time,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7159785285,Samrat street food,Tripolia Bazaar,26.921071,75.822143,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7160138285,Chokha amer,Amer,26.9898771,75.8537705,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7190468085,Molly Moo,C-Scheme,26.9113009,75.8017201,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7232291585,Charis cafe,Sindhi Camp,26.9132795,75.7940823,MEDIUM,signature_dish;price_min,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7250139186,"Blue door Cafe  , Jaipur",Tripolia Bazaar,26.9266184,75.8269278,MEDIUM,signature_dish;price_min;opening_time,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7306107985,burger singh,MI Road,26.9165819,75.8096329,MEDIUM,signature_dish;price_min;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7684763326,The Hungry Owl,Mansarovar,26.8487827,75.7691477,MEDIUM,signature_dish;price_min;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N7969344386,Sri Motu Ram Prasadam,Durgapura,26.8436065,75.8024609,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8037689053,Chokhi Dhani - Tonk Road,,26.7675872,75.8361121,MEDIUM,signature_dish;price_min;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8044543830,Chaudhary Canteen,,26.7795829,75.8385864,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8071848421,South Indian Dosa Corner,Vaishali Nagar,26.9143066,75.7379933,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8071848459,Shyam Sweets,Vaishali Nagar,26.9148058,75.7380264,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8083911704,Brown Sugar,Civil Lines,26.9024065,75.7865482,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8087154678,Saras Dairy,Vaishali Nagar,26.9054236,75.7388882,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8088655773,Ridhi Sidhi Sweets,Gopalpura,26.8734967,75.7760574,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8088655798,Gulnar Juice,Gopalpura,26.8735628,75.7761313,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8090272809,One Two Ka Four,Vaishali Nagar,26.896566,75.7391914,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8090275218,Jodhpur Sweet Centre,Vaishali Nagar,26.8965433,75.7388928,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8119003843,Coffee Break,Vaishali Nagar,26.9091075,75.738462,MEDIUM,signature_dish;price_min,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8120433448,Bhairu Sahu Matka Kulfi Juice & Ice Cream,Civil Lines,26.8993887,75.7838445,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8125618821,Juicy Fruity,Adarsh Nagar,26.9031105,75.8366548,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8125618822,The Food Court,Adarsh Nagar,26.903362,75.8368928,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8125618825,American Grill,Adarsh Nagar,26.9033299,75.836829,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8140727758,Frontier Biscuits,Vaishali Nagar,26.9109947,75.7440542,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8140978704,Dengri's - The Restro Lounge,Vaishali Nagar,26.9102046,75.7434242,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8140978705,Choco Cheri,Vaishali Nagar,26.9102837,75.7437465,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8379213954,Coffee America,Mansarovar,26.8613782,75.7735375,MEDIUM,signature_dish;price_min,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8624888435,Mehta Pustak Bhandar,Johari Bazaar,26.9194619,75.8216071,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8624888436,Black Pizza,Bapu Bazaar,26.9061335,75.822165,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8632333092,Herbs On Pizza,Vidyadhar Nagar,26.9700049,75.7623864,MEDIUM,signature_dish;price_min,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8887611105,bablu tea stall,,26.8465067,75.8940019,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8887639428,Saras Dairy,,26.8418472,75.8922605,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8887645034,omji tea stole,,26.8414227,75.8922946,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8887995501,braj tea stall,,26.8413945,75.8919855,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8891919680,Gauri sweet,Jagatpura,26.8363861,75.8720631,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8892854930,Saras Dairy Sector 6,,26.8371014,75.8920437,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8900590496,"sector - 5 , dairy",,26.8366152,75.8850804,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8900651448,banavari thadi,,26.8358975,75.8769066,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N8903968898,Tan-Sukh,Vaishali Nagar,26.9035157,75.7530934,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N9495760718,Café BAE,Civil Lines,26.899789,75.7929507,MEDIUM,signature_dish;price_min;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10013473818,thali and more,C-Scheme,26.9109569,75.805667,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10259447809,Vinay Restaurant,Sindhi Camp,26.9280901,75.7970653,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10554368725,Terrazzo,Gopalpura,26.881962,75.7974672,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10554368726,"Talk Of The Town, Lal Kothi",Gopalpura,26.8824325,75.797106,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10554368728,The Khopcha Cafe,Gopalpura,26.8819484,75.7975186,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10561385109,Kabul Chicken Sajji,Johari Bazaar,26.9221585,75.8300509,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10744673403,Café coffee day,Amer,26.9854069,75.8495623,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10745129341,Rajastani Thali Dal Baati Churma,Sindhi Camp,26.9274262,75.7908643,MEDIUM,signature_dish;price_min,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10899269954,The Warehouse Cafe,C-Scheme,26.8860135,75.8036761,MEDIUM,signature_dish;price_min;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10904661341,the doors restaurant,MI Road,26.91579,75.81012,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10904661667,matti indian cafe house,Sindhi Camp,26.9160713,75.8015668,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10904677030,Unique Bakers,Jagatpura,26.8232047,75.867953,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10904677031,Arora Bakers,Jagatpura,26.8226139,75.8647334,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10904677035,Dream Cafe,Jagatpura,26.8277721,75.8477985,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10904677037,Punjab Rasoi Restaurant,Jagatpura,26.8265338,75.8492276,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10904677048,Chai Aashram,Jagatpura,26.8302623,75.8495723,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10904687645,Arpita Bakers,Jagatpura,26.8280346,75.84754,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10904687646,Let's Brew Coffee,Jagatpura,26.8282916,75.844543,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10904687647,Garrison cafe,Jagatpura,26.8283365,75.8445068,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10904714955,salon,MI Road,26.9113372,75.8118529,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10917746182,Roseberry,Gopalpura,26.8685465,75.7969727,MEDIUM,signature_dish;price_min;opening_time,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10959797687,KANHA SWEETS AND BAKERY,,26.9541898,75.7028711,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10959797692,LUCKY NON VEG RESTRAUNT,,26.9531851,75.7027962,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10959797695,RADHEY  BAKERS,,26.9517058,75.7014027,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10960889865,kgn cafe,Vidyadhar Nagar,26.9726124,75.7675594,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10960889883,Mother Dairy,Vidyadhar Nagar,26.9703762,75.7611297,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10960889891,FAST FOOD CORNER,Vidyadhar Nagar,26.968325,75.7629053,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10960889892,CHAT KA CHAURAHA,Vidyadhar Nagar,26.9695114,75.7630294,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10960893907,roof top cafe,Vidyadhar Nagar,26.9704518,75.7606957,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N10960893909,glorious restaurent,Vidyadhar Nagar,26.9705699,75.7626812,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11082457256,Jaipur Chaupati,Durgapura,26.8406321,75.7739393,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11162418128,Half Light Coffee Roasters,C-Scheme,26.9073957,75.7954528,MEDIUM,signature_dish;price_min,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11185475306,Daisy and Jade Jaipur,,26.9022301,75.7125581,MEDIUM,signature_dish;price_min,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11425726510,BTS Burger To Shakei,Mansarovar,26.8416823,75.770054,MEDIUM,signature_dish;price_min;opening_time,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11496566023,The Curry Spoon,Ramganj,26.9361784,75.8348424,MEDIUM,signature_dish;price_min;opening_time,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11497259569,Govindam Sweets & Bakery,Tripolia Bazaar,26.9286259,75.8255219,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11556672755,Niros,MI Road,26.9162948,75.811478,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11609578469,Кафе,Kishanpole Bazaar,26.9175489,75.8169087,MEDIUM,signature_dish;price_min;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11690525027,Krishna Paradise,,26.9587845,75.7041211,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11691570492,Rangoli Bakery,Gopalpura,26.8843583,75.7844685,MEDIUM,signature_dish;price_min;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11693090731,tattoo cafe,Johari Bazaar,26.922633,75.827839,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11693091362,vind view cafe,Johari Bazaar,26.92264,75.827818,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11697024064,Kanha Restraunt,,26.9527025,75.7000583,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11697030632,TEA TIME CAFE,,26.9561705,75.7090258,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11697053362,Baker's Heart,,26.9536647,75.7026994,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11697053363,Rajdhani Cafe,,26.9549117,75.7031055,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11697066653,Kanha Bakers,,26.9523695,75.7001031,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11697111040,Bell Pepper Pizza,,26.9476578,75.7240065,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11697474057,Somra juice and icecream corner,,26.952,75.7019616,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11722176171,Sharma Kachori Wallaz,Chandpole,26.9266401,75.8088945,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11724571841,Karodiya Kachori Bhandar,Johari Bazaar,26.92088,75.8271023,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11725249803,Roop Basant Pavitra Bhojanalaya,Sindhi Camp,26.92059,75.7888677,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11725249804,Khandelwal,Sindhi Camp,26.9205952,75.7888436,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11760727012,Laxmi,Sodala,26.9021987,75.7726597,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11763678169,NOTHING BEFORE COFFEE,Tripolia Bazaar,26.9238475,75.824011,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11764154269,Annpoornam,Sindhi Camp,26.9148703,75.8047591,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N11965989513,Jodhpur Misthan Bhandar,,26.9092688,75.6941393,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12117596629,Shree Laxmi Jodhpur Sweets,Jhotwara,26.95653,75.7412095,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12151385705,Ganesh Resturent,Pratap Nagar,26.784195,75.8235447,MEDIUM,signature_dish;price_min;opening_time,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12358211503,Shree Sanwariya Sarkar,Sindhi Camp,26.9247973,75.7899824,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12358211703,Shri Shyam Pavitra Bhojnalaya,Sindhi Camp,26.924693,75.7906604,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12358211801,street food,Sindhi Camp,26.9244746,75.7891214,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12358212002,Anjani,Sindhi Camp,26.9244798,75.7905539,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12358212201,The Mama Bhanja's,Sindhi Camp,26.9254591,75.7912713,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12361795404,chai,Tripolia Bazaar,26.9241837,75.8203002,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12361795407,Kebabs and Curries Company Family Restaurant,Tripolia Bazaar,26.928008,75.8283941,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12361795408,Samosa,Tripolia Bazaar,26.9277497,75.8280203,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12361795410,Biryani,Sindhi Camp,26.9197437,75.7897154,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12361795415,"Maa Bakery , Jaipur",Sindhi Camp,26.9244808,75.7907088,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12361795417,Fresh Bites,Sindhi Camp,26.9256027,75.7910741,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12361795505,Crazy mood Coffee,Tripolia Bazaar,26.9264938,75.827716,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12361795506,Krishna Bhojnalya,Sindhi Camp,26.9179347,75.7903436,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12361795803,street food street,Sindhi Camp,26.919879,75.7894725,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12361796202,Atithi,Sindhi Camp,26.9177934,75.7904291,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12361796306,Kebabs and Curries Company,Sindhi Camp,26.9286951,75.7891802,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12365223406,chai,Chandpole,26.9326934,75.8049478,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12365225001,fried chicken,Shastri Nagar,26.9332474,75.8045387,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12367921602,Rajasthan Craft Plaza Family Restaurant,Sindhi Camp,26.9228362,75.7999201,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12369816604,J. K,Sindhi Camp,26.9228991,75.7881135,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12373714204,Rajasthani Thali,Sindhi Camp,26.9228662,75.8013105,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12373714205,Thali House,Sindhi Camp,26.9225559,75.7991003,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12376557404,Bikaner Misthan Bhandar,Sindhi Camp,26.9217588,75.7969706,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12376557505,Bikaner Bhojnalaya,Sindhi Camp,26.9218853,75.7973434,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12376558601,they offer Thali for 150inr and refill until you are full,Sindhi Camp,26.9226018,75.7994137,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12379232203,Shahar,Sindhi Camp,26.9184451,75.799315,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12379294402,The Little French Home,Sindhi Camp,26.9156131,75.795923,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12379294501,rooftop,Sindhi Camp,26.9161718,75.7959976,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12379294701,rooftop,Sindhi Camp,26.9156803,75.7959173,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12395867028,TVG AMER RESTAURANT,Ramganj,26.9415187,75.8386718,MEDIUM,signature_dish;price_min;opening_time,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12396071301,The Johri,Johari Bazaar,26.9185848,75.8264162,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12595806172,Sonis Cafe,Shastri Nagar,26.941585,75.7874029,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12595806173,Burger Queen,Shastri Nagar,26.9421064,75.7885138,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12595819932,Kalidoscope,Vidyadhar Nagar,26.9563366,75.7806167,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12669189229,Tharka Restauratnt,Jhotwara,26.9541328,75.7464672,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12734119470,Retreat,MI Road,26.9154952,75.8064548,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N12927047438,Mehfil e Chaii,Vaishali Nagar,26.9096345,75.7180126,MEDIUM,signature_dish;price_min,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N13120379386,thadi,Malviya Nagar,26.8588867,75.8154322,MEDIUM,signature_dish;price_min;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N13201142301,Garh rooftop cafe and restaurant,Amer,26.9859918,75.8543102,MEDIUM,signature_dish;price_min,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N13275317106,Spicy King,Shastri Nagar,26.947482,75.7976766,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N13296710002,Kha'Ba bar and kitchen,Sindhi Camp,26.9319385,75.7886818,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N13335517501,The Akky South Indian,Chandpole,26.9245268,75.8158137,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N13335517601,Rajmahal Restaurant,Sindhi Camp,26.9210603,75.7972789,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N13374238601,Banana Leaf,C-Scheme,26.9086334,75.8094777,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N13378344903,Foffee,Tripolia Bazaar,26.9352447,75.8241841,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N13420769375,Noir Cafe,MI Road,26.9147551,75.8125212,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N13423374282,Naturals,C-Scheme,26.9110022,75.7953835,HIGH,signature_dish;price_min;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N13423773617,Curious Life Coffee Roasters: RED,C-Scheme,26.9093594,75.8086807,MEDIUM,signature_dish;price_min,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N13423971793,Jaipur Adda,Sindhi Camp,26.9211837,75.7948487,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N13564660001,Shree Paawan Sweets,,26.9812179,75.7447225,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N13564669801,Shree Raghvendra Sweets & Juice Center,,26.9813973,75.7446251,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N13564670701,Shree Shyam Sweets & Bakers,,26.9825359,75.7389093,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N13602800764,Mr Macchiato,Shastri Nagar,26.9334687,75.7939667,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N13604724101,Kokum Bistro,Amer,26.9922926,75.8506609,MEDIUM,signature_dish;price_min;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N13607613087,Once Upon at Gath,Chandpole,26.9375434,75.8158196,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N13647677301,Café Auberge,Civil Lines,26.9114545,75.789028,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N13651411902,R.K Hotel,Shastri Nagar,26.9488328,75.8059295,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N13660701045,Chaisa,C-Scheme,26.8915909,75.7993874,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N13672024783,Elvina's Cuisine Hub,,26.8246856,75.7573729,MEDIUM,signature_dish;price_min;opening_time,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-N13704865113,Town Coffee,Malviya Nagar,26.8502125,75.8023122,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-W223785883,parking area near bus stand,Sindhi Camp,26.9237098,75.8012964,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-W237962625,De-novo Restaurant,,27.0303673,75.8927076,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-W331543458,Nice Cafe,Tripolia Bazaar,26.9342754,75.8253565,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-W361514403,Annapurna Canteen,Malviya Nagar,26.8632407,75.8106274,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-W590565341,Green Leaf Cafe,Mansarovar,26.8481857,75.7683043,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-W745235616,RJ 14,Vaishali Nagar,26.8951713,75.7505953,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-W758347908,Hide out cafe,Jagatpura,26.8472168,75.8603008,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-W758546144,Saras Dairy,Vaishali Nagar,26.9018314,75.7365719,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-W758640337,Sugar Berry,Vaishali Nagar,26.8989805,75.733749,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-W758646777,Saras Dairy,Vaishali Nagar,26.9021084,75.7387878,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-W759592844,Decked Up By Garden Café,Vaishali Nagar,26.9136135,75.7526771,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-W862954957,Shankar lal Mava,Sanganer,26.8186738,75.7975327,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-W866422928,Saras Parlour,Malviya Nagar,26.8666132,75.801778,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-W867324712,Saras Dairy - 11517,Civil Lines,26.9012176,75.7807973,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-W961875192,new cafe jagatpura,Jagatpura,26.8363406,75.8271557,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-W961876114,hanuman rastorent,Jagatpura,26.8357356,75.82805,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-W962291075,sheter ki thdi,Malviya Nagar,26.8396295,75.8248358,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-W962487873,INDIRA RASOI,Jagatpura,26.8358664,75.8315161,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-W1173342714,Saras Dairy Booth,Gopalpura,26.878604,75.8055596,HIGH,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-W1347531059,Padao Restaurant,Shastri Nagar,26.9373593,75.812114,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-W1428329277,Tea House,Gopalpura,26.8739407,75.7766477,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-W1428331379,patashi center,Vidyadhar Nagar,26.9555421,75.7712703,MEDIUM,signature_dish;price_min;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-W1428334632,IRIS Cafe,,26.8580852,75.7257099,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING
+HB-OSM-W1434523049,Restaurant RZD,Vaishali Nagar,26.9064629,75.7381764,MEDIUM,signature_dish;price_min;opening_time;phone,"OSM-sourced; confirm existence, name, food type on site",,PENDING

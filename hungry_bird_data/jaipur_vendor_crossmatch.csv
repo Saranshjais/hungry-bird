@@ -1,0 +1,9 @@
+﻿doc_vendor_id,doc_vendor_name,osm_vendor_id,osm_name,verdict,reason
+HB-DOC-0003,Laxmi Misthan Bhandar (LMB),HB-OSM-N2684968689,Laxmi Mishthan Bhandar,CONFIRMED,name + area agree across independent sources
+HB-DOC-0004,Gulab Ji Chai Wale,HB-OSM-N5249183922,Gulab Ji Chai,CONFIRMED,name + area agree across independent sources
+HB-DOC-0005,Sahu Chaiwala (Sahu ki Chai),HB-OSM-N6718124385,Sahu Ki Chai,CONFIRMED,name + area agree across independent sources
+HB-DOC-0007,Pandit Kulfi,HB-OSM-N6132611585,Pandit Kulfi,CONFIRMED,name + area agree across independent sources
+HB-DOC-0008,Samrat Restaurant,HB-OSM-N7159785285,Samrat street food,PLAUSIBLE_NOT_MERGED,"name variant 'Samrat street food' near Chaura Rasta — plausible, confirm before merging"
+HB-DOC-0022,Kanha,multiple,Kanha branches,PLAUSIBLE_NOT_MERGED,"chain with multiple OSM branches (Malviya Nagar, Vaishali Nagar, ...) — map per-branch, do not merge into one point"
+HB-DOC-0003,Laxmi Misthan Bhandar (LMB),HB-OSM-N11760727012,Laxmi,REJECTED,"different area (Sodala), generic name overlap"
+HB-DOC-0012,Special Kulfi Bhandar,HB-OSM-N8120433448,Bhairu Sahu Matka Kulfi,REJECTED,different name and area; keyword-only overlap
