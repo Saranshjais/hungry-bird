@@ -1,0 +1,362 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
+
+import '../core/formatters.dart';
+import '../core/theme.dart';
+
+/// Space reserved under scrollables for the floating bottom navigation bar.
+const double kNavBarSpace = 110;
+
+void showSnack(BuildContext context, String message, {bool error = false}) {
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  messenger?.hideCurrentSnackBar();
+  messenger?.showSnackBar(SnackBar(
+    content: Row(
+      children: [
+        Icon(error ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded,
+            color: error ? const Color(0xFFFCA5A5) : const Color(0xFF86EFAC), size: 20),
+        const SizedBox(width: 10),
+        Expanded(child: Text(message)),
+      ],
+    ),
+  ));
+}
+
+class AppNetworkImage extends StatelessWidget {
+  const AppNetworkImage({super.key, required this.url, this.fit = BoxFit.cover, this.width, this.height, this.radius = 0});
+
+  final String? url;
+  final BoxFit fit;
+  final double? width;
+  final double? height;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget fallback() => Image.asset('assets/images/placeholder.jpg', fit: fit, width: width, height: height);
+    final image = (url == null || !url!.startsWith('http'))
+        ? fallback()
+        : CachedNetworkImage(
+            imageUrl: url!,
+            fit: fit,
+            width: width,
+            height: height,
+            fadeInDuration: const Duration(milliseconds: 200),
+            placeholder: (_, __) => SkeletonBox(width: width, height: height, radius: 0),
+            errorWidget: (_, __, ___) => fallback(),
+          );
+    if (radius == 0) return image;
+    return ClipRRect(borderRadius: BorderRadius.circular(radius), child: image);
+  }
+}
+
+class SkeletonBox extends StatelessWidget {
+  const SkeletonBox({super.key, this.width, this.height, this.radius = 12});
+
+  final double? width;
+  final double? height;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Shimmer.fromColors(
+      baseColor: dark ? const Color(0xFF292524) : const Color(0xFFEDEBE9),
+      highlightColor: dark ? const Color(0xFF3A3532) : const Color(0xFFF8F7F6),
+      child: Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(radius)),
+      ),
+    );
+  }
+}
+
+/// Star + rating, or "New" for unrated stalls.
+class RatingPill extends StatelessWidget {
+  const RatingPill({super.key, required this.rating, this.count = 0, this.onImage = false, this.compact = false});
+
+  final double? rating;
+  final int count;
+  final bool onImage;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasRating = rating != null && count > 0;
+    final bg = onImage ? Colors.white : (hasRating ? AppColors.successSoft : AppColors.brandSoft);
+    final fg = hasRating ? (onImage ? AppColors.ink : const Color(0xFF166534)) : AppColors.brandDark;
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: compact ? 7 : 9, vertical: compact ? 3 : 5),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: onImage ? [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 8)] : null,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(hasRating ? Icons.star_rounded : Icons.auto_awesome_rounded,
+              size: compact ? 13 : 15, color: hasRating ? AppColors.star : AppColors.brand),
+          const SizedBox(width: 3),
+          Text(
+            hasRating ? (compact ? Fmt.rating(rating) : '${Fmt.rating(rating)} (${Fmt.count(count)})') : 'New',
+            style: TextStyle(fontSize: compact ? 11.5 : 12.5, fontWeight: FontWeight.w800, color: fg),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+enum BadgeKind { hiddenGem, famous, verified }
+
+class VendorBadge extends StatelessWidget {
+  const VendorBadge(this.kind, {super.key, this.small = false});
+
+  final BadgeKind kind;
+  final bool small;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, icon, fg, bg) = switch (kind) {
+      BadgeKind.hiddenGem => ('Hidden Gem', Icons.diamond_rounded, AppColors.gem, AppColors.gemSoft),
+      BadgeKind.famous => ('Local Legend', Icons.local_fire_department_rounded, AppColors.brandDeep, AppColors.brandLight),
+      BadgeKind.verified => ('Verified', Icons.verified_rounded, AppColors.info, const Color(0xFFDBEAFE)),
+    };
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: small ? 7 : 10, vertical: small ? 3 : 5),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: small ? 12 : 14, color: fg),
+          const SizedBox(width: 4),
+          Text(label, style: TextStyle(fontSize: small ? 10.5 : 12, fontWeight: FontWeight.w800, color: fg)),
+        ],
+      ),
+    );
+  }
+}
+
+class SectionHeader extends StatelessWidget {
+  const SectionHeader({super.key, required this.title, this.subtitle, this.onSeeAll, this.padding});
+
+  final String title;
+  final String? subtitle;
+  final VoidCallback? onSeeAll;
+  final EdgeInsetsGeometry? padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: padding ?? const EdgeInsets.fromLTRB(20, 24, 12, 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: theme.textTheme.titleLarge?.copyWith(fontSize: 19)),
+                if (subtitle != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(subtitle!, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                  ),
+              ],
+            ),
+          ),
+          if (onSeeAll != null)
+            TextButton(
+              onPressed: onSeeAll,
+              child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                Text('See all'),
+                SizedBox(width: 2),
+                Icon(Icons.chevron_right_rounded, size: 18),
+              ]),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class EmptyState extends StatelessWidget {
+  const EmptyState({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+    this.compact = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 32, vertical: compact ? 24 : 48),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: compact ? 64 : 84,
+              height: compact ? 64 : 84,
+              decoration: const BoxDecoration(color: AppColors.brandSoft, shape: BoxShape.circle),
+              child: Icon(icon, size: compact ? 30 : 38, color: AppColors.brand),
+            ),
+            const SizedBox(height: 18),
+            Text(title, textAlign: TextAlign.center, style: theme.textTheme.titleMedium?.copyWith(fontSize: 18)),
+            const SizedBox(height: 6),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant, height: 1.45),
+            ),
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: 20),
+              FilledButton(onPressed: onAction, child: Text(actionLabel!)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ErrorState extends StatelessWidget {
+  const ErrorState({super.key, required this.message, required this.onRetry, this.compact = false});
+
+  final String message;
+  final VoidCallback onRetry;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) => EmptyState(
+        icon: Icons.cloud_off_rounded,
+        title: 'Couldn\'t load this',
+        message: message,
+        actionLabel: 'Try again',
+        onAction: onRetry,
+        compact: compact,
+      );
+}
+
+/// Interactive 1–5 star picker.
+class StarRatingInput extends StatelessWidget {
+  const StarRatingInput({super.key, required this.value, required this.onChanged, this.size = 40});
+
+  final int value;
+  final ValueChanged<int> onChanged;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (i) {
+        final filled = i < value;
+        return Semantics(
+          button: true,
+          label: '${i + 1} star${i == 0 ? '' : 's'}',
+          selected: filled,
+          child: IconButton(
+            visualDensity: VisualDensity.compact,
+            iconSize: size,
+            onPressed: () => onChanged(i + 1),
+            icon: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 160),
+              transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+              child: Icon(
+                filled ? Icons.star_rounded : Icons.star_outline_rounded,
+                key: ValueKey(filled),
+                color: filled ? AppColors.star : Theme.of(context).colorScheme.outline,
+              ),
+            ),
+          ),
+        );
+      }),
+    );
+  }
+}
+
+class StarRow extends StatelessWidget {
+  const StarRow({super.key, required this.rating, this.size = 16});
+
+  final double rating;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (i) {
+        final icon = rating >= i + 1
+            ? Icons.star_rounded
+            : rating > i
+                ? Icons.star_half_rounded
+                : Icons.star_outline_rounded;
+        return Icon(icon, size: size, color: AppColors.star);
+      }),
+    );
+  }
+}
+
+class Avatar extends StatelessWidget {
+  const Avatar({super.key, required this.name, this.size = 40});
+
+  final String name;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    const palette = [Color(0xFFF97316), Color(0xFF7C3AED), Color(0xFF0EA5E9), Color(0xFF16A34A), Color(0xFFDB2777)];
+    final color = palette[name.codeUnits.fold<int>(0, (a, b) => a + b) % palette.length];
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.14), shape: BoxShape.circle),
+      child: Text(
+        Fmt.initials(name),
+        style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: size * 0.38),
+      ),
+    );
+  }
+}
+
+/// Rounded white card container used across screens.
+class SurfaceCard extends StatelessWidget {
+  const SurfaceCard({super.key, required this.child, this.padding = const EdgeInsets.all(16), this.onTap, this.margin});
+
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry? margin;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: margin ?? EdgeInsets.zero,
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(padding: padding, child: child),
+        ),
+      ),
+    );
+  }
+}
