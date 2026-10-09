@@ -1,36 +1,74 @@
-# Hungry Bird — Vendor Detail Page + Fixes
+# HungryBird
 
-Drop these files into your repo at the **same relative paths** (they'll overwrite/add to existing files). Folder structure here matches your repo exactly:
+Street-food discovery for India: hidden-gem stalls, reviews, maps and community suggestions.
 
+| Part | Folder | Stack |
+| --- | --- | --- |
+| API | [`backend/`](backend) | Flask, SQLAlchemy, Alembic (Postgres on Render, SQLite locally) |
+| Website + admin panel | [`frontend/`](frontend) | Next.js 16 (public site at `/`, admin at `/admin`) |
+| Mobile app | [`hungry_bird_app/`](hungry_bird_app) | Flutter (Android / iOS) — see its [README](hungry_bird_app/README.md) |
+| Research data | [`hungry_bird_data/`](hungry_bird_data) | Jaipur vendor datasets used by `backend/seed_jaipur_data.py` |
+
+`mobile/` contains the earlier Expo/React Native prototype. It is superseded by the Flutter app and kept only for reference.
+
+## Running locally
+
+**API** (Python 3.11)
+
+```bash
+cd backend
+python -m venv .venv && .venv\Scripts\activate      # macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+flask db upgrade                  # or: python seed_jaipur_data.py  (fresh DB with ~300 Jaipur vendors)
+flask run --host 0.0.0.0          # http://127.0.0.1:5000
 ```
-backend/app/models.py                                    → updated (new columns)
-backend/app/routes/main.py                                → updated (new endpoint)
-backend/migrations/versions/d3f9a1b2c4e5_...py             → new migration
-frontend/src/app/vendor/[id]/page.jsx                      → new (SEO metadata, server component)
-frontend/src/app/vendor/[id]/VendorDetailClient.jsx        → new (the actual page UI)
-frontend/src/app/vendor/[id]/VendorMap.jsx                 → new (mini map)
-frontend/src/app/city/[slug]/page.jsx                      → updated (VendorCard + Near Me)
+
+**Website + admin panel**
+
+```bash
+cd frontend
+npm install
+set NEXT_PUBLIC_API_URL=http://127.0.0.1:5000   # PowerShell: $env:NEXT_PUBLIC_API_URL="…"
+npm run dev                                     # http://localhost:3000 and /admin
 ```
 
-## What changed
+**Mobile app** — see [`hungry_bird_app/README.md`](hungry_bird_app/README.md):
+`flutter run --dart-define=API_BASE_URL=http://10.0.2.2:5000`
 
-**Backend**
-- `Vendor` model: added `description`, `specialty_dish`, `opening_hours` columns
-- New migration for those columns — run `flask db upgrade` after dropping the file in
-- New endpoint: `GET /api/vendors/<id>` — returns full vendor detail, all reviews, and 4 nearby vendors in the same city
+## Admin panel
 
-**Frontend**
-- New vendor detail page at `/vendor/[id]` — photo hero, badges (Hidden Gem / Verified / price), rating summary, description, full review list + review form, mini-map, directions button, nearby vendors. Includes `generateMetadata` for proper link previews on WhatsApp/social when people share a vendor.
-- `VendorCard` on the city page: removed the fake `"60% OFF"` badges, replaced with real `Hidden Gem` / price-level badges. Clicking the card now goes to the vendor detail page; "Get Directions" is now its own button so both actions are reachable.
-- "Near Me" button on the city page now actually works — uses real geolocation, sorts vendors by distance, and shows the distance on each card. Click again to turn it off.
+`/admin` manages everything the website and the app show:
 
-## Before you run it
+- **Dashboard** — live totals, 7/30-day activity chart, recent activity, vendors by city.
+- **Submissions** — approve (with editable details and coordinates) or reject community suggestions.
+- **Vendors** — search/filter/paginate, full create & edit (description, specialty dish, hours, price, photo, map position…), hide, bulk CSV/XLSX import, CSV export.
+- **Cities**, **Categories** (the app's filter chips), **Reviews** (vendor reviews, rating summary, website testimonials).
+- **Users** (suspend / reactivate / delete), **Staff** (admin accounts with roles), **Inbox** (contact form + in-app support), **Reports** (flagged vendors/reviews/reels with one-click take-down), **Reels**.
+- **App settings** — home banners, broadcast notifications, maintenance mode, minimum app version (forces updates), announcement strip, store links, guest reviews on/off.
 
-1. Since `description`, `specialty_dish`, `opening_hours` are new and start empty for all existing vendors, the vendor detail page falls back to a generic sentence when `description` is blank. Consider a quick admin panel field (in `admin/vendors`) to let you fill these in for your best stalls — that's what will make the page feel premium instead of generic.
-2. Run the migration: `cd backend && flask db upgrade`
-3. Nothing else needs new npm packages — the vendor map reuses `react-leaflet`, already a dependency via `CityMap.jsx`.
+Staff roles: `super_admin` (everything), `moderator`, `support`, `city_manager`, `app_manager`. Every role can read; write access is limited per area, and only super admins manage staff.
 
-## Not done yet (from the original priority list)
-- Favorites/Wishlist UI — the backend already has `/api/favorites` and `/api/saved` routes (and even two overlapping models for it — `Favorite` and `SavedVendor` — worth consolidating to one before building the UI)
-- City-agnostic "Explore Near Me" page across all cities
-- Admin UI fields for the new `description`/`specialty_dish`/`opening_hours` columns
+**First login.** On an empty `admin_users` table the API creates a super admin from `ADMIN_USERNAME` / `ADMIN_EMAIL` / `ADMIN_PASSWORD`. If those aren't set it falls back to the old panel login (`saransh` / `Sara@123`). After the first login, change the password (sidebar → Password) and add named accounts for your team under **Staff**.
+
+## Deploying
+
+The Render blueprint (`render.yaml`) runs `pip install -r requirements.txt && flask db upgrade` on every deploy.
+
+Migration `e7a1c9d2f3b4` adds the admin/app tables (staff, categories, inbox, reports, banners, settings, notifications) and user moderation fields. It also back-fills vendor columns that existed in the model but never had a migration; every step checks the live schema first, so it is safe on existing databases. Default food categories are seeded when the table is created.
+
+Environment variables:
+
+| Service | Variable | Notes |
+| --- | --- | --- |
+| API | `SECRET_KEY`, `DATABASE_URL` | set by the blueprint |
+| API | `ADMIN_USERNAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` | first super admin (only used while no admin exists) |
+| Website | `NEXT_PUBLIC_API_URL` | API root, e.g. `https://hungry-bird-jye4.onrender.com` |
+| App | `--dart-define=API_BASE_URL=…` | defaults to the Render API |
+
+## API overview
+
+Public (`/api`): `cities`, `vendors` (filters: `city`, `category`, `q`, `is_hidden_gem`, `is_famous`, `sort=rating|popular|newest|distance`, `lat`/`lng`, `limit`/`offset`), `vendors/<id>`, `vendors/nearby`, `vendors/hidden-gems`, `search`, `vendors/<id>/rate`, `submit-vendor`, `app/config`, `categories`, `notifications`, `contact`, `reports`, `trails`, `guides`, `vendor-reviews`, `site-reviews`, `reels`.
+
+Account (`/api/auth`, Bearer token): `register`, `login`, `me`, `profile`, `password`, `account` (delete), `notifications-preference`; plus `/api/favorites` (`toggle`, `sync`) and `/api/user/{submissions,reviews}`.
+
+Admin (`/api/admin`, staff token): `login`, `me`, `stats`, `counts`, `submissions`, `vendors` (+ `bulk-upload`, `export`), `cities`, `categories`, `ratings`, `reviews`, `site-reviews`, `users`, `staff`, `inbox`, `reports` (+ `take-down`), `reels`, `app-settings`, `banners`, `notifications`.
