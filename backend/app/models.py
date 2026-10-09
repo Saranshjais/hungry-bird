@@ -13,6 +13,8 @@ class User(db.Model):
     push_token = db.Column(db.String(255), nullable=True)
     notifications_enabled = db.Column(db.Boolean, default=True)
     password_hash = db.Column(db.String(255), nullable=False)
+    status = db.Column(db.String(20), default="active")  # "active", "suspended"
+    last_login_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def set_password(self, password):
@@ -21,6 +23,21 @@ class User(db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    @property
+    def is_suspended(self):
+        return (self.status or "active") == "suspended"
+
+    def to_public_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "email": self.email,
+            "phone": self.phone,
+            "status": self.status or "active",
+            "notifications_enabled": self.notifications_enabled,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
 
 
 class City(db.Model):
@@ -121,6 +138,8 @@ class Vendor(db.Model):
             "hidden_gem_score_status": self.hidden_gem_score_status or ("PENDING_CURATOR_REVIEW" if self.hidden_gem_candidate else None),
             "is_famous": self.is_famous,
             "avg_rating": self.avg_rating or 4.5,
+            # Unpadded rating (null until someone actually rates the vendor)
+            "rating": self.avg_rating if self.total_ratings else None,
             "total_ratings": self.total_ratings or 0,
             "price_level": self.price_level or ("₹" if self.price_min and self.price_min <= 50 else "₹₹"),
             "price_min": self.price_min,
@@ -138,9 +157,48 @@ class Vendor(db.Model):
             "image_url": self.image_url or self.photo_reference or "https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=600",
             "website": self.website,
             "phone": self.phone,
+            "instagram": self.instagram,
+            "closed_days": self.closed_days,
+            "market": self.market,
+            "is_verified": (self.verified_status or "verified") == "verified",
             "source_type": self.source_type,
             "source_name": self.source_name,
             "data_confidence": self.data_confidence or "HIGH"
+        }
+
+    def to_admin_dict(self):
+        """Raw values (no display fallbacks) so the admin panel edits real data."""
+        return {
+            "id": self.id,
+            "city_id": self.city_id,
+            "city_name": self.city.name if self.city else None,
+            "name": self.name,
+            "cuisine_type": self.cuisine_type,
+            "food_category": self.food_category,
+            "specialty_dish": self.specialty_dish,
+            "description": self.description,
+            "opening_hours": self.opening_hours,
+            "closed_days": self.closed_days,
+            "is_hidden_gem": bool(self.is_hidden_gem),
+            "is_famous": bool(self.is_famous),
+            "avg_rating": self.avg_rating,
+            "total_ratings": self.total_ratings or 0,
+            "price_level": self.price_level,
+            "price_min": self.price_min,
+            "price_max": self.price_max,
+            "address_text": self.address_text,
+            "area": self.area,
+            "landmark": self.landmark,
+            "lat": self.lat,
+            "lng": self.lng,
+            "phone": self.phone,
+            "website": self.website,
+            "instagram": self.instagram,
+            "image_url": self.image_url,
+            "source": self.source,
+            "verified_status": self.verified_status or "verified",
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
 
@@ -253,3 +311,179 @@ class OTPVerification(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship("User", backref=db.backref("otps", lazy=True, cascade="all, delete-orphan"))
+
+
+# ==================== ADMIN / APP MANAGEMENT ====================
+
+ADMIN_ROLES = ("super_admin", "moderator", "support", "city_manager", "app_manager")
+
+
+class AdminUser(db.Model):
+    """Staff account for the admin panel (separate from app users)."""
+    __tablename__ = "admin_users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(150), unique=True, nullable=False)
+    username = db.Column(db.String(80), unique=True, nullable=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(30), default="moderator")
+    is_active = db.Column(db.Boolean, default=True)
+    last_login = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "email": self.email,
+            "username": self.username,
+            "role": self.role,
+            "is_active": bool(self.is_active),
+            "last_login": self.last_login.isoformat() if self.last_login else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class Category(db.Model):
+    __tablename__ = "categories"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    slug = db.Column(db.String(100), unique=True, nullable=False)
+    icon = db.Column(db.String(20), nullable=True)  # emoji shown in the app chips
+    image_url = db.Column(db.String(500), nullable=True)
+    sort_order = db.Column(db.Integer, default=0)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "slug": self.slug,
+            "icon": self.icon,
+            "image_url": self.image_url,
+            "sort_order": self.sort_order or 0,
+            "is_active": bool(self.is_active),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class ContactMessage(db.Model):
+    """Support inbox: messages from the website contact page and the app's help screen."""
+    __tablename__ = "contact_messages"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(150), nullable=False)
+    subject = db.Column(db.String(200), nullable=True)
+    message = db.Column(db.Text, nullable=False)
+    source = db.Column(db.String(20), default="web")  # "web", "app"
+    status = db.Column(db.String(20), default="unread")  # "unread", "read", "resolved"
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "email": self.email,
+            "subject": self.subject,
+            "message": self.message,
+            "source": self.source,
+            "status": self.status,
+            "user_id": self.user_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+REPORT_TARGETS = ("vendor", "review", "reel")
+
+
+class Report(db.Model):
+    """User-flagged content (wrong vendor info, abusive review, etc.)."""
+    __tablename__ = "reports"
+
+    id = db.Column(db.Integer, primary_key=True)
+    target_type = db.Column(db.String(20), nullable=False)  # "vendor", "review", "reel"
+    target_id = db.Column(db.Integer, nullable=False)
+    reason = db.Column(db.String(100), nullable=False)
+    details = db.Column(db.Text, nullable=True)
+    reporter_user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    reporter_name = db.Column(db.String(100), nullable=True)
+    status = db.Column(db.String(20), default="pending")  # "pending", "resolved", "dismissed"
+    admin_notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    resolved_at = db.Column(db.DateTime, nullable=True)
+
+
+class AppBanner(db.Model):
+    """Promo banners shown in the mobile app's home carousel."""
+    __tablename__ = "app_banners"
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(150), nullable=False)
+    subtitle = db.Column(db.String(250), nullable=True)
+    image_url = db.Column(db.String(500), nullable=False)
+    link_type = db.Column(db.String(20), default="none")  # "none", "vendor", "city", "category", "url"
+    link_value = db.Column(db.String(500), nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
+    sort_order = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "subtitle": self.subtitle,
+            "image_url": self.image_url,
+            "link_type": self.link_type or "none",
+            "link_value": self.link_value,
+            "is_active": bool(self.is_active),
+            "sort_order": self.sort_order or 0,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class AppSetting(db.Model):
+    """Key/value app configuration (values are JSON-encoded)."""
+    __tablename__ = "app_settings"
+
+    key = db.Column(db.String(80), primary_key=True)
+    value = db.Column(db.Text, nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class AppNotification(db.Model):
+    """Broadcast announcements sent from the admin panel; the app lists these in its inbox."""
+    __tablename__ = "app_notifications"
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(150), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    target = db.Column(db.String(100), default="all")  # "all" or "city:<slug>"
+    link_type = db.Column(db.String(20), default="none")
+    link_value = db.Column(db.String(500), nullable=True)
+    push_sent_count = db.Column(db.Integer, default=0)
+    sent_by = db.Column(db.String(100), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "body": self.body,
+            "target": self.target or "all",
+            "link_type": self.link_type or "none",
+            "link_value": self.link_value,
+            "push_sent_count": self.push_sent_count or 0,
+            "sent_by": self.sent_by,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }

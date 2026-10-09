@@ -4,7 +4,14 @@ import re
 import requests
 
 from app import db, cache
-from app.models import City, Vendor, VendorSubmission, Rating, ReelSubmission
+from app.models import (
+    City, Vendor, VendorSubmission, Rating, ReelSubmission, Category, AppBanner,
+    AppNotification, ContactMessage, Report, Favorite, REPORT_TARGETS,
+)
+from app.helpers import (
+    get_settings, public_vendor_query, recompute_vendor_rating, haversine_km,
+    get_optional_user,
+)
 import os
 import uuid
 from werkzeug.utils import secure_filename
@@ -41,12 +48,23 @@ def index():
         "mumbai": "Popular for Vada Pav, Pav Bhaji, and vibrant street food culture.",
     }
 
+    counts = dict(
+        db.session.query(Vendor.city_id, db.func.count(Vendor.id))
+        .filter(db.or_(Vendor.verified_status.is_(None), Vendor.verified_status != "rejected"))
+        .group_by(Vendor.city_id)
+        .all()
+    )
+
     results = []
     for city in cities:
         results.append({
             "id": city.id,
             "name": city.name,
             "slug": city.slug,
+            "state": city.state,
+            "lat": city.lat,
+            "lng": city.lng,
+            "vendor_count": counts.get(city.id, 0),
             "desc": city_descriptions.get(city.slug, "Explore local food and hidden gems.")
         })
 
@@ -94,7 +112,7 @@ def home_feed():
             "desc": city_descriptions.get(city.slug, "Explore local food and hidden gems.")
         })
         
-    recent_vendors = Vendor.query.order_by(Vendor.id.desc()).limit(10).all()
+    recent_vendors = public_vendor_query().order_by(Vendor.id.desc()).limit(10).all()
     
     vendor_results = []
     for v in recent_vendors:
@@ -117,11 +135,53 @@ def home_feed():
 
 
 # -------------------- SEARCH --------------------
-    results = []
-    for v in vendors:
-        results.append(v.to_dict())
-        
-    return jsonify({"results": results})
+def _search_filter(term):
+    like = f"%{term}%"
+    return db.or_(
+        Vendor.name.ilike(like),
+        Vendor.area.ilike(like),
+        Vendor.locality.ilike(like),
+        Vendor.landmark.ilike(like),
+        Vendor.specialty_dish.ilike(like),
+        Vendor.cuisine_type.ilike(like),
+        Vendor.food_category.ilike(like),
+        Vendor.food_subcategories.ilike(like),
+    )
+
+
+def _category_filter(category):
+    """Match a category name or slug against both free-text and data-key columns."""
+    terms = {category}
+    cat = Category.query.filter(
+        db.or_(Category.slug == category.lower(), Category.name.ilike(category))
+    ).first()
+    if cat:
+        terms.update({cat.name, cat.slug, cat.slug.replace("-", "_")})
+    terms.add(category.lower().replace(" ", "_").replace("-", "_"))
+    clauses = []
+    for t in terms:
+        clauses.append(Vendor.food_category.ilike(f"%{t}%"))
+        clauses.append(Vendor.cuisine_type.ilike(f"%{t}%"))
+    return db.or_(*clauses)
+
+
+@main_bp.route("/search", methods=["GET"])
+def search_vendors():
+    q = request.args.get("q", "").strip()
+    city_slug = request.args.get("city", "").strip()
+    limit = min(request.args.get("limit", 50, type=int), 100)
+    if not q:
+        return jsonify({"results": [], "count": 0})
+
+    query = public_vendor_query().filter(_search_filter(q))
+    if city_slug and city_slug != "all":
+        city = City.query.filter_by(slug=city_slug).first()
+        if city:
+            query = query.filter(Vendor.city_id == city.id)
+
+    vendors = query.order_by(Vendor.avg_rating.desc().nullslast(), Vendor.id.asc()).limit(limit).all()
+    results = [v.to_dict() for v in vendors]
+    return jsonify({"results": results, "count": len(results)})
 
 
 # -------------------- VENDORS API --------------------
@@ -131,21 +191,23 @@ def get_vendors():
     category = request.args.get("category", "").strip()
     area = request.args.get("area", "").strip()
     is_hidden_gem = request.args.get("is_hidden_gem", "").strip().lower()
+    is_famous = request.args.get("is_famous", "").strip().lower()
     search_q = request.args.get("q", "").strip()
-    limit = int(request.args.get("limit", 100))
+    sort = request.args.get("sort", "rating").strip().lower()
+    lat = request.args.get("lat", type=float)
+    lng = request.args.get("lng", type=float)
+    limit = min(request.args.get("limit", 100, type=int), 500)
+    offset = max(request.args.get("offset", 0, type=int), 0)
 
-    query = Vendor.query
+    query = public_vendor_query()
 
-    if city_slug:
+    if city_slug and city_slug != "all":
         city = City.query.filter_by(slug=city_slug).first()
         if city:
             query = query.filter_by(city_id=city.id)
 
     if category and category != 'All':
-        query = query.filter(db.or_(
-            Vendor.food_category.ilike(f"%{category}%"),
-            Vendor.cuisine_type.ilike(f"%{category}%")
-        ))
+        query = query.filter(_category_filter(category))
 
     if area and area != 'All':
         query = query.filter(Vendor.area.ilike(f"%{area}%"))
@@ -153,23 +215,54 @@ def get_vendors():
     if is_hidden_gem in ('true', '1', 'yes'):
         query = query.filter(db.or_(Vendor.is_hidden_gem == True, Vendor.hidden_gem_candidate == True))
 
-    if search_q:
-        query = query.filter(db.or_(
-            Vendor.name.ilike(f"%{search_q}%"),
-            Vendor.area.ilike(f"%{search_q}%"),
-            Vendor.specialty_dish.ilike(f"%{search_q}%"),
-            Vendor.food_category.ilike(f"%{search_q}%")
-        ))
+    if is_famous in ('true', '1', 'yes'):
+        query = query.filter(Vendor.is_famous == True)
 
-    vendors = query.order_by(Vendor.avg_rating.desc().nullslast(), Vendor.id.asc()).limit(limit).all()
-    return jsonify({"vendors": [v.to_dict() for v in vendors], "count": len(vendors)})
+    if search_q:
+        query = query.filter(_search_filter(search_q))
+
+    total = query.count()
+
+    if sort == "distance" and lat is not None and lng is not None:
+        # Distance sort happens in Python; city-scoped vendor lists are small.
+        vendors = query.all()
+        with_coords = [v for v in vendors if v.lat is not None and v.lng is not None]
+        without = [v for v in vendors if v.lat is None or v.lng is None]
+        with_coords.sort(key=lambda v: haversine_km(lat, lng, v.lat, v.lng))
+        vendors = (with_coords + without)[offset:offset + limit]
+    else:
+        if sort == "newest":
+            order = [Vendor.created_at.desc().nullslast(), Vendor.id.desc()]
+        elif sort == "name":
+            order = [Vendor.name.asc()]
+        elif sort == "popular":
+            order = [Vendor.total_ratings.desc().nullslast(), Vendor.avg_rating.desc().nullslast()]
+        else:
+            order = [Vendor.avg_rating.desc().nullslast(), Vendor.id.asc()]
+        vendors = query.order_by(*order).offset(offset).limit(limit).all()
+
+    results = []
+    for v in vendors:
+        d = v.to_dict()
+        if lat is not None and lng is not None and v.lat is not None and v.lng is not None:
+            d["distance_km"] = round(haversine_km(lat, lng, v.lat, v.lng), 2)
+        results.append(d)
+
+    return jsonify({"vendors": results, "count": len(results), "total": total, "offset": offset})
 
 
 @main_bp.route("/vendors/hidden-gems", methods=["GET"])
 def get_hidden_gems():
-    gems = Vendor.query.filter(
+    city_slug = request.args.get("city", "").strip()
+    limit = min(request.args.get("limit", 200, type=int), 500)
+    query = public_vendor_query().filter(
         db.or_(Vendor.is_hidden_gem == True, Vendor.hidden_gem_candidate == True)
-    ).order_by(Vendor.avg_rating.desc().nullslast()).all()
+    )
+    if city_slug and city_slug != "all":
+        city = City.query.filter_by(slug=city_slug).first()
+        if city:
+            query = query.filter(Vendor.city_id == city.id)
+    gems = query.order_by(Vendor.avg_rating.desc().nullslast()).limit(limit).all()
     return jsonify({"hidden_gems": [v.to_dict() for v in gems], "count": len(gems)})
 
 
@@ -178,11 +271,31 @@ def get_nearby_vendors():
     lat = request.args.get("lat", type=float)
     lng = request.args.get("lng", type=float)
     radius = request.args.get("radius", default=10.0, type=float) # km
+    limit = min(request.args.get("limit", 50, type=int), 150)
 
-    query = Vendor.query.filter(Vendor.lat.isnot(None), Vendor.lng.isnot(None))
-    vendors = query.limit(150).all()
+    query = public_vendor_query().filter(Vendor.lat.isnot(None), Vendor.lng.isnot(None))
 
-    return jsonify({"vendors": [v.to_dict() for v in vendors]})
+    if lat is None or lng is None:
+        vendors = query.limit(limit).all()
+        return jsonify({"vendors": [v.to_dict() for v in vendors]})
+
+    # Cheap bounding box first (1 deg lat ~ 111 km), then exact distance.
+    delta = radius / 111.0 + 0.01
+    candidates = query.filter(
+        Vendor.lat.between(lat - delta, lat + delta),
+        Vendor.lng.between(lng - delta * 1.5, lng + delta * 1.5),
+    ).all()
+
+    nearby = []
+    for v in candidates:
+        dist = haversine_km(lat, lng, v.lat, v.lng)
+        if dist <= radius:
+            d = v.to_dict()
+            d["distance_km"] = round(dist, 2)
+            nearby.append(d)
+    nearby.sort(key=lambda d: d["distance_km"])
+
+    return jsonify({"vendors": nearby[:limit], "count": min(len(nearby), limit), "radius_km": radius})
 
 
 @main_bp.route("/trails", methods=["GET"])
@@ -257,8 +370,8 @@ def city_page(slug):
     city = City.query.filter_by(slug=slug).first_or_404()
 
     vendors = (
-        Vendor.query
-        .filter_by(city_id=city.id)
+        public_vendor_query()
+        .filter(Vendor.city_id == city.id)
         .order_by(Vendor.avg_rating.desc().nullslast())
         .all()
     )
@@ -314,7 +427,8 @@ def city_page(slug):
 # -------------------- VENDOR DETAIL --------------------
 @main_bp.route("/vendors/<int:vendor_id>", methods=["GET"])
 def get_vendor_detail(vendor_id):
-    vendor = Vendor.query.get_or_404(vendor_id)
+    vendor = public_vendor_query().filter(Vendor.id == vendor_id).first_or_404()
+    user = get_optional_user()
 
     reviews = (
         Rating.query.filter_by(vendor_id=vendor.id)
@@ -327,19 +441,23 @@ def get_vendor_detail(vendor_id):
             "rating_value": r.rating_value,
             "review_text": r.review_text,
             "author_name": r.author_name or "Anonymous",
+            "user_id": r.user_id,
+            "is_mine": bool(user and r.user_id == user.id),
             "created_at": r.created_at.isoformat() if r.created_at else None,
         }
         for r in reviews
     ]
 
-    nearby = (
-        Vendor.query.filter(Vendor.city_id == vendor.city_id, Vendor.id != vendor.id)
-        .order_by(Vendor.avg_rating.desc().nullslast())
-        .limit(4)
-        .all()
-    )
-    nearby_data = [
-        {
+    same_city = public_vendor_query().filter(Vendor.city_id == vendor.city_id, Vendor.id != vendor.id)
+    if vendor.lat is not None and vendor.lng is not None:
+        candidates = same_city.filter(Vendor.lat.isnot(None), Vendor.lng.isnot(None)).all()
+        candidates.sort(key=lambda n: haversine_km(vendor.lat, vendor.lng, n.lat, n.lng))
+        nearby = candidates[:4]
+    else:
+        nearby = same_city.order_by(Vendor.avg_rating.desc().nullslast()).limit(4).all()
+    nearby_data = []
+    for n in nearby:
+        item = {
             "id": n.id,
             "name": n.name,
             "cuisine_type": n.cuisine_type,
@@ -350,11 +468,19 @@ def get_vendor_detail(vendor_id):
             "is_hidden_gem": n.is_hidden_gem,
             "price_level": n.price_level,
         }
-        for n in nearby
-    ]
+        if vendor.lat is not None and n.lat is not None:
+            item["distance_km"] = round(haversine_km(vendor.lat, vendor.lng, n.lat, n.lng), 2)
+        nearby_data.append(item)
+
+    is_favorite = bool(
+        user and Favorite.query.filter_by(user_id=user.id, vendor_id=vendor.id).first()
+    )
 
     return jsonify({
+        "is_favorite": is_favorite,
         "vendor": {
+            # Full field set first; the explicit keys below keep the web page's contract.
+            **vendor.to_dict(),
             "id": vendor.id,
             "name": vendor.name,
             "cuisine_type": vendor.cuisine_type,
@@ -386,20 +512,33 @@ def get_vendor_detail(vendor_id):
 # -------------------- SUBMIT VENDOR --------------------
 @main_bp.route("/submit-vendor", methods=["POST"])
 def submit_vendor():
-    data = request.json or request.form
-    
-    city_id = int(data.get("city_id", 0))
-    if city_id == 0:
+    data = request.get_json(silent=True) or request.form
+    user = get_optional_user()
+
+    try:
+        city_id = int(data.get("city_id") or 0)
+    except (TypeError, ValueError):
+        city_id = 0
+    if city_id == 0 or not db.session.get(City, city_id):
         return jsonify({"success": False, "error": "City ID is required"}), 400
-        
-    stall_name = data.get("stall_name")
+
+    stall_name = (data.get("stall_name") or "").strip()
+    if not stall_name:
+        return jsonify({"success": False, "error": "Stall name is required"}), 400
     cuisine_type = data.get("cuisine_type")
     description = data.get("description")
     google_maps_url = data.get("google_maps_url")
     approx_address = data.get("approx_address")
     estimated_price = data.get("estimated_price")
-    submitted_by_name = data.get("submitted_by_name")
-    submitted_by_email = data.get("submitted_by_email")
+    submitted_by_name = data.get("submitted_by_name") or (user.name if user else None)
+    submitted_by_email = data.get("submitted_by_email") or (user.email if user else None)
+
+    rating = None
+    try:
+        if data.get("rating") not in (None, ""):
+            rating = max(1.0, min(5.0, float(data.get("rating"))))
+    except (TypeError, ValueError):
+        rating = None
 
     # First try to get lat/lng directly from the request body (sent by mobile app)
     lat = None
@@ -467,8 +606,8 @@ def submit_vendor():
         submitted_by_email=submitted_by_email,
         lat=lat,
         lng=lng,
-        rating=data.get("rating"),
-        user_id=data.get("user_id"),
+        rating=rating,
+        user_id=user.id if user else data.get("user_id"),
     )
 
     db.session.add(submission)
@@ -485,7 +624,11 @@ def submit_vendor():
     except Exception as e:
         print("WebSocket emit failed:", e)
 
-    return jsonify({"success": True, "message": "Thank you! Your hidden stall suggestion is submitted."})
+    return jsonify({
+        "success": True,
+        "id": submission.id,
+        "message": "Thank you! Your hidden stall suggestion is submitted.",
+    })
 
 # -------------------- RATE VENDOR --------------------
 @main_bp.route("/vendors/<int:vendor_id>/rate", methods=["POST"])
@@ -505,36 +648,52 @@ def rate_vendor(vendor_id):
     except:
         return jsonify({"success": False, "error": "Invalid rating value"}), 400
 
-    vendor = Vendor.query.get_or_404(vendor_id)
-    
+    vendor = public_vendor_query().filter(Vendor.id == vendor_id).first_or_404()
+    user = get_optional_user()
+
+    if not user and not get_settings().get("allow_guest_reviews", True):
+        return jsonify({"success": False, "error": "Please log in to post a review"}), 401
+
     user_ip = request.remote_addr
-    
-    new_rating = Rating(
-        vendor_id=vendor.id,
-        rating_value=rating_val,
-        user_ip=user_ip,
-        user_id=data.get("user_id"),
-        review_text=review_text if review_text else None,
-        author_name=author_name if author_name else None
-    )
-    
-    db.session.add(new_rating)
+    if user and not author_name:
+        author_name = user.name
+
+    # A logged-in user keeps a single review per vendor; rating again updates it.
+    existing = Rating.query.filter_by(vendor_id=vendor.id, user_id=user.id).first() if user else None
+    if existing:
+        existing.rating_value = rating_val
+        existing.review_text = review_text or None
+        existing.author_name = author_name or existing.author_name
+        review = existing
+    else:
+        review = Rating(
+            vendor_id=vendor.id,
+            rating_value=rating_val,
+            user_ip=user_ip,
+            user_id=user.id if user else None,
+            review_text=review_text if review_text else None,
+            author_name=author_name if author_name else None
+        )
+        db.session.add(review)
     db.session.flush()
-    
-    # Calculate new average
-    all_ratings = Rating.query.filter_by(vendor_id=vendor.id).all()
-    total = len(all_ratings)
-    avg = sum(r.rating_value for r in all_ratings) / total if total > 0 else 0
-    
-    vendor.avg_rating = round(avg, 1)
-    vendor.total_ratings = total
-    
+
+    recompute_vendor_rating(vendor)
     db.session.commit()
-    
+
     return jsonify({
-        "success": True, 
+        "success": True,
+        "updated": existing is not None,
         "avg_rating": vendor.avg_rating,
-        "total_ratings": vendor.total_ratings
+        "total_ratings": vendor.total_ratings,
+        "review": {
+            "id": review.id,
+            "rating_value": review.rating_value,
+            "review_text": review.review_text,
+            "author_name": review.author_name or "Anonymous",
+            "user_id": review.user_id,
+            "is_mine": bool(user),
+            "created_at": review.created_at.isoformat() if review.created_at else None,
+        },
     })
 
 # -------------------- VENDOR REVIEWS --------------------
@@ -552,6 +711,8 @@ def get_vendor_reviews():
     for r in ratings:
         data.append({
             "id": r.id,
+            "vendor_id": r.vendor_id,
+            "vendor_image_url": r.vendor.image_url if r.vendor else None,
             "vendor_name": r.vendor.name if r.vendor else "Unknown Vendor",
             "city_name": r.vendor.city.name if r.vendor and r.vendor.city else "Unknown",
             "city_slug": r.vendor.city.slug if r.vendor and r.vendor.city else "",
@@ -654,8 +815,124 @@ def get_reels():
             "id": r.id,
             "title": r.title,
             "author": r.author_name,
-            # We assume flask is running on 5000 and can serve static files
-            "videoUrl": f"http://127.0.0.1:5000/static/uploads/reels/{r.video_filename}",
+            "videoUrl": f"{request.host_url.rstrip('/')}/static/uploads/reels/{r.video_filename}",
             "views": r.views
         })
     return jsonify({"reels": results})
+
+
+# -------------------- MOBILE APP CONFIG --------------------
+@main_bp.route("/app/config", methods=["GET"])
+def app_config():
+    """Single bootstrap call for the mobile app: settings, banners, categories."""
+    banners = (
+        AppBanner.query.filter_by(is_active=True)
+        .order_by(AppBanner.sort_order.asc(), AppBanner.id.desc())
+        .all()
+    )
+    categories = (
+        Category.query.filter_by(is_active=True)
+        .order_by(Category.sort_order.asc(), Category.name.asc())
+        .all()
+    )
+    return jsonify({
+        "settings": get_settings(),
+        "banners": [b.to_dict() for b in banners],
+        "categories": [c.to_dict() for c in categories],
+    })
+
+
+@main_bp.route("/categories", methods=["GET"])
+def list_categories():
+    categories = (
+        Category.query.filter_by(is_active=True)
+        .order_by(Category.sort_order.asc(), Category.name.asc())
+        .all()
+    )
+    return jsonify({"categories": [c.to_dict() for c in categories]})
+
+
+@main_bp.route("/notifications", methods=["GET"])
+def list_notifications():
+    city_slug = request.args.get("city", "").strip()
+    targets = ["all"]
+    if city_slug:
+        targets.append(f"city:{city_slug}")
+    items = (
+        AppNotification.query.filter(AppNotification.target.in_(targets))
+        .order_by(AppNotification.created_at.desc())
+        .limit(50)
+        .all()
+    )
+    return jsonify({"notifications": [n.to_dict() for n in items]})
+
+
+# -------------------- CONTACT / SUPPORT --------------------
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+@main_bp.route("/contact", methods=["POST"])
+def submit_contact():
+    data = request.get_json(silent=True) or request.form
+    user = get_optional_user()
+    name = (data.get("name") or (user.name if user else "")).strip()
+    email = (data.get("email") or (user.email if user else "")).strip()
+    subject = (data.get("subject") or "").strip()
+    message = (data.get("message") or "").strip()
+
+    if not name or not email or not message:
+        return jsonify({"success": False, "error": "Name, email and message are required"}), 400
+    if not EMAIL_RE.match(email):
+        return jsonify({"success": False, "error": "Please enter a valid email address"}), 400
+    if len(message) > 5000:
+        return jsonify({"success": False, "error": "Message is too long"}), 400
+
+    msg = ContactMessage(
+        name=name[:100],
+        email=email[:150],
+        subject=subject[:200] or None,
+        message=message,
+        source="app" if data.get("source") == "app" else "web",
+        user_id=user.id if user else None,
+    )
+    db.session.add(msg)
+    db.session.commit()
+    return jsonify({"success": True, "message": "Thanks! Our team will get back to you soon."}), 201
+
+
+# -------------------- REPORT CONTENT --------------------
+@main_bp.route("/reports", methods=["POST"])
+def submit_report():
+    data = request.get_json(silent=True) or {}
+    user = get_optional_user()
+    target_type = (data.get("target_type") or "").strip().lower()
+    reason = (data.get("reason") or "").strip()
+    details = (data.get("details") or "").strip()
+
+    try:
+        target_id = int(data.get("target_id"))
+    except (TypeError, ValueError):
+        target_id = None
+
+    if target_type not in REPORT_TARGETS or not target_id or not reason:
+        return jsonify({"success": False, "error": "target_type, target_id and reason are required"}), 400
+
+    exists = {
+        "vendor": lambda: db.session.get(Vendor, target_id),
+        "review": lambda: db.session.get(Rating, target_id),
+        "reel": lambda: db.session.get(ReelSubmission, target_id),
+    }[target_type]()
+    if not exists:
+        return jsonify({"success": False, "error": "The reported item no longer exists"}), 404
+
+    report = Report(
+        target_type=target_type,
+        target_id=target_id,
+        reason=reason[:100],
+        details=details[:2000] or None,
+        reporter_user_id=user.id if user else None,
+        reporter_name=(user.name if user else (data.get("reporter_name") or "").strip()[:100]) or None,
+    )
+    db.session.add(report)
+    db.session.commit()
+    return jsonify({"success": True, "message": "Thanks for letting us know. Our moderators will review it."}), 201

@@ -15,3 +15,4 @@ flask-cors==5.0.0
 PyJWT==2.8.0
 Flask-SocketIO==5.3.6
 exponent-server-sdk
+openpyxl==3.1.5

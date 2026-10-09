@@ -9,9 +9,20 @@ if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 
 from app import create_app, db
-from app.models import City, Vendor, User
+from app.models import City, Vendor, User, Category
 
 DATA_DIR = os.path.join(os.path.dirname(backend_dir), 'hungry_bird_data')
+
+DEFAULT_CATEGORIES = [
+    ('Street Food', 'street-food', '🌮'),
+    ('Kachori & Samosa', 'kachori-samosa', '🥟'),
+    ('Chai & Tea', 'tea-chai', '☕'),
+    ('Lassi & Dairy', 'dairy-lassi', '🥛'),
+    ('Sweets', 'sweets', '🍬'),
+    ('Kulfi & Ice Cream', 'kulfi-ice-cream', '🍦'),
+    ('Snacks & Fast Food', 'fast-food-snacks', '🍔'),
+    ('Rajasthani', 'rajasthani-traditional', '🍛'),
+]
 
 def parse_float(val):
     if not val or val.strip() == '' or val.strip().lower() == 'null':
@@ -209,6 +220,11 @@ def seed_database():
                     )
                     db.session.add(v_obj)
                     added_count += 1
+
+        # Default app categories (slugs mirror the food_category data keys)
+        if Category.query.count() == 0:
+            for i, (name, slug, icon) in enumerate(DEFAULT_CATEGORIES):
+                db.session.add(Category(name=name, slug=slug, icon=icon, sort_order=i, is_active=True))
 
         db.session.commit()
         total_vendors = Vendor.query.count()

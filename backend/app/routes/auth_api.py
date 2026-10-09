@@ -1,3 +1,4 @@
+import re
 import jwt
 from flask import Blueprint, request, jsonify, current_app
 from app import db
@@ -7,6 +8,8 @@ from functools import wraps
 from app.utils import send_push_notification
 
 auth_api = Blueprint("auth_api", __name__)
+
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 def token_required(f):
     @wraps(f)
@@ -27,15 +30,20 @@ def token_required(f):
             current_user = User.query.filter_by(id=data['user_id']).first()
         except Exception as e:
             return jsonify({'error': 'Token is invalid!'}), 401
-            
+
+        if not current_user:
+            return jsonify({'error': 'Account not found'}), 401
+        if current_user.is_suspended:
+            return jsonify({'error': 'Your account has been suspended. Please contact support.'}), 403
+
         return f(current_user, *args, **kwargs)
   
     return decorated
 
 @auth_api.route('/api/auth/register', methods=['POST'])
 def register():
-    data = request.json
-    name = data.get('name')
+    data = request.get_json(silent=True) or {}
+    name = (data.get('name') or '').strip()
     email = data.get('email')
     password = data.get('password')
 
@@ -43,6 +51,11 @@ def register():
         return jsonify({"error": "Missing required fields"}), 400
 
     email = email.lower().strip()
+
+    if not EMAIL_RE.match(email):
+        return jsonify({"error": "Please enter a valid email address"}), 400
+    if len(password) < 6:
+        return jsonify({"error": "Password must be at least 6 characters"}), 400
 
     if User.query.filter_by(email=email).first():
         return jsonify({"error": "Email already exists"}), 400
@@ -74,7 +87,7 @@ def register():
 
 @auth_api.route('/api/auth/login', methods=['POST'])
 def login():
-    data = request.json
+    data = request.get_json(silent=True) or {}
     email = data.get('email')
     password = data.get('password')
 
@@ -90,6 +103,12 @@ def login():
 
     if not user or not user.check_password(password):
         return jsonify({"error": "Invalid email or password"}), 401
+
+    if user.is_suspended:
+        return jsonify({"error": "Your account has been suspended. Please contact support."}), 403
+
+    user.last_login_at = datetime.utcnow()
+    db.session.commit()
 
     token = jwt.encode({
         'user_id': user.id,
@@ -130,6 +149,20 @@ def delete_account(current_user):
     db.session.delete(current_user)
     db.session.commit()
     return jsonify({"message": "Account deleted successfully"}), 200
+
+@auth_api.route('/api/auth/password', methods=['PUT'])
+@token_required
+def change_password(current_user):
+    data = request.get_json(silent=True) or {}
+    current_password = data.get('current_password') or ''
+    new_password = data.get('new_password') or ''
+    if not current_user.check_password(current_password):
+        return jsonify({"error": "Current password is incorrect"}), 400
+    if len(new_password) < 6:
+        return jsonify({"error": "New password must be at least 6 characters"}), 400
+    current_user.set_password(new_password)
+    db.session.commit()
+    return jsonify({"message": "Password updated"}), 200
 
 @auth_api.route('/api/auth/profile', methods=['PUT'])
 @token_required
@@ -212,21 +245,41 @@ def test_push(current_user):
 @auth_api.route('/api/favorites', methods=['GET'])
 @token_required
 def get_favorites(current_user):
-    favorites = Favorite.query.filter_by(user_id=current_user.id).all()
+    favorites = (
+        Favorite.query.filter_by(user_id=current_user.id)
+        .order_by(Favorite.created_at.desc())
+        .all()
+    )
     results = []
     for fav in favorites:
         v = fav.vendor
-        if v:
+        if v and v.verified_status != "rejected":
             results.append({
-                "id": v.id,
-                "name": v.name,
-                "cuisine_type": v.cuisine_type,
+                **v.to_dict(),
                 "city_name": v.city.name if v.city else "Unknown",
                 "rating": v.avg_rating,
-                "image_url": v.image_url,
-                "is_hidden_gem": v.is_hidden_gem
+                "saved_at": fav.created_at.isoformat() if fav.created_at else None,
             })
     return jsonify({"favorites": results}), 200
+
+
+@auth_api.route('/api/favorites/sync', methods=['POST'])
+@token_required
+def sync_favorites(current_user):
+    """Merge vendor ids saved while logged out into the account."""
+    data = request.get_json(silent=True) or {}
+    ids = set()
+    for raw in data.get('vendor_ids') or []:
+        try:
+            ids.add(int(raw))
+        except (TypeError, ValueError):
+            continue
+    existing = {f.vendor_id for f in Favorite.query.filter_by(user_id=current_user.id).all()}
+    valid = {v.id for v in Vendor.query.filter(Vendor.id.in_(ids)).all()} if ids else set()
+    for vendor_id in valid - existing:
+        db.session.add(Favorite(user_id=current_user.id, vendor_id=vendor_id))
+    db.session.commit()
+    return jsonify({"vendor_ids": sorted(existing | valid)}), 200
 
 @auth_api.route('/api/favorites/toggle', methods=['POST'])
 @token_required
@@ -236,7 +289,9 @@ def toggle_favorite(current_user):
     
     if not vendor_id:
         return jsonify({"error": "vendor_id is required"}), 400
-        
+    if not db.session.get(Vendor, vendor_id):
+        return jsonify({"error": "Vendor not found"}), 404
+
     fav = Favorite.query.filter_by(user_id=current_user.id, vendor_id=vendor_id).first()
     if fav:
         db.session.delete(fav)
@@ -263,6 +318,8 @@ def get_user_submissions(current_user):
             "cuisine_type": sub.cuisine_type,
             "city_name": sub.city.name if sub.city else "Unknown",
             "status": sub.status,
+            "approx_address": sub.approx_address,
+            "review_notes": sub.review_notes,
             "created_at": sub.created_at.isoformat() if sub.created_at else None
         })
     return jsonify({"submissions": results}), 200
@@ -278,7 +335,9 @@ def get_user_reviews(current_user):
         if v:
             results.append({
                 "id": r.id,
+                "vendor_id": v.id,
                 "vendor_name": v.name,
+                "vendor_image_url": v.image_url,
                 "city_name": v.city.name if v.city else "Unknown",
                 "rating_value": r.rating_value,
                 "review_text": r.review_text,

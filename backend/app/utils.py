@@ -44,3 +44,25 @@ def send_push_notification(token, message, title=None, data=None):
         if hasattr(e, 'response') and e.response:
             print(e.response.text)
         return False
+
+
+def send_push_batch(tokens, message, title=None, data=None):
+    """Send one message to many Expo push tokens (chunks of 100). Returns how many were accepted."""
+    valid = [t for t in dict.fromkeys(tokens or []) if t and t.startswith("ExponentPushToken")]
+    sent = 0
+    for i in range(0, len(valid), 100):
+        chunk = valid[i:i + 100]
+        payload = [{"to": t, "sound": "default", "body": message, "title": title, "data": data or {}} for t in chunk]
+        try:
+            response = requests.post(
+                "https://exp.host/--/api/v2/push/send",
+                json=payload,
+                headers={"Accept": "application/json", "Content-Type": "application/json"},
+                timeout=10,
+            )
+            response.raise_for_status()
+            tickets = response.json().get("data", [])
+            sent += sum(1 for t in tickets if t.get("status") == "ok")
+        except requests.exceptions.RequestException as e:
+            print(f"Error sending push batch: {e}")
+    return sent
