@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
-import axios from "axios";
+import { adminFetch, setSession } from "../lib/api";
 import { Lock, ArrowRight, ShieldCheck, User } from "lucide-react";
 
 
@@ -20,39 +20,23 @@ export default function AdminLogin() {
     setError("");
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000";
-      let res;
-      
-      try {
-        res = await axios.post(`${baseUrl}/api/admin/login`, { username, password }, { timeout: 5000 });
-      } catch (err1) {
-        if (err1.response) {
-          setError(err1.response.data?.error || "Invalid credentials.");
-          return;
-        }
-        // Fallback to localhost if 127.0.0.1 fails
-        const fallbackUrl = baseUrl.includes("127.0.0.1") ? "http://localhost:5000" : "http://127.0.0.1:5000";
-        res = await axios.post(`${fallbackUrl}/api/admin/login`, { username, password }, { timeout: 5000 });
-      }
-      
-      if (res.data && res.data.token) {
-        sessionStorage.setItem("admin_token", res.data.token);
-        router.push("/admin");
+      const data = await adminFetch("/login", {
+        method: "POST",
+        body: { username: username.trim(), password },
+        auth: false,
+      });
+      if (data?.token) {
+        setSession(data.token, data.admin || null);
+        router.replace("/admin");
       } else {
         setError("Login failed. No token received.");
       }
     } catch (err) {
-      console.error("Admin login error:", err);
-      if (err.response?.data?.error) {
-        setError(err.response.data.error);
-      } else {
-        setError("Unable to connect to backend server. Please ensure Flask is running.");
-      }
+      setError(err.message || "Unable to sign in.");
     } finally {
       setLoading(false);
     }
   };
-
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-stone-950 font-sans">
@@ -100,7 +84,9 @@ export default function AdminLogin() {
               </div>
               <input
                 type="text"
-                placeholder="Enter Username"
+                placeholder="Username or email"
+                aria-label="Username or email"
+                autoComplete="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
@@ -115,6 +101,8 @@ export default function AdminLogin() {
               <input
                 type="password"
                 placeholder="Enter Password"
+                aria-label="Password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required

@@ -1,149 +1,355 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import axios from "axios";
-import { Star, TrendingUp, Search, Filter } from "lucide-react";
-import { motion } from "motion/react";
-import CustomSelect from "../components/CustomSelect";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { BarChart3, CircleCheck, CircleX, ExternalLink, MessageSquareText, Quote, Star, Trash2, X } from "lucide-react";
+import { adminFetch, formatDate, formatDateTime, qs } from "../lib/api";
+import { useCan, useDebounce, usePageFor } from "../lib/hooks";
+import { useToast } from "../components/Toast";
+import { useConfirm } from "../components/Modal";
+import { EmptyState, ErrorBanner, Loading, PageHeader, Pagination, ReadOnlyNote, SearchInput, Stars, StatusBadge, Tabs } from "../components/ui";
 
-export default function AdminRatings() {
-  const [ratings, setRatings] = useState([]);
-  const [loading, setLoading] = useState(true);
+const PER_PAGE = 25;
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filter, setFilter] = useState("all");
+export default function AdminReviews() {
+  const [tab, setTab] = useState("reviews");
+  const [vendorFilter, setVendorFilter] = useState(null); // { id, name }
 
-  const getDummyData = () => [
-    { id: 1, user_name: "Rahul S.", vendor_name: "Sharma Ji Chaat", rating: 5, comment: "Best chaat in the city!" },
-    { id: 2, user_name: "Priya D.", vendor_name: "Bombay Vada Pav", rating: 3, comment: "It was okay, a bit too spicy." },
-    { id: 3, user_name: "Amit K.", vendor_name: "Raju Fast Food", rating: 1, comment: "Very unhygienic, do not recommend." },
-  ];
-
-  useEffect(() => {
-    const fetchRatings = async () => {
-      try {
-        const token = sessionStorage.getItem("admin_token");
-        const res = await axios.get((process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000") + "/api/admin/ratings", {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setRatings(res.data.ratings || []);
-      } catch (err) {
-        console.error("Failed to fetch ratings:", err);
-        setRatings(getDummyData());
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchRatings();
-  }, []);
-
-  const statusOptions = [
-    { value: "all", label: "All Ratings" },
-    { value: "5", label: "5 Stars" },
-    { value: "4", label: "4+ Stars" },
-    { value: "3", label: "3+ Stars" },
-    { value: "1", label: "1 Star" },
-  ];
-
-  const filteredRatings = ratings.filter(r => {
-    const matchesSearch = 
-      (r.user_name || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
-      (r.vendor_name || r.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (r.comment || "").toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const rVal = r.rating || r.avg_rating || 5;
-    let matchesStatus = true;
-    if (filter === "5") matchesStatus = rVal === 5;
-    else if (filter === "4") matchesStatus = rVal >= 4;
-    else if (filter === "3") matchesStatus = rVal >= 3;
-    else if (filter === "1") matchesStatus = rVal === 1;
-    
-    return matchesSearch && matchesStatus;
-  });
+  const showVendorReviews = (vendor) => {
+    setVendorFilter(vendor);
+    setTab("reviews");
+  };
 
   return (
-    <div className="font-sans">
-      <div className="admin-page-header">
-        <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight m-0 leading-none">Review Moderation</h1>
-          <p className="text-slate-500 mt-1 font-medium text-sm">Monitor and moderate text reviews left by consumers.</p>
-        </div>
-      </div>
-
-      {/* Filter Bar */}
-      <div className="relative z-50 bg-white border border-slate-200 p-4 rounded-2xl shadow-sm mb-6 flex flex-col md:flex-row gap-4">
-        {/* Search */}
-        <div className="relative flex-1 group z-10">
-          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-brand-500 transition-colors">
-            <Search size={16} />
-          </div>
-          <input
-            type="text"
-            placeholder="Search by review, user, or vendor..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
-          />
-        </div>
-
-        {/* Filters */}
-        <div className="flex gap-4">
-          <CustomSelect 
-            value={filter}
-            onChange={setFilter}
-            options={statusOptions}
-            icon={Filter}
-          />
-        </div>
-      </div>
-
-      <div className="admin-card bg-transparent shadow-none border-none p-0">
-        {loading ? (
-          <div className="flex justify-center items-center h-32 bg-white rounded-xl border border-slate-200">
-            <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-8 h-8 border-4 border-brand-500/30 border-t-brand-500 rounded-full" />
-          </div>
-        ) : filteredRatings.length === 0 ? (
-          <div className="text-center py-10 bg-white rounded-xl border border-dashed border-slate-200">
-            <Star size={40} className="mx-auto text-slate-200 mb-3" />
-            <h3 className="text-lg font-bold text-slate-700">No reviews found</h3>
-            <p className="text-slate-400 text-sm">Try adjusting your search or filters.</p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-4">
-            {filteredRatings.map((review) => (
-              <div key={review.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-3">
-                <div className="flex justify-between items-start">
-                  <div className="flex gap-3 items-center">
-                    <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-700 font-bold flex items-center justify-center">
-                      {review.user_name?.charAt(0) || "U"}
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-slate-800 m-0 leading-tight">{review.user_name || "Anonymous"}</h4>
-                      <span className="text-xs text-slate-500">Reviewed <strong className="text-brand-600">{review.vendor_name || review.name}</strong></span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-md text-amber-700 font-bold border border-amber-100">
-                    <Star size={14} className="fill-amber-500" />
-                    {review.rating || review.avg_rating || 5}
-                  </div>
-                </div>
-                
-                <p className="text-slate-600 italic text-sm border-l-4 border-slate-200 pl-3">
-                  "{review.comment || "Great food, definitely coming back! Highly recommended."}"
-                </p>
-                
-                <div className="flex justify-between items-center mt-2 pt-3 border-t border-slate-100">
-                  <span className="text-xs text-slate-400">{new Date().toLocaleDateString()}</span>
-                  <button className="text-xs font-semibold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-md transition-colors">
-                    Delete Review
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+    <div>
+      <PageHeader title="Reviews" subtitle="Moderate vendor reviews and the testimonials shown on the website." />
+      <ReadOnlyNote area="reviews" />
+      <Tabs
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { value: "reviews", label: "Vendor reviews", icon: MessageSquareText },
+          { value: "summary", label: "Rating summary", icon: BarChart3 },
+          { value: "site", label: "Website testimonials", icon: Quote },
+        ]}
+      />
+      {tab === "reviews" && <VendorReviews vendorFilter={vendorFilter} clearVendor={() => setVendorFilter(null)} />}
+      {tab === "summary" && <RatingSummary onShowReviews={showVendorReviews} />}
+      {tab === "site" && <SiteReviews />}
     </div>
   );
 }
 
+function VendorReviews({ vendorFilter, clearVendor }) {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const canWrite = useCan("reviews");
+  const [search, setSearch] = useState("");
+  const q = useDebounce(search, 300);
+  const [lowOnly, setLowOnly] = useState(false);
+  const vendorId = vendorFilter?.id || "";
+  const [page, setPage] = usePageFor([q, lowOnly, vendorId].join("|"));
+  const [data, setData] = useState({ reviews: [], total: 0, page: 1, pages: 1 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await adminFetch(`/reviews${qs({ q, max_rating: lowOnly ? 2 : "", vendor_id: vendorId, page, per_page: PER_PAGE })}`);
+      setData(res);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [q, lowOnly, vendorId, page]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const remove = async (r) => {
+    const ok = await confirm({
+      title: "Delete this review?",
+      message: `The ${r.rating_value}★ review by ${r.author_name} on ${r.vendor_name || "this vendor"} will be removed and the vendor's average rating recalculated.`,
+      confirmLabel: "Delete review",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      const res = await adminFetch(`/reviews/${r.id}`, { method: "DELETE" });
+      toast.success(res.message || "Review deleted");
+      if (data.reviews.length === 1 && page > 1) setPage(page - 1);
+      else load();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  return (
+    <>
+      <div className="admin-toolbar">
+        <SearchInput value={search} onChange={setSearch} placeholder="Search review text, author or vendor..." />
+        <label className="admin-check px-2">
+          <input type="checkbox" checked={lowOnly} onChange={(e) => setLowOnly(e.target.checked)} />≤ 2★ only
+        </label>
+        {vendorFilter && (
+          <span className="admin-badge brand !text-sm !py-1">
+            Vendor: {vendorFilter.name}
+            <button type="button" onClick={clearVendor} className="ml-1 flex" aria-label="Clear vendor filter">
+              <X size={13} />
+            </button>
+          </span>
+        )}
+      </div>
+
+      <ErrorBanner message={error} onRetry={load} />
+
+      {loading && data.reviews.length === 0 ? (
+        <Loading label="Loading reviews..." />
+      ) : data.reviews.length === 0 ? (
+        <div className="admin-card">
+          <EmptyState icon={MessageSquareText} title="No reviews found" message={q || lowOnly || vendorFilter ? "Try changing the filters." : "Reviews written on the website and app will appear here."} />
+        </div>
+      ) : (
+        <>
+          <div className="admin-table-container" style={{ opacity: loading ? 0.6 : 1 }}>
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Vendor</th>
+                  <th>Rating</th>
+                  <th>Review</th>
+                  <th>Author</th>
+                  <th>Date</th>
+                  {canWrite && <th className="actions"></th>}
+                </tr>
+              </thead>
+              <tbody>
+                {data.reviews.map((r) => (
+                  <tr key={r.id}>
+                    <td style={{ minWidth: 160 }}>
+                      <a href={`/vendor/${r.vendor_id}`} target="_blank" rel="noreferrer" className="font-semibold text-neutral-900 hover:text-brand-600 inline-flex items-center gap-1">
+                        {r.vendor_name || `Vendor #${r.vendor_id}`} <ExternalLink size={11} className="text-neutral-400" />
+                      </a>
+                      <div className="text-xs text-neutral-500">{r.city_name || ""}</div>
+                    </td>
+                    <td>
+                      <span className={`font-semibold whitespace-nowrap ${r.rating_value <= 2 ? "text-rose-600" : "text-amber-600"}`}>★ {r.rating_value}</span>
+                    </td>
+                    <td style={{ minWidth: 260, maxWidth: 480 }}>
+                      {r.review_text ? <div className="text-sm text-neutral-700 whitespace-pre-line line-clamp-4">{r.review_text}</div> : <span className="text-neutral-400 italic text-xs">Rating only</span>}
+                    </td>
+                    <td style={{ minWidth: 150 }}>
+                      <div className="font-medium">{r.author_name}</div>
+                      {r.user_email && <div className="text-xs text-neutral-500">{r.user_email}</div>}
+                      {!r.user_id && r.user_ip && <div className="text-[11px] text-neutral-400">Guest · {r.user_ip}</div>}
+                    </td>
+                    <td className="text-neutral-500 text-xs whitespace-nowrap" title={formatDateTime(r.created_at)}>
+                      {formatDate(r.created_at)}
+                    </td>
+                    {canWrite && (
+                      <td className="actions">
+                        <button type="button" className="admin-btn admin-btn-ghost admin-icon-btn !text-rose-600" title="Delete review" onClick={() => remove(r)}>
+                          <Trash2 size={15} />
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <Pagination page={data.page} pages={data.pages} total={data.total} perPage={data.per_page || PER_PAGE} onChange={setPage} noun="reviews" />
+        </>
+      )}
+    </>
+  );
+}
+
+function RatingSummary({ onShowReviews }) {
+  const [ratings, setRatings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await adminFetch("/ratings");
+      setRatings(res.ratings || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return ratings;
+    return ratings.filter((r) => [r.name, r.city_name, r.cuisine_type].filter(Boolean).some((v) => v.toLowerCase().includes(q)));
+  }, [ratings, search]);
+
+  return (
+    <>
+      <div className="admin-toolbar">
+        <SearchInput value={search} onChange={setSearch} placeholder="Filter by vendor, city or cuisine..." />
+        <span className="text-xs text-neutral-500 px-2">{ratings.length} vendors with ratings</span>
+      </div>
+      <ErrorBanner message={error} onRetry={load} />
+      {loading ? (
+        <Loading label="Loading ratings..." />
+      ) : filtered.length === 0 ? (
+        <div className="admin-card">
+          <EmptyState icon={Star} title="No rated vendors" />
+        </div>
+      ) : (
+        <div className="admin-table-container">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Vendor</th>
+                <th>City</th>
+                <th>Cuisine</th>
+                <th>Average</th>
+                <th className="num">Ratings</th>
+                <th className="actions"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((r) => (
+                <tr key={r.id}>
+                  <td className="font-semibold">{r.name}</td>
+                  <td className="text-neutral-600">{r.city_name || "—"}</td>
+                  <td className="text-neutral-600">{r.cuisine_type || "—"}</td>
+                  <td>
+                    <Stars value={r.avg_rating} />
+                  </td>
+                  <td className="num">{r.total_ratings}</td>
+                  <td className="actions">
+                    <button type="button" className="admin-btn admin-btn-sm" onClick={() => onShowReviews({ id: r.id, name: r.name })}>
+                      View reviews
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+}
+
+function SiteReviews() {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const canWrite = useCan("reviews");
+  const [status, setStatus] = useState("all");
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await adminFetch(`/site-reviews?status=${status}`);
+      setItems(res.site_reviews || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [status]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const setReviewStatus = async (r, next) => {
+    try {
+      const res = await adminFetch(`/site-reviews/${r.id}`, { method: "PUT", body: { status: next } });
+      toast.success(res.message || `Review ${next}`);
+      load();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  const remove = async (r) => {
+    const ok = await confirm({ title: "Delete testimonial?", message: `"${(r.review_text || "").slice(0, 120)}" by ${r.author_name || "Anonymous"} will be permanently deleted.`, confirmLabel: "Delete", danger: true });
+    if (!ok) return;
+    try {
+      const res = await adminFetch(`/site-reviews/${r.id}`, { method: "DELETE" });
+      toast.success(res.message || "Testimonial deleted");
+      load();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  return (
+    <>
+      <div className="admin-toolbar">
+        <div className="admin-segmented">
+          {["all", "pending", "approved", "rejected"].map((s) => (
+            <button key={s} type="button" className={status === s ? "active" : ""} onClick={() => setStatus(s)}>
+              {s[0].toUpperCase() + s.slice(1)}
+            </button>
+          ))}
+        </div>
+        <span className="text-xs text-neutral-500 px-2">Approved testimonials are shown on the website&apos;s reviews section.</span>
+      </div>
+      <ErrorBanner message={error} onRetry={load} />
+      {loading ? (
+        <Loading label="Loading testimonials..." />
+      ) : items.length === 0 ? (
+        <div className="admin-card">
+          <EmptyState icon={Quote} title={`No ${status === "all" ? "" : status} testimonials`} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {items.map((r) => (
+            <div key={r.id} className="admin-card !mb-0 flex flex-col gap-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="font-semibold text-neutral-900">{r.author_name || "Anonymous"}</div>
+                  <div className="text-xs text-neutral-500">
+                    {formatDate(r.created_at)} {r.rating_value ? <span className="text-amber-600 font-semibold ml-1">★ {r.rating_value}</span> : null}
+                  </div>
+                </div>
+                <StatusBadge status={r.status} />
+              </div>
+              <p className="text-sm text-neutral-700 m-0 whitespace-pre-line">{r.review_text}</p>
+              {canWrite && (
+                <div className="flex flex-wrap gap-2 pt-3 border-t border-neutral-100 mt-auto">
+                  {r.status !== "approved" && (
+                    <button type="button" className="admin-btn admin-btn-success admin-btn-sm" onClick={() => setReviewStatus(r, "approved")}>
+                      <CircleCheck size={14} /> Approve
+                    </button>
+                  )}
+                  {r.status !== "rejected" && (
+                    <button type="button" className="admin-btn admin-btn-danger-soft admin-btn-sm" onClick={() => setReviewStatus(r, "rejected")}>
+                      <CircleX size={14} /> Reject
+                    </button>
+                  )}
+                  <button type="button" className="admin-btn admin-btn-ghost admin-btn-sm ml-auto" onClick={() => remove(r)}>
+                    <Trash2 size={14} /> Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}

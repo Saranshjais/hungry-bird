@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Play, ArrowRight, Share2, Check, Upload, X } from 'lucide-react';
 import Link from 'next/link';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
+
 const DUMMY_REELS = [
   {
     id: 1,
@@ -50,7 +52,7 @@ export default function ReelsSection() {
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:5000/reels")
+    fetch(`${API_URL}/api/reels`)
       .then(res => res.json())
       .then(data => {
         if (data.reels && data.reels.length > 0) {
@@ -69,7 +71,7 @@ export default function ReelsSection() {
     }
     setUploading(true);
     try {
-      const res = await fetch("http://127.0.0.1:5000/submit-reel", {
+      const res = await fetch(`${API_URL}/api/submit-reel`, {
         method: "POST",
         body: formData,
       });

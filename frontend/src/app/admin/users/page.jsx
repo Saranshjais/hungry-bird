@@ -1,202 +1,314 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { User, Shield, ShieldOff, Search, MoreVertical, Filter } from "lucide-react";
-import { motion } from "motion/react";
-import CustomSelect from "../components/CustomSelect";
+import { useCallback, useEffect, useState } from "react";
+import { Ban, Bell, BellOff, Eye, Heart, Mail, Phone, Trash2, UserCheck, Users } from "lucide-react";
+import { adminFetch, formatDate, formatDateTime, qs, timeAgo } from "../lib/api";
+import { useCan, useDebounce, usePageFor } from "../lib/hooks";
+import { useToast } from "../components/Toast";
+import Modal, { useConfirm } from "../components/Modal";
+import { EmptyState, ErrorBanner, Loading, PageHeader, Pagination, ReadOnlyNote, SearchInput, Spinner, StatusBadge } from "../components/ui";
+
+const PER_PAGE = 25;
 
 export default function AdminUsers() {
-  const [users, setUsers] = useState([]);
+  const toast = useToast();
+  const confirm = useConfirm();
+  const canWrite = useCan("users");
+
+  const [search, setSearch] = useState("");
+  const q = useDebounce(search, 300);
+  const [status, setStatus] = useState("all");
+  const [page, setPage] = usePageFor(`${q}|${status}`);
+  const [data, setData] = useState({ users: [], total: 0, page: 1, pages: 1 });
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [error, setError] = useState("");
+  const [busyId, setBusyId] = useState(null);
+  const [viewing, setViewing] = useState(null); // { user, detail, loading, error }
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await adminFetch(`/users${qs({ q, status, page, per_page: PER_PAGE })}`);
+      setData(res);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [q, status, page]);
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const token = sessionStorage.getItem("admin_token");
-        const res = await fetch((process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000") + "/api/admin/users", {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-        
-        if (res.ok) {
-          const data = await res.json();
-          setUsers(data.users || []);
-        } else {
-          setUsers(getDummyData());
-        }
-      } catch (err) {
-        console.error("Failed to fetch users", err);
-        setUsers(getDummyData());
-      } finally {
-        setLoading(false);
-      }
-    };
+    load();
+  }, [load]);
 
-    fetchUsers();
-  }, []);
-
-  const getDummyData = () => [
-    { id: 1, name: "Arjun Verma", email: "arjun.v@example.com", role: "consumer", joined: "2024-01-15T08:00:00Z", status: "active", reviews_count: 14 },
-    { id: 2, name: "Sneha Patel", email: "sneha.p@example.com", role: "moderator", joined: "2023-11-20T12:30:00Z", status: "active", reviews_count: 52 },
-    { id: 3, name: "Fake User99", email: "spam99@example.com", role: "consumer", joined: "2024-03-24T18:45:00Z", status: "suspended", reviews_count: 0 },
-  ];
-
-  const toggleUserStatus = async (id, currentStatus) => {
-    const newStatus = currentStatus === "active" ? "suspended" : "active";
-    
-    // Optimistic update
-    setUsers(users.map(u => u.id === id ? { ...u, status: newStatus } : u));
-
-    try {
-      const token = sessionStorage.getItem("admin_token");
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000"}/api/admin/users/${id}/status`, {
-        method: "PUT",
-        headers: { 
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ status: newStatus })
+  const setUserStatus = async (u, next) => {
+    if (next === "suspended") {
+      const ok = await confirm({
+        title: `Suspend ${u.name || u.email}?`,
+        message: "Their account is blocked: they can't log in or use signed-in features (reviews, favourites, submissions) on the website or app until reactivated.",
+        confirmLabel: "Suspend user",
+        danger: true,
       });
+      if (!ok) return;
+    }
+    setBusyId(u.id);
+    try {
+      const res = await adminFetch(`/users/${u.id}/status`, { method: "PUT", body: { status: next } });
+      setData((d) => ({ ...d, users: d.users.map((x) => (x.id === u.id ? { ...x, status: next } : x)) }));
+      setViewing((v) => (v && v.user.id === u.id ? { ...v, user: { ...v.user, status: next } } : v));
+      toast.success(res.message || `User ${next}`);
     } catch (err) {
-      console.error("Failed to update user status", err);
+      toast.error(err.message);
+    } finally {
+      setBusyId(null);
     }
   };
 
-  const [statusFilter, setStatusFilter] = useState("all");
+  const remove = async (u) => {
+    const ok = await confirm({
+      title: `Permanently delete ${u.name || u.email}?`,
+      message:
+        "This cannot be undone. The account, favourites and saved vendors are deleted; their reviews and submissions stay but are no longer linked to an account.\n\nTo only block access, suspend the user instead.",
+      confirmLabel: "Delete permanently",
+      danger: true,
+    });
+    if (!ok) return;
+    setBusyId(u.id);
+    try {
+      const res = await adminFetch(`/users/${u.id}`, { method: "DELETE" });
+      toast.success(res.message || "User deleted");
+      setViewing(null);
+      if (data.users.length === 1 && page > 1) setPage(page - 1);
+      else load();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setBusyId(null);
+    }
+  };
 
-  const statusOptions = [
-    { value: "all", label: "All Statuses" },
-    { value: "active", label: "Active" },
-    { value: "suspended", label: "Suspended" },
-  ];
-
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = 
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      user.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || user.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const openView = async (u) => {
+    setViewing({ user: u, detail: null, loading: true, error: "" });
+    try {
+      const detail = await adminFetch(`/users/${u.id}`);
+      setViewing((v) => (v && v.user.id === u.id ? { user: detail.user || u, detail, loading: false, error: "" } : v));
+    } catch (err) {
+      setViewing((v) => (v && v.user.id === u.id ? { ...v, loading: false, error: err.message } : v));
+    }
+  };
 
   return (
-    <div className="font-sans">
-      <div className="admin-page-header">
-        <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight m-0 leading-none">User Management</h1>
-          <p className="text-slate-500 mt-1 font-medium text-sm">View, manage, and moderate registered users.</p>
+    <div>
+      <PageHeader title="Users" subtitle={`${data.total.toLocaleString("en-IN")} ${status === "all" ? "registered" : status} app users`} />
+      <ReadOnlyNote area="users" />
+
+      <div className="admin-toolbar">
+        <SearchInput value={search} onChange={setSearch} placeholder="Search by name, email or phone..." />
+        <div className="admin-segmented">
+          {["all", "active", "suspended"].map((s) => (
+            <button key={s} type="button" className={status === s ? "active" : ""} onClick={() => setStatus(s)}>
+              {s[0].toUpperCase() + s.slice(1)}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Filter Bar */}
-      <div className="relative z-50 bg-white border border-slate-200 p-4 rounded-2xl shadow-sm mb-6 flex flex-col md:flex-row gap-4">
-        {/* Search */}
-        <div className="relative flex-1 group z-10">
-          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-brand-500 transition-colors">
-            <Search size={16} />
-          </div>
-          <input
-            type="text"
-            placeholder="Search users by name or email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
-          />
-        </div>
+      <ErrorBanner message={error} onRetry={load} />
 
-        {/* Filters */}
-        <div className="flex gap-4">
-          <CustomSelect 
-            value={statusFilter}
-            onChange={setStatusFilter}
-            options={statusOptions}
-            icon={Filter}
-          />
+      {loading && data.users.length === 0 ? (
+        <Loading label="Loading users..." />
+      ) : data.users.length === 0 ? (
+        <div className="admin-card">
+          <EmptyState icon={Users} title="No users found" message={q || status !== "all" ? "Try a different search or filter." : "People who sign up on the website or app will appear here."} />
         </div>
-      </div>
-
-      <div className="admin-card">
-        {loading ? (
-          <div className="flex justify-center items-center h-32">
-            <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-8 h-8 border-4 border-brand-500/30 border-t-brand-500 rounded-full" />
-          </div>
-        ) : filteredUsers.length === 0 ? (
-          <div className="text-center py-10 border border-dashed border-slate-200 rounded-xl">
-            <User size={40} className="mx-auto text-slate-300 mb-3" />
-            <h3 className="text-lg font-bold text-slate-700">No users found</h3>
-            <p className="text-slate-400 text-sm">Try adjusting your search or filters.</p>
-          </div>
-        ) : (
-          <div className="admin-table-container">
+      ) : (
+        <>
+          <div className="admin-table-container" style={{ opacity: loading ? 0.6 : 1 }}>
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>User Details</th>
-                  <th>Role</th>
-                  <th>Contributions</th>
-                  <th>Joined Date</th>
+                  <th>User</th>
+                  <th>Joined</th>
+                  <th>Last login</th>
+                  <th className="num">Reviews</th>
+                  <th className="num">Submissions</th>
                   <th>Status</th>
-                  <th>Actions</th>
+                  <th className="actions">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className={user.status === "suspended" ? "opacity-60 bg-red-50/20" : ""}>
-                    <td>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold">
-                          {user.name.charAt(0)}
+                {data.users.map((u) => {
+                  const suspended = u.status === "suspended";
+                  return (
+                    <tr key={u.id} style={{ opacity: busyId === u.id ? 0.5 : 1 }}>
+                      <td style={{ minWidth: 220 }}>
+                        <div className="flex items-center gap-3">
+                          <div className="admin-avatar" style={{ width: 34, height: 34, fontSize: "0.8rem" }}>
+                            {(u.name || u.email || "?").charAt(0)}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-neutral-900 truncate">{u.name || "—"}</div>
+                            <div className="text-xs text-neutral-500 truncate">{u.email}</div>
+                            {u.phone && <div className="text-xs text-neutral-400">{u.phone}</div>}
+                          </div>
                         </div>
-                        <div>
-                          <div className="font-bold text-slate-800">{user.name}</div>
-                          <div className="text-xs text-slate-500">{user.email}</div>
+                      </td>
+                      <td className="text-neutral-600 text-xs whitespace-nowrap">{formatDate(u.joined)}</td>
+                      <td className="text-neutral-600 text-xs whitespace-nowrap" title={formatDateTime(u.last_login)}>
+                        {u.last_login ? timeAgo(u.last_login) : "Never"}
+                      </td>
+                      <td className="num">{u.reviews_count}</td>
+                      <td className="num">{u.submissions_count}</td>
+                      <td>
+                        <StatusBadge status={u.status || "active"} />
+                      </td>
+                      <td className="actions">
+                        <div className="admin-actions">
+                          <button type="button" className="admin-btn admin-btn-ghost admin-icon-btn" title="View details" onClick={() => openView(u)}>
+                            <Eye size={15} />
+                          </button>
+                          {canWrite && (
+                            <>
+                              <button
+                                type="button"
+                                className="admin-btn admin-btn-sm"
+                                disabled={busyId === u.id}
+                                onClick={() => setUserStatus(u, suspended ? "active" : "suspended")}
+                              >
+                                {suspended ? <UserCheck size={14} /> : <Ban size={14} />} {suspended ? "Reactivate" : "Suspend"}
+                              </button>
+                              <button type="button" className="admin-btn admin-btn-ghost admin-icon-btn !text-rose-600" title="Delete permanently" disabled={busyId === u.id} onClick={() => remove(u)}>
+                                <Trash2 size={15} />
+                              </button>
+                            </>
+                          )}
                         </div>
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize border ${
-                        user.role === 'admin' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
-                        user.role === 'moderator' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                        'bg-slate-100 text-slate-600 border-slate-200'
-                      }`}>
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="text-slate-600 font-medium text-sm">
-                      {user.reviews_count} Reviews
-                    </td>
-                    <td className="text-slate-500 text-sm">
-                      {new Date(user.joined).toLocaleDateString()}
-                    </td>
-                    <td>
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
-                        user.status === 'active' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'
-                      }`}>
-                        {user.status}
-                      </span>
-                    </td>
-                    <td>
-                      <button 
-                        onClick={() => toggleUserStatus(user.id, user.status)}
-                        className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-semibold transition-colors ${
-                          user.status === 'active' 
-                            ? 'text-rose-600 bg-rose-50 hover:bg-rose-100' 
-                            : 'text-green-600 bg-green-50 hover:bg-green-100'
-                        }`}
-                      >
-                        {user.status === 'active' ? (
-                          <><ShieldOff size={14}/> Suspend</>
-                        ) : (
-                          <><Shield size={14}/> Reactivate</>
-                        )}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
+          <Pagination page={data.page} pages={data.pages} total={data.total} perPage={data.per_page || PER_PAGE} onChange={setPage} noun="users" />
+        </>
+      )}
+
+      <Modal
+        open={!!viewing}
+        drawer
+        onClose={() => setViewing(null)}
+        title={viewing?.user.name || viewing?.user.email || "User"}
+        subtitle={viewing ? `User #${viewing.user.id} · joined ${formatDate(viewing.user.joined)}` : ""}
+        footer={
+          viewing &&
+          canWrite && (
+            <>
+              <button type="button" className="admin-btn admin-btn-ghost !text-rose-600 mr-auto" onClick={() => remove(viewing.user)}>
+                <Trash2 size={15} /> Delete
+              </button>
+              <button
+                type="button"
+                className="admin-btn"
+                onClick={() => setUserStatus(viewing.user, viewing.user.status === "suspended" ? "active" : "suspended")}
+              >
+                {viewing.user.status === "suspended" ? <UserCheck size={15} /> : <Ban size={15} />}
+                {viewing.user.status === "suspended" ? "Reactivate" : "Suspend"}
+              </button>
+            </>
+          )
+        }
+      >
+        {viewing && (
+          <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-2 text-sm">
+              <div className="flex items-center gap-2">
+                <StatusBadge status={viewing.user.status || "active"} />
+                <span className="admin-badge neutral">
+                  {viewing.user.has_push_token ? <Bell size={11} /> : <BellOff size={11} />}
+                  {viewing.user.has_push_token ? (viewing.user.notifications_enabled ? "Push enabled" : "Push muted") : "No device registered"}
+                </span>
+              </div>
+              {viewing.user.email && (
+                <a href={`mailto:${viewing.user.email}`} className="flex items-center gap-2 text-blue-600 hover:underline">
+                  <Mail size={14} /> {viewing.user.email}
+                </a>
+              )}
+              {viewing.user.phone && (
+                <a href={`tel:${viewing.user.phone}`} className="flex items-center gap-2 text-neutral-700">
+                  <Phone size={14} /> {viewing.user.phone}
+                </a>
+              )}
+              <div className="text-xs text-neutral-500">Last login: {formatDateTime(viewing.user.last_login, "Never")}</div>
+            </div>
+
+            {viewing.loading ? (
+              <div className="flex items-center gap-2 text-sm text-neutral-500">
+                <Spinner small /> Loading activity...
+              </div>
+            ) : viewing.error ? (
+              <ErrorBanner message={viewing.error} onRetry={() => openView(viewing.user)} />
+            ) : (
+              viewing.detail && (
+                <>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { label: "Favourites", value: viewing.detail.favorites_count, icon: Heart },
+                      { label: "Reviews", value: viewing.user.reviews_count },
+                      { label: "Submissions", value: viewing.user.submissions_count },
+                    ].map((s) => (
+                      <div key={s.label} className="rounded-lg border border-neutral-200 p-3 text-center">
+                        <div className="text-xl font-bold text-neutral-900">{s.value ?? 0}</div>
+                        <div className="text-[11px] uppercase tracking-wider text-neutral-500 font-semibold">{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div>
+                    <div className="admin-label">Recent reviews</div>
+                    {viewing.detail.reviews?.length ? (
+                      <ul className="list-none m-0 p-0 flex flex-col gap-2">
+                        {viewing.detail.reviews.map((r) => (
+                          <li key={r.id} className="rounded-lg border border-neutral-200 p-3">
+                            <div className="flex justify-between gap-2 text-sm">
+                              <span className="font-semibold text-neutral-800 truncate">{r.vendor_name || "Vendor"}</span>
+                              <span className="text-amber-600 font-semibold whitespace-nowrap">★ {r.rating_value}</span>
+                            </div>
+                            {r.review_text && <p className="text-xs text-neutral-600 mt-1 mb-0 line-clamp-3">{r.review_text}</p>}
+                            <div className="text-[11px] text-neutral-400 mt-1">{formatDate(r.created_at)}</div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-neutral-500 m-0">No reviews yet.</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <div className="admin-label">Vendor submissions</div>
+                    {viewing.detail.submissions?.length ? (
+                      <ul className="list-none m-0 p-0 border border-neutral-200 rounded-lg divide-y divide-neutral-100">
+                        {viewing.detail.submissions.map((s) => (
+                          <li key={s.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
+                            <span className="truncate">{s.stall_name}</span>
+                            <span className="flex items-center gap-2 shrink-0">
+                              <span className="text-[11px] text-neutral-400">{formatDate(s.created_at)}</span>
+                              <StatusBadge status={s.status} />
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-neutral-500 m-0">No submissions yet.</p>
+                    )}
+                  </div>
+                </>
+              )
+            )}
+          </div>
         )}
-      </div>
+      </Modal>
     </div>
   );
 }

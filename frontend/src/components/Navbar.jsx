@@ -31,7 +31,7 @@ export default function Navbar() {
     // Fetch cities for dropdown
     const fetchCities = async () => {
       try {
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:5000';
+        const backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:5000';
         const res = await fetch(`${backendUrl}/api/cities`);
         const data = await res.json();
         setCities(data.cities || []);

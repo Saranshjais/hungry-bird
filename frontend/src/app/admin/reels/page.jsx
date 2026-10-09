@@ -1,132 +1,133 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { CheckCircle2, XCircle, Play, Video, Loader2 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { useCallback, useEffect, useState } from "react";
+import { CircleCheck, CircleX, Clapperboard, Eye, Trash2, User } from "lucide-react";
+import { adminFetch, formatDate, formatDateTime } from "../lib/api";
+import { useAdmin, useCan } from "../lib/hooks";
+import { useToast } from "../components/Toast";
+import { useConfirm } from "../components/Modal";
+import { EmptyState, ErrorBanner, Loading, PageHeader, ReadOnlyNote, StatusBadge, Tabs } from "../components/ui";
 
 export default function AdminReels() {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const { counts, refreshCounts } = useAdmin();
+  const canWrite = useCan("reels");
+
+  const [status, setStatus] = useState("pending");
   const [reels, setReels] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(null);
+  const [error, setError] = useState("");
+  const [busyId, setBusyId] = useState(null);
 
-  useEffect(() => {
-    fetchReels();
-  }, []);
-
-  const fetchReels = async () => {
+  const load = useCallback(async (s, { quiet = false } = {}) => {
+    if (!quiet) setLoading(true);
+    setError("");
     try {
-      const token = sessionStorage.getItem("admin_token");
-      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000") + "/api/admin/reels/pending", {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      const data = await res.json();
+      const data = await adminFetch(`/reels?status=${s}`);
       setReels(data.reels || []);
     } catch (err) {
-      console.error(err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleAction = async (id, action) => {
-    setActionLoading(id);
+  useEffect(() => {
+    load(status);
+  }, [status, load]);
+
+  const act = async (reel, action) => {
+    setBusyId(reel.id);
     try {
-      const token = sessionStorage.getItem("admin_token");
-      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000") + `/api/admin/reels/${id}/${action}`, {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      
-      if (res.ok) {
-        setReels(reels.filter(r => r.id !== id));
-      } else {
-        alert("Action failed. Please try again.");
-      }
+      await adminFetch(`/reels/${reel.id}/${action}`, { method: "POST" });
+      toast.success(action === "approve" ? `"${reel.title}" approved - it is now live in the app` : `"${reel.title}" rejected`);
+      load(status, { quiet: true });
+      refreshCounts();
     } catch (err) {
-      console.error(err);
-      alert("Network error.");
+      toast.error(err.message);
     } finally {
-      setActionLoading(null);
+      setBusyId(null);
     }
   };
 
+  const remove = async (reel) => {
+    const ok = await confirm({ title: "Delete reel?", message: `"${reel.title}" and its video file will be permanently deleted.`, confirmLabel: "Delete reel", danger: true });
+    if (!ok) return;
+    setBusyId(reel.id);
+    try {
+      await adminFetch(`/reels/${reel.id}`, { method: "DELETE" });
+      toast.success("Reel deleted");
+      load(status, { quiet: true });
+      refreshCounts();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const tabs = [
+    { value: "pending", label: "Pending", count: counts.pending_reels ?? undefined },
+    { value: "approved", label: "Approved" },
+    { value: "rejected", label: "Rejected" },
+    { value: "all", label: "All" },
+  ];
+
   return (
-    <div className="font-sans">
-      <div className="admin-page-header">
-        <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
-            <Video className="text-rose-500" size={32} /> Video Approvals
-          </h1>
-          <p className="text-slate-500 mt-2 font-medium">Review and moderate community-submitted video reels.</p>
-        </div>
-      </div>
+    <div>
+      <PageHeader title="Video Reels" subtitle="Short food videos uploaded by users. Approved reels are shown in the app and on the website." />
+      <ReadOnlyNote area="reels" />
+      <Tabs tabs={tabs} value={status} onChange={setStatus} />
+      <ErrorBanner message={error} onRetry={() => load(status)} />
 
       {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
-        </div>
+        <Loading label="Loading reels..." />
       ) : reels.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
-          <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle2 size={32} className="text-slate-300" />
-          </div>
-          <h3 className="text-xl font-bold text-slate-700">All Caught Up!</h3>
-          <p className="text-slate-500 mt-2">No pending video submissions at the moment.</p>
+        <div className="admin-card">
+          <EmptyState icon={Clapperboard} title={status === "pending" ? "No reels waiting for review" : `No ${status === "all" ? "" : status} reels`} message={status === "pending" ? "New uploads will appear here for approval." : undefined} />
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          <AnimatePresence>
-            {reels.map((reel) => (
-              <motion.div
-                key={reel.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col group"
-              >
-                <div className="relative h-64 bg-black">
-                  <video 
-                    src={reel.videoUrl} 
-                    className="w-full h-full object-cover" 
-                    controls 
-                    preload="metadata"
-                  />
-                  <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white border border-white/10">
-                    ID: #{reel.id}
-                  </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-5">
+          {reels.map((reel) => (
+            <div key={reel.id} className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm flex flex-col" style={{ opacity: busyId === reel.id ? 0.6 : 1 }}>
+              <div className="bg-neutral-900 aspect-[9/16] max-h-[460px] w-full flex items-center justify-center">
+                <video src={reel.videoUrl} controls preload="metadata" playsInline className="w-full h-full object-contain" />
+              </div>
+              <div className="p-4 flex flex-col gap-2 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-semibold text-neutral-900 text-sm m-0 leading-snug line-clamp-2">{reel.title || "Untitled reel"}</h3>
+                  <StatusBadge status={reel.status} />
                 </div>
-                
-                <div className="p-6 flex flex-col flex-grow">
-                  <div className="flex-grow">
-                    <h3 className="text-lg font-bold text-slate-900 leading-tight mb-2">{reel.title}</h3>
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center text-rose-600 font-bold text-sm">
-                        {reel.author_name.charAt(0).toUpperCase()}
-                      </div>
-                      <span className="text-sm font-semibold text-slate-600">{reel.author_name}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3 pt-4 mt-2 border-t border-slate-100">
-                    <button
-                      onClick={() => handleAction(reel.id, 'reject')}
-                      disabled={actionLoading === reel.id}
-                      className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 transition-colors disabled:opacity-50"
-                    >
-                      <XCircle size={18} /> Reject
-                    </button>
-                    <button
-                      onClick={() => handleAction(reel.id, 'approve')}
-                      disabled={actionLoading === reel.id}
-                      className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-semibold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-colors disabled:opacity-50"
-                    >
-                      <CheckCircle2 size={18} /> Approve
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-500">
+                  <span className="inline-flex items-center gap-1">
+                    <User size={12} /> {reel.author_name || "Anonymous"}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Eye size={12} /> {reel.views} views
+                  </span>
+                  <span title={formatDateTime(reel.created_at)}>{formatDate(reel.created_at)}</span>
+                </div>
+                {canWrite && (
+                  <div className="flex flex-wrap gap-2 pt-3 mt-auto border-t border-neutral-100">
+                    {reel.status !== "approved" && (
+                      <button type="button" className="admin-btn admin-btn-success admin-btn-sm" disabled={busyId === reel.id} onClick={() => act(reel, "approve")}>
+                        <CircleCheck size={14} /> Approve
+                      </button>
+                    )}
+                    {reel.status !== "rejected" && (
+                      <button type="button" className="admin-btn admin-btn-danger-soft admin-btn-sm" disabled={busyId === reel.id} onClick={() => act(reel, "reject")}>
+                        <CircleX size={14} /> Reject
+                      </button>
+                    )}
+                    <button type="button" className="admin-btn admin-btn-ghost admin-icon-btn ml-auto !text-rose-600" title="Delete" disabled={busyId === reel.id} onClick={() => remove(reel)}>
+                      <Trash2 size={15} />
                     </button>
                   </div>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

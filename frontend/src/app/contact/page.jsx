@@ -1,6 +1,7 @@
-import { Mail, MapPin, Phone, Send, User, Heart, AtSign, ArrowRight } from 'lucide-react';
+import { Mail, MapPin, Phone, Send, Heart, AtSign, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import ContactForm from './ContactForm';
 
 export const metadata = {
   title: 'Contact Us | HungryBird',
@@ -47,44 +48,7 @@ export default function ContactPage() {
               </div>
             </div>
 
-            <form className="space-y-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-bold text-stone-700 mb-1.5">
-                    <User size={14} className="text-stone-400" /> Your Name
-                  </label>
-                  <input type="text" className="w-full border border-stone-200 rounded-xl p-3 focus:outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 transition-all font-medium text-stone-800 text-sm" placeholder="Enter your full name" />
-                </div>
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-bold text-stone-700 mb-1.5">
-                    <Mail size={14} className="text-stone-400" /> Email Address
-                  </label>
-                  <input type="email" className="w-full border border-stone-200 rounded-xl p-3 focus:outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 transition-all font-medium text-stone-800 text-sm" placeholder="Enter your email" />
-                </div>
-              </div>
-
-              <div>
-                <label className="flex items-center gap-2 text-sm font-bold text-stone-700 mb-1.5">
-                  <AtSign size={14} className="text-stone-400" /> Subject
-                </label>
-                <select className="w-full border border-stone-200 rounded-xl p-3 focus:outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 transition-all font-medium text-stone-800 bg-white text-sm">
-                  <option value="">Select a subject</option>
-                  <option value="support">Support</option>
-                  <option value="feedback">Feedback</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="flex items-center gap-2 text-sm font-bold text-stone-700 mb-1.5">
-                  <Send size={14} className="text-stone-400" /> Message
-                </label>
-                <textarea rows={4} className="w-full border border-stone-200 rounded-xl p-3 focus:outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 transition-all resize-none font-medium text-stone-800 text-sm" placeholder="How can we help you?" />
-              </div>
-
-              <button type="button" className="w-full bg-brand-500 hover:bg-brand-600 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-brand-500/20 flex items-center justify-center gap-2 hover:-translate-y-1 mt-2">
-                Send Message <Send size={16} />
-              </button>
-            </form>
+            <ContactForm />
           </div>
 
           {/* Right Column - Contact Info */}

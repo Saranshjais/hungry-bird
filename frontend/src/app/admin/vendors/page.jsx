@@ -1,396 +1,618 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
-import { Search, Filter, MapPin, ChevronDown, Check, X, Edit, Save, UploadCloud, Loader2 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
-import CustomSelect from "../components/CustomSelect";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  CloudUpload, Crown, Download, ExternalLink, Eye, EyeOff, FileSpreadsheet, Gem, Pencil, Plus, Save, Store, Trash2, X,
+} from "lucide-react";
+import { adminFetch, downloadFile, formatDate, qs, saveBlob } from "../lib/api";
+import { useCan, useDebounce, usePageFor } from "../lib/hooks";
+import { useToast } from "../components/Toast";
+import Modal, { useConfirm } from "../components/Modal";
+import {
+  EmptyState, ErrorBanner, Field, ImagePreview, Loading, PageHeader, Pagination, ReadOnlyNote, SearchInput, Spinner, Stars, Thumb,
+} from "../components/ui";
+
+const PER_PAGE = 25;
+
+const TEMPLATE_HEADERS = [
+  "name", "city", "cuisine_type", "food_category", "specialty_dish", "description", "opening_hours",
+  "price_level", "address", "area", "lat", "lng", "phone", "image_url", "is_hidden_gem",
+];
+
+const STATUS_LABEL = { verified: "Live", pending: "Pending", rejected: "Hidden" };
+
+const EMPTY_VENDOR = {
+  name: "", city_id: "", cuisine_type: "", food_category: "", specialty_dish: "", description: "",
+  opening_hours: "", closed_days: "", price_level: "", price_min: "", price_max: "",
+  address_text: "", area: "", landmark: "", lat: "", lng: "",
+  phone: "", website: "", instagram: "", image_url: "",
+  is_hidden_gem: false, is_famous: false, verified_status: "verified",
+};
+
+const STRING_FIELDS = [
+  "name", "cuisine_type", "food_category", "specialty_dish", "description", "opening_hours", "closed_days",
+  "price_level", "address_text", "area", "landmark", "phone", "website", "instagram", "image_url",
+];
+const NUMBER_FIELDS = ["price_min", "price_max", "lat", "lng"];
+
+function toForm(v) {
+  const f = { ...EMPTY_VENDOR };
+  Object.keys(EMPTY_VENDOR).forEach((k) => {
+    if (v[k] !== null && v[k] !== undefined) f[k] = v[k];
+  });
+  f.city_id = v.city_id ? String(v.city_id) : "";
+  f.verified_status = v.verified_status || "verified";
+  return f;
+}
+
+function toPayload(f) {
+  const body = {};
+  STRING_FIELDS.forEach((k) => (body[k] = typeof f[k] === "string" ? f[k].trim() : f[k]));
+  NUMBER_FIELDS.forEach((k) => (body[k] = f[k] === "" || f[k] === null ? null : f[k]));
+  body.city_id = f.city_id ? Number(f.city_id) : null;
+  body.is_hidden_gem = !!f.is_hidden_gem;
+  body.is_famous = !!f.is_famous;
+  body.verified_status = f.verified_status;
+  return body;
+}
 
 export default function AdminVendors() {
-  const [vendors, setVendors] = useState([]);
+  const toast = useToast();
+  const confirm = useConfirm();
+  const canWrite = useCan("vendors");
+
+  const [search, setSearch] = useState("");
+  const q = useDebounce(search, 300);
+  const [cityId, setCityId] = useState("");
+  const [status, setStatus] = useState("");
+  const [flag, setFlag] = useState("");
+  const [sort, setSort] = useState("newest");
+  const [page, setPage] = usePageFor([q, cityId, status, flag, sort].join("|"));
+
+  const [data, setData] = useState({ vendors: [], total: 0, page: 1, pages: 1 });
   const [loading, setLoading] = useState(true);
-  const [editingVendor, setEditingVendor] = useState(null);
-  
-  // Bulk upload
-  const fileInputRef = useRef(null);
+  const [error, setError] = useState("");
+  const [cities, setCities] = useState([]);
+  const [categories, setCategories] = useState([]);
+
+  const [form, setForm] = useState(null); // { id?, ...fields }
+  const [saving, setSaving] = useState(false);
+  const [rowBusy, setRowBusy] = useState(null);
+
+  const fileRef = useRef(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    const formData = new FormData();
-    formData.append('file', file);
-
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
     try {
-      const token = sessionStorage.getItem("admin_token");
-      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000") + "/api/admin/vendors/bulk-upload", {
-        method: 'POST',
-        headers: { "Authorization": `Bearer ${token}` },
-        body: formData
-      });
-      const data = await res.json();
-      if (res.ok) {
-        alert(data.message);
-        fetchVendors();
-      } else {
-        alert("Upload failed: " + data.error);
-      }
+      const res = await adminFetch(`/vendors${qs({ q, city_id: cityId, status, flag, sort, page, per_page: PER_PAGE })}`);
+      setData(res);
     } catch (err) {
-      console.error(err);
-      alert("An error occurred during upload.");
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-  
-  // Filter states
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [cityFilter, setCityFilter] = useState("all");
-
-  const getDummyData = () => [
-    { id: 1, name: "Sharma Ji Ki Chai", city_name: "Jaipur", cuisine_type: "Beverages", avg_rating: 4.8, verified_status: "verified", is_hidden_gem: true, is_famous: true },
-    { id: 2, name: "Raju Chaat Bhandar", city_name: "Delhi", cuisine_type: "Street Food", avg_rating: 4.5, verified_status: "verified", is_hidden_gem: false, is_famous: true },
-    { id: 3, name: "Bombay Vada Pav Center", city_name: "Mumbai", cuisine_type: "Snacks", avg_rating: null, verified_status: "pending", is_hidden_gem: false, is_famous: false },
-  ];
-
-  const fetchVendors = async () => {
-    try {
-      const token = sessionStorage.getItem("admin_token");
-      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000") + "/api/admin/vendors", {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setVendors(data.vendors || []);
-      } else {
-        setVendors(getDummyData());
-      }
-    } catch (err) {
-      console.error("Failed to fetch vendors", err);
-      setVendors(getDummyData());
+      setError(err.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [q, cityId, status, flag, sort, page]);
 
   useEffect(() => {
-    fetchVendors();
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    adminFetch("/cities").then((d) => setCities(d.cities || [])).catch(() => {});
+    adminFetch("/categories").then((d) => setCategories(d.categories || [])).catch(() => {});
   }, []);
 
-  const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this vendor? This action cannot be undone.")) return;
-    try {
-      const token = sessionStorage.getItem("admin_token");
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000'}/api/admin/vendors/${id}`, {
-        method: "DELETE",
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (res.ok) {
-        alert(data.message);
-        fetchVendors(); // refresh list
-      } else {
-        alert("Error: " + data.error);
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Failed to delete vendor");
+  // Dashboard "Add a vendor" quick action links here with ?new=1.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("new") === "1") {
+      window.history.replaceState(null, "", "/admin/vendors");
+      if (canWrite) setForm({ ...EMPTY_VENDOR });
     }
+  }, [canWrite]);
+
+  const filtersActive = search || cityId || status || flag || sort !== "newest";
+  const clearFilters = () => {
+    setSearch("");
+    setCityId("");
+    setStatus("");
+    setFlag("");
+    setSort("newest");
   };
 
-  const handleSaveEdit = async (e) => {
+  const openCreate = () => {
+    setForm({ ...EMPTY_VENDOR, city_id: cityId || (cities.length === 1 ? String(cities[0].id) : "") });
+  };
+
+  const setF = (patch) => setForm((f) => ({ ...f, ...patch }));
+
+  const save = async (e) => {
     e.preventDefault();
+    if (!form.name.trim()) return toast.error("Vendor name is required.");
+    if (!form.city_id) return toast.error("Please choose a city.");
+    setSaving(true);
     try {
-      const token = sessionStorage.getItem("admin_token");
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000'}/api/admin/vendors/${editingVendor.id}`, {
-        method: "PUT",
-        headers: { 
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          name: editingVendor.name,
-          cuisine_type: editingVendor.cuisine_type,
-          is_hidden_gem: editingVendor.is_hidden_gem,
-          is_famous: editingVendor.is_famous,
-          verified_status: editingVendor.verified_status
-        })
-      });
-      if (res.ok) {
-        setEditingVendor(null);
-        fetchVendors();
-      } else {
-        const data = await res.json();
-        alert("Error updating vendor: " + data.error);
-      }
+      const body = toPayload(form);
+      const res = form.id
+        ? await adminFetch(`/vendors/${form.id}`, { method: "PUT", body })
+        : await adminFetch("/vendors", { method: "POST", body });
+      toast.success(res.message || "Vendor saved");
+      setForm(null);
+      load();
     } catch (err) {
-      console.error(err);
-      alert("Failed to update vendor.");
+      toast.error(err.message);
+    } finally {
+      setSaving(false);
     }
   };
 
-  // Derive unique cities for dropdown
-  const uniqueCities = useMemo(() => {
-    const cities = vendors.map(v => v.city_name).filter(Boolean);
-    return [...new Set(cities)];
-  }, [vendors]);
+  const quickUpdate = async (vendor, patch, successMsg) => {
+    setRowBusy(vendor.id);
+    try {
+      const res = await adminFetch(`/vendors/${vendor.id}`, { method: "PUT", body: patch });
+      setData((d) => ({ ...d, vendors: d.vendors.map((v) => (v.id === vendor.id ? res.vendor || { ...v, ...patch } : v)) }));
+      toast.success(successMsg);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setRowBusy(null);
+    }
+  };
 
-  const cityOptions = [
-    { value: "all", label: "All Cities" },
-    ...uniqueCities.map(c => ({ value: c, label: c }))
-  ];
-
-  const statusOptions = [
-    { value: "all", label: "All Statuses" },
-    { value: "verified", label: "Verified" },
-    { value: "pending", label: "Pending" }
-  ];
-
-  // Apply filters
-  const filteredVendors = useMemo(() => {
-    return vendors.filter(v => {
-      const searchLower = searchQuery.toLowerCase();
-      const matchesSearch = 
-        v.name.toLowerCase().includes(searchLower) || 
-        (v.cuisine_type || "").toLowerCase().includes(searchLower);
-      
-      const matchesStatus = statusFilter === "all" || v.verified_status === statusFilter;
-      const matchesCity = cityFilter === "all" || v.city_name === cityFilter;
-      
-      return matchesSearch && matchesStatus && matchesCity;
+  const remove = async (vendor) => {
+    const ok = await confirm({
+      title: "Delete vendor?",
+      message: `"${vendor.name}" and its reviews will be permanently deleted from the app and website. To only hide it, use "Hide" instead.`,
+      confirmLabel: "Delete vendor",
+      danger: true,
     });
-  }, [vendors, searchQuery, statusFilter, cityFilter]);
+    if (!ok) return;
+    setRowBusy(vendor.id);
+    try {
+      const res = await adminFetch(`/vendors/${vendor.id}`, { method: "DELETE" });
+      toast.success(res.message || "Vendor deleted");
+      if (data.vendors.length === 1 && page > 1) setPage(page - 1);
+      else load();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setRowBusy(null);
+    }
+  };
+
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const res = await adminFetch("/vendors/bulk-upload", { method: "POST", body: fd, isForm: true });
+      setUploadResult({ ...res, filename: file.name });
+      if (res.imported) load();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const downloadTemplate = () => {
+    const csv = `${TEMPLATE_HEADERS.join(",")}\r\n`;
+    saveBlob(new Blob([`﻿${csv}`], { type: "text/csv;charset=utf-8" }), "hungrybird-vendor-template.csv");
+  };
+
+  const exportCsv = async () => {
+    setExporting(true);
+    try {
+      await downloadFile("/vendors/export", `hungrybird-vendors-${new Date().toISOString().slice(0, 10)}.csv`);
+      toast.success("Export downloaded");
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const categoryOptions = categories.map((c) => ({ value: c.slug.replace(/-/g, "_"), label: c.name }));
 
   return (
     <div>
-      <div className="admin-page-header flex-col items-start gap-4 md:flex-row md:items-center justify-between">
-        <h1>Manage Vendors</h1>
-        
-        <div>
-          <input 
-            type="file" 
-            accept=".csv, .xlsx" 
-            ref={fileInputRef} 
-            onChange={handleFileUpload} 
-            className="hidden" 
-          />
-          <button 
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="admin-btn admin-btn-primary flex items-center gap-2"
-          >
-            {uploading ? <Loader2 size={16} className="animate-spin" /> : <UploadCloud size={16} />}
-            {uploading ? "Uploading..." : "Bulk Upload (.csv, .xlsx)"}
-          </button>
-        </div>
-      </div>
-
-      {/* Filter Bar */}
-      <div className="relative z-50 bg-white border border-slate-200 p-4 rounded-2xl shadow-sm mb-6 flex flex-col md:flex-row gap-4">
-        {/* Search */}
-        <div className="relative flex-1 group z-10">
-          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-brand-500 transition-colors">
-            <Search size={16} />
-          </div>
-          <input
-            type="text"
-            placeholder="Search by vendor name or cuisine..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
-          />
-        </div>
-
-        {/* Filters */}
-        <div className="flex gap-4">
-          <CustomSelect 
-            value={statusFilter}
-            onChange={setStatusFilter}
-            options={statusOptions}
-            icon={Filter}
-          />
-          <CustomSelect 
-            value={cityFilter}
-            onChange={setCityFilter}
-            options={cityOptions}
-            icon={MapPin}
-          />
-        </div>
-      </div>
-
-      <div className="admin-card">
-        {loading ? (
-          <div className="p-8 text-center text-slate-500">Loading vendors...</div>
-        ) : vendors.length === 0 ? (
-          <div className="p-8 text-center text-slate-500">No vendors found in the database.</div>
-        ) : filteredVendors.length === 0 ? (
-          <div className="p-8 text-center text-slate-500 flex flex-col items-center">
-            <Search size={32} className="text-slate-300 mb-2" />
-            <p>No vendors match your current filters.</p>
-            <button 
-              onClick={() => { setSearchQuery(""); setStatusFilter("all"); setCityFilter("all"); }}
-              className="text-brand-500 hover:underline mt-2 text-sm font-medium"
-            >
-              Clear filters
+      <PageHeader
+        title="Vendors"
+        subtitle={
+          filtersActive
+            ? `${data.total.toLocaleString("en-IN")} vendor${data.total === 1 ? "" : "s"} match your filters.`
+            : `${data.total.toLocaleString("en-IN")} vendors across ${cities.length} cit${cities.length === 1 ? "y" : "ies"}.`
+        }
+      >
+        <button type="button" className="admin-btn" onClick={exportCsv} disabled={exporting}>
+          {exporting ? <Spinner small /> : <Download size={15} />} Export CSV
+        </button>
+        {canWrite && (
+          <>
+            <input type="file" accept=".csv,.xlsx" ref={fileRef} onChange={handleUpload} className="hidden" />
+            <button type="button" className="admin-btn" onClick={() => fileRef.current?.click()} disabled={uploading}>
+              {uploading ? <Spinner small /> : <CloudUpload size={15} />} {uploading ? "Uploading..." : "Bulk upload"}
             </button>
-          </div>
-        ) : (
-          <div className="admin-table-container">
+            <button type="button" className="admin-btn admin-btn-brand" onClick={openCreate}>
+              <Plus size={15} /> Add vendor
+            </button>
+          </>
+        )}
+      </PageHeader>
+
+      <ReadOnlyNote area="vendors" />
+
+      <div className="admin-toolbar">
+        <SearchInput value={search} onChange={setSearch} placeholder="Search name, area, cuisine, address, dish..." />
+        <select className="admin-select" value={cityId} onChange={(e) => setCityId(e.target.value)} aria-label="City">
+          <option value="">All cities</option>
+          {cities.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+        <select className="admin-select" value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status">
+          <option value="">Any status</option>
+          <option value="verified">Live (verified)</option>
+          <option value="pending">Pending</option>
+          <option value="rejected">Hidden (rejected)</option>
+        </select>
+        <select className="admin-select" value={flag} onChange={(e) => setFlag(e.target.value)} aria-label="Flag">
+          <option value="">All vendors</option>
+          <option value="hidden_gem">Hidden gems</option>
+          <option value="famous">Famous</option>
+          <option value="missing_location">Missing location</option>
+          <option value="missing_details">Missing description</option>
+        </select>
+        <select className="admin-select" value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort">
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="name">Name A–Z</option>
+          <option value="rating">Highest rated</option>
+        </select>
+        {filtersActive && (
+          <button type="button" className="admin-btn admin-btn-ghost" onClick={clearFilters}>
+            <X size={14} /> Clear
+          </button>
+        )}
+      </div>
+
+      <ErrorBanner message={error} onRetry={load} />
+
+      {loading && data.vendors.length === 0 ? (
+        <Loading label="Loading vendors..." />
+      ) : data.vendors.length === 0 ? (
+        <div className="admin-card">
+          <EmptyState icon={Store} title={filtersActive ? "No vendors match these filters" : "No vendors yet"} message={filtersActive ? "Try a different search or clear the filters." : "Add a vendor or bulk upload a spreadsheet to get started."}>
+            {filtersActive && (
+              <button type="button" className="admin-btn" onClick={clearFilters}>
+                Clear filters
+              </button>
+            )}
+          </EmptyState>
+        </div>
+      ) : (
+        <>
+          <div className="admin-table-container" style={{ opacity: loading ? 0.6 : 1, transition: "opacity .15s" }}>
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>City</th>
-                  <th>Cuisine</th>
+                  <th style={{ width: 60 }}></th>
+                  <th>Vendor</th>
+                  <th>City / Area</th>
                   <th>Rating</th>
+                  <th>Badges</th>
                   <th>Status</th>
-                  <th>Actions</th>
+                  <th className="actions">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredVendors.map((vendor) => (
-                  <tr key={vendor.id}>
-                    <td className="font-bold text-slate-800">{vendor.name}</td>
-                    <td className="capitalize text-slate-600">{vendor.city_name}</td>
-                    <td className="text-slate-600">{vendor.cuisine_type || "N/A"}</td>
-                    <td className="text-slate-600 font-medium">
-                      {vendor.avg_rating ? <span className="text-amber-500">★ {vendor.avg_rating}</span> : "N/A"}
-                    </td>
-                    <td>
-                      <span className={`admin-badge ${vendor.verified_status || "pending"}`}>
-                        {vendor.verified_status || "Pending"}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="admin-actions flex gap-2">
-                        <button 
-                          className="admin-btn admin-btn-secondary bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs px-3 py-1.5 flex items-center gap-1.5" 
-                          onClick={() => setEditingVendor(vendor)}
-                        >
-                          <Edit size={14} /> Edit
-                        </button>
-                        <button 
-                          className="admin-btn admin-btn-danger text-xs px-3 py-1.5" 
-                          onClick={() => handleDelete(vendor.id)}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {data.vendors.map((v) => {
+                  const hidden = v.verified_status === "rejected";
+                  const busy = rowBusy === v.id;
+                  return (
+                    <tr key={v.id} style={{ opacity: busy ? 0.5 : 1 }}>
+                      <td>
+                        <Thumb src={v.image_url} alt={v.name} />
+                      </td>
+                      <td style={{ minWidth: 200 }}>
+                        <div className="font-semibold text-neutral-900">{v.name}</div>
+                        <div className="text-xs text-neutral-500 mt-0.5">
+                          {[v.specialty_dish, v.cuisine_type].filter(Boolean).join(" · ") || "—"}
+                        </div>
+                        {(v.lat == null || v.lng == null) && <div className="text-[11px] text-amber-700 font-medium mt-0.5">No map location</div>}
+                      </td>
+                      <td style={{ minWidth: 140 }}>
+                        <div className="text-neutral-800">{v.city_name || "—"}</div>
+                        <div className="text-xs text-neutral-500 truncate max-w-[200px]">{v.area || ""}</div>
+                      </td>
+                      <td>
+                        <Stars value={v.avg_rating} />
+                        <div className="text-xs text-neutral-400">{v.total_ratings || 0} reviews</div>
+                      </td>
+                      <td>
+                        <div className="flex flex-wrap gap-1">
+                          {v.is_hidden_gem && (
+                            <span className="admin-badge gem">
+                              <Gem size={11} /> Hidden Gem
+                            </span>
+                          )}
+                          {v.is_famous && (
+                            <span className="admin-badge famous">
+                              <Crown size={11} /> Famous
+                            </span>
+                          )}
+                          {!v.is_hidden_gem && !v.is_famous && <span className="text-neutral-300">—</span>}
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`admin-badge ${v.verified_status || "verified"}`} title={`verified_status: ${v.verified_status || "verified"} · added ${formatDate(v.created_at)}`}>
+                          {STATUS_LABEL[v.verified_status] || "Live"}
+                        </span>
+                      </td>
+                      <td className="actions">
+                        <div className="admin-actions">
+                          <a href={`/vendor/${v.id}`} target="_blank" rel="noreferrer" className="admin-btn admin-btn-ghost admin-icon-btn" title="View on site">
+                            <ExternalLink size={15} />
+                          </a>
+                          {canWrite && (
+                            <>
+                              <button
+                                type="button"
+                                className="admin-btn admin-btn-ghost admin-icon-btn"
+                                title={v.is_hidden_gem ? "Remove Hidden Gem badge" : "Mark as Hidden Gem"}
+                                disabled={busy}
+                                onClick={() => quickUpdate(v, { is_hidden_gem: !v.is_hidden_gem }, v.is_hidden_gem ? "Hidden Gem badge removed" : "Marked as Hidden Gem")}
+                              >
+                                <Gem size={15} className={v.is_hidden_gem ? "text-brand-500" : ""} />
+                              </button>
+                              <button
+                                type="button"
+                                className="admin-btn admin-btn-ghost admin-icon-btn"
+                                title={hidden ? "Unhide (make live again)" : "Hide from app & website"}
+                                disabled={busy}
+                                onClick={() => quickUpdate(v, { verified_status: hidden ? "verified" : "rejected" }, hidden ? "Vendor is live again" : "Vendor hidden from app & website")}
+                              >
+                                {hidden ? <Eye size={15} /> : <EyeOff size={15} />}
+                              </button>
+                              <button type="button" className="admin-btn admin-btn-ghost admin-icon-btn" title="Edit" disabled={busy} onClick={() => setForm({ id: v.id, ...toForm(v) })}>
+                                <Pencil size={15} />
+                              </button>
+                              <button type="button" className="admin-btn admin-btn-ghost admin-icon-btn !text-rose-600" title="Delete" disabled={busy} onClick={() => remove(v)}>
+                                <Trash2 size={15} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
+          <Pagination page={data.page} pages={data.pages} total={data.total} perPage={data.per_page || PER_PAGE} onChange={setPage} noun="vendors" />
+        </>
+      )}
+
+      {canWrite && (
+        <div className="admin-card mt-6 flex flex-wrap items-center gap-4">
+          <FileSpreadsheet size={28} className="text-emerald-600 shrink-0" />
+          <div className="flex-1 min-w-[220px]">
+            <div className="font-semibold text-sm text-neutral-900">Bulk upload vendors</div>
+            <div className="text-xs text-neutral-500 mt-0.5">
+              Upload a .csv or .xlsx file. Required columns: <code>name</code> and <code>city</code>. New cities are created automatically and duplicates (same name in the same city) are skipped.
+            </div>
+          </div>
+          <button type="button" className="admin-btn" onClick={downloadTemplate}>
+            <Download size={15} /> Download template
+          </button>
+          <button type="button" className="admin-btn admin-btn-primary" onClick={() => fileRef.current?.click()} disabled={uploading}>
+            {uploading ? <Spinner small /> : <CloudUpload size={15} />} Upload file
+          </button>
+        </div>
+      )}
+
+      {/* Add / edit vendor */}
+      <Modal
+        open={!!form}
+        onClose={() => setForm(null)}
+        busy={saving}
+        size="xl"
+        title={form?.id ? `Edit vendor` : "Add vendor"}
+        subtitle={form?.id ? `#${form.id} · ${form.name}` : "Fields marked * are required. Everything else can be filled in later."}
+        footer={
+          <>
+            {form?.id && (
+              <a href={`/vendor/${form.id}`} target="_blank" rel="noreferrer" className="admin-btn admin-btn-ghost mr-auto">
+                <ExternalLink size={15} /> View on site
+              </a>
+            )}
+            <button type="button" className="admin-btn" onClick={() => setForm(null)} disabled={saving}>
+              Cancel
+            </button>
+            <button type="submit" form="vendor-form" className="admin-btn admin-btn-brand" disabled={saving}>
+              <Save size={15} /> {saving ? "Saving..." : form?.id ? "Save changes" : "Create vendor"}
+            </button>
+          </>
+        }
+      >
+        {form && (
+          <form id="vendor-form" className="admin-form-grid three" onSubmit={save}>
+            <div className="admin-form-section">Basics</div>
+            <Field label="Name" required className="span-2">
+              <input className="admin-input" required maxLength={200} value={form.name} onChange={(e) => setF({ name: e.target.value })} />
+            </Field>
+            <Field label="City" required>
+              <select className="admin-select full" required value={form.city_id} onChange={(e) => setF({ city_id: e.target.value })}>
+                <option value="">Choose a city</option>
+                {cities.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Cuisine type">
+              <input className="admin-input" maxLength={200} value={form.cuisine_type} onChange={(e) => setF({ cuisine_type: e.target.value })} placeholder="e.g. Chaat" />
+            </Field>
+            <Field label="Food category" hint="Used for category chips in the app">
+              <input className="admin-input" list="vendor-categories" maxLength={80} value={form.food_category} onChange={(e) => setF({ food_category: e.target.value })} placeholder="e.g. street_food" />
+            </Field>
+            <Field label="Specialty dish">
+              <input className="admin-input" maxLength={150} value={form.specialty_dish} onChange={(e) => setF({ specialty_dish: e.target.value })} placeholder="e.g. Pyaaz Kachori" />
+            </Field>
+            <Field label="Description" className="span-all">
+              <textarea className="admin-textarea" rows={3} value={form.description} onChange={(e) => setF({ description: e.target.value })} placeholder="What makes this place special?" />
+            </Field>
+
+            <div className="admin-form-section">Timing & price</div>
+            <Field label="Opening hours">
+              <input className="admin-input" maxLength={150} value={form.opening_hours} onChange={(e) => setF({ opening_hours: e.target.value })} placeholder="e.g. 8 AM – 10 PM" />
+            </Field>
+            <Field label="Closed days">
+              <input className="admin-input" maxLength={60} value={form.closed_days} onChange={(e) => setF({ closed_days: e.target.value })} placeholder="e.g. Monday" />
+            </Field>
+            <Field label="Price level" hint="₹ budget · ₹₹ mid · ₹₹₹ premium, or free text">
+              <input className="admin-input" list="vendor-price-levels" maxLength={20} value={form.price_level} onChange={(e) => setF({ price_level: e.target.value })} />
+            </Field>
+            <Field label="Min price (₹)">
+              <input className="admin-input" type="number" min={0} step="any" value={form.price_min} onChange={(e) => setF({ price_min: e.target.value })} />
+            </Field>
+            <Field label="Max price (₹)">
+              <input className="admin-input" type="number" min={0} step="any" value={form.price_max} onChange={(e) => setF({ price_max: e.target.value })} />
+            </Field>
+            <div />
+
+            <div className="admin-form-section">Location</div>
+            <Field label="Address" className="span-all">
+              <input className="admin-input" maxLength={300} value={form.address_text} onChange={(e) => setF({ address_text: e.target.value })} />
+            </Field>
+            <Field label="Area / locality">
+              <input className="admin-input" maxLength={150} value={form.area} onChange={(e) => setF({ area: e.target.value })} />
+            </Field>
+            <Field label="Landmark">
+              <input className="admin-input" maxLength={150} value={form.landmark} onChange={(e) => setF({ landmark: e.target.value })} />
+            </Field>
+            <div />
+            <Field label="Latitude">
+              <input className="admin-input" type="number" step="any" min={-90} max={90} value={form.lat} onChange={(e) => setF({ lat: e.target.value })} placeholder="26.9124" />
+            </Field>
+            <Field label="Longitude">
+              <input className="admin-input" type="number" step="any" min={-180} max={180} value={form.lng} onChange={(e) => setF({ lng: e.target.value })} placeholder="75.7873" />
+            </Field>
+            <div className="flex items-end pb-2">
+              {form.lat !== "" && form.lng !== "" ? (
+                <a href={`https://www.google.com/maps?q=${form.lat},${form.lng}`} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline inline-flex items-center gap-1">
+                  Check on Google Maps <ExternalLink size={12} />
+                </a>
+              ) : (
+                <span className="text-xs text-amber-700">Without coordinates the vendor won&apos;t appear on maps.</span>
+              )}
+            </div>
+
+            <div className="admin-form-section">Contact</div>
+            <Field label="Phone">
+              <input className="admin-input" maxLength={50} value={form.phone} onChange={(e) => setF({ phone: e.target.value })} />
+            </Field>
+            <Field label="Website">
+              <input className="admin-input" maxLength={300} value={form.website} onChange={(e) => setF({ website: e.target.value })} placeholder="https://" />
+            </Field>
+            <Field label="Instagram">
+              <input className="admin-input" maxLength={150} value={form.instagram} onChange={(e) => setF({ instagram: e.target.value })} placeholder="@handle or URL" />
+            </Field>
+
+            <div className="admin-form-section">Photo & visibility</div>
+            <div className="span-2 flex flex-col gap-3">
+              <Field label="Image URL">
+                <input className="admin-input" type="url" maxLength={500} value={form.image_url} onChange={(e) => setF({ image_url: e.target.value })} placeholder="https://..." />
+              </Field>
+              <ImagePreview src={form.image_url} height={150} />
+            </div>
+            <div className="flex flex-col gap-3">
+              <Field label="Status">
+                <select className="admin-select full" value={form.verified_status} onChange={(e) => setF({ verified_status: e.target.value })}>
+                  <option value="verified">Live (verified)</option>
+                  <option value="pending">Pending</option>
+                  <option value="rejected">Hidden (rejected)</option>
+                </select>
+              </Field>
+              <label className="admin-check">
+                <input type="checkbox" checked={!!form.is_hidden_gem} onChange={(e) => setF({ is_hidden_gem: e.target.checked })} />
+                <Gem size={14} className="text-brand-500" /> Hidden Gem
+              </label>
+              <label className="admin-check">
+                <input type="checkbox" checked={!!form.is_famous} onChange={(e) => setF({ is_famous: e.target.checked })} />
+                <Crown size={14} className="text-amber-600" /> Famous
+              </label>
+            </div>
+
+            <datalist id="vendor-price-levels">
+              <option value="₹" />
+              <option value="₹₹" />
+              <option value="₹₹₹" />
+            </datalist>
+            <datalist id="vendor-categories">
+              {categoryOptions.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </datalist>
+          </form>
         )}
-      </div>
+      </Modal>
 
-      <AnimatePresence>
-        {editingVendor && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              exit={{ opacity: 0 }} 
-              onClick={() => setEditingVendor(null)}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }} 
-              animate={{ opacity: 1, scale: 1, y: 0 }} 
-              exit={{ opacity: 0, scale: 0.95, y: 20 }} 
-              className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden"
-            >
-              <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <h2 className="text-xl font-bold text-slate-800">Edit Vendor</h2>
-                <button 
-                  onClick={() => setEditingVendor(null)}
-                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
-                >
-                  <X size={20} />
-                </button>
+      {/* Bulk upload result */}
+      <Modal
+        open={!!uploadResult}
+        onClose={() => setUploadResult(null)}
+        title="Bulk upload finished"
+        subtitle={uploadResult?.filename}
+        footer={
+          <button type="button" className="admin-btn admin-btn-primary" onClick={() => setUploadResult(null)}>
+            Done
+          </button>
+        }
+      >
+        {uploadResult && (
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                <div className="text-2xl font-bold text-emerald-700">{uploadResult.imported ?? 0}</div>
+                <div className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Imported</div>
               </div>
-              
-              <form onSubmit={handleSaveEdit} className="p-6 flex flex-col gap-5">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Vendor Name</label>
-                  <input 
-                    type="text" 
-                    value={editingVendor.name || ""} 
-                    onChange={e => setEditingVendor({...editingVendor, name: e.target.value})}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Cuisine Type</label>
-                  <input 
-                    type="text" 
-                    value={editingVendor.cuisine_type || ""} 
-                    onChange={e => setEditingVendor({...editingVendor, cuisine_type: e.target.value})}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Status</label>
-                  <select 
-                    value={editingVendor.verified_status || "pending"} 
-                    onChange={e => setEditingVendor({...editingVendor, verified_status: e.target.value})}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none bg-white"
-                  >
-                    <option value="verified">Verified</option>
-                    <option value="pending">Pending</option>
-                    <option value="rejected">Rejected</option>
-                  </select>
-                </div>
-
-                <div className="flex gap-6 mt-2">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={editingVendor.is_hidden_gem || false} 
-                      onChange={e => setEditingVendor({...editingVendor, is_hidden_gem: e.target.checked})}
-                      className="w-4 h-4 text-brand-500 rounded border-slate-300 focus:ring-brand-500"
-                    />
-                    <span className="text-sm font-medium text-slate-700">Hidden Gem</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={editingVendor.is_famous || false} 
-                      onChange={e => setEditingVendor({...editingVendor, is_famous: e.target.checked})}
-                      className="w-4 h-4 text-brand-500 rounded border-slate-300 focus:ring-brand-500"
-                    />
-                    <span className="text-sm font-medium text-slate-700">Famous</span>
-                  </label>
-                </div>
-
-                <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-slate-100">
-                  <button 
-                    type="button" 
-                    onClick={() => setEditingVendor(null)}
-                    className="px-5 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit" 
-                    className="px-5 py-2.5 text-sm font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-xl transition-colors flex items-center gap-2 shadow-lg shadow-brand-500/30"
-                  >
-                    <Save size={16} /> Save Changes
-                  </button>
-                </div>
-              </form>
-            </motion.div>
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                <div className="text-2xl font-bold text-amber-700">{uploadResult.skipped ?? 0}</div>
+                <div className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Skipped</div>
+              </div>
+            </div>
+            {uploadResult.message && <p className="text-sm text-neutral-600 m-0">{uploadResult.message}</p>}
+            {uploadResult.errors?.length > 0 && (
+              <div>
+                <div className="admin-label">Rows that were skipped</div>
+                <ul className="max-h-60 overflow-y-auto border border-neutral-200 rounded-lg divide-y divide-neutral-100 text-xs text-neutral-700 m-0 p-0 list-none">
+                  {uploadResult.errors.map((err, i) => (
+                    <li key={i} className="px-3 py-2">
+                      {err}
+                    </li>
+                  ))}
+                </ul>
+                {uploadResult.skipped > uploadResult.errors.length && <div className="admin-hint">Only the first {uploadResult.errors.length} problems are listed.</div>}
+              </div>
+            )}
           </div>
         )}
-      </AnimatePresence>
+      </Modal>
     </div>
   );
 }
-

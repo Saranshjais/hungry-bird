@@ -28,7 +28,7 @@ export default function UserSubmissionsPage() {
   const fetchSubmissions = async () => {
     try {
       setLoading(true);
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:5000';
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:5000';
       const res = await fetch(`${backendUrl}/api/user/submissions`, {
         headers: {
           'Authorization': `Bearer ${token}`
