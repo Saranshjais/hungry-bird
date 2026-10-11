@@ -1,3 +1,5 @@
+import os
+
 from flask import Flask, jsonify, request
 from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -35,6 +37,13 @@ def create_app():
     app.register_blueprint(admin_api_bp)
     app.register_blueprint(auth_api)
 
+    with app.app_context():
+        # Create any tables that are missing without trying to recreate existing PostgreSQL objects.
+        for table in db.metadata.sorted_tables:
+            table.create(bind=db.engine, checkfirst=True)
+        from app.routes.admin_api import _ensure_bootstrap_admin
+        _ensure_bootstrap_admin()
+
     @app.errorhandler(HTTPException)
     def api_http_error(err):
         # API clients (mobile app, admin panel) always get JSON errors.
@@ -62,7 +71,7 @@ def create_app():
                 "city_details": "/api/city/<slug>",
                 "submit_vendor": "/api/submit-vendor"
             },
-            "frontend_url": "http://localhost:5174"
+            "frontend_url": os.getenv("FRONTEND_URL", "http://localhost:5174")
         }
 
     return app

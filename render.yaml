@@ -14,10 +14,7 @@
         },
         {
           "key": "DATABASE_URL",
-          "fromDatabase": {
-            "name": "hungry-bird-db",
-            "property": "connectionString"
-          }
+          "sync": false
         },
         {
           "key": "GOOGLE_MAPS_API_KEY",
@@ -32,6 +29,10 @@
           "value": "run.py"
         },
         {
+          "key": "FRONTEND_URL",
+          "sync": false
+        },
+        {
           "key": "ADMIN_USERNAME",
           "sync": false
         },
@@ -44,14 +45,6 @@
           "sync": false
         }
       ]
-    }
-  ],
-  "databases": [
-    {
-      "name": "hungry-bird-db",
-      "databaseName": "hungrybird",
-      "user": "hungrybird",
-      "plan": "free"
     }
   ]
 }
