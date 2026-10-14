@@ -116,8 +116,12 @@ def _ensure_bootstrap_admin():
     Credentials come from ADMIN_USERNAME / ADMIN_EMAIL / ADMIN_PASSWORD; without them the
     legacy panel credentials are used. Change the password from the panel after first login.
     """
+    if not db.inspect(db.engine).has_table("admin_users"):
+        AdminUser.__table__.create(bind=db.engine, checkfirst=True)
+
     if AdminUser.query.count() > 0:
         return
+
     username = os.getenv("ADMIN_USERNAME", "saransh")
     password = current_app.config.get("ADMIN_PASSWORD") or "Sara@123"
     admin = AdminUser(

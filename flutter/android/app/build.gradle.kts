@@ -17,7 +17,8 @@ plugins {
 android {
     namespace = "com.hungrybird.hungry_bird_app"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    // Use the complete NDK installed by Android Studio on this machine.
+    ndkVersion = "27.2.12479018"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
