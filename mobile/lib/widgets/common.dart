@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -57,8 +58,43 @@ void showSnack(BuildContext context, String message, {bool error = false}) {
   ));
 }
 
+/// Shown where a photo is missing: a plain tile with an icon, never a stock photo that could
+/// pass for the stall's own.
+class ImagePlaceholder extends StatelessWidget {
+  const ImagePlaceholder({super.key, this.width, this.height, this.icon = Icons.storefront_rounded});
+
+  final double? width;
+  final double? height;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return LayoutBuilder(builder: (context, constraints) {
+      final w = width ?? (constraints.hasBoundedWidth ? constraints.maxWidth : 96);
+      final h = height ?? (constraints.hasBoundedHeight ? constraints.maxHeight : 96);
+      return Container(
+        width: width,
+        height: height,
+        color: scheme.surfaceContainerHighest,
+        alignment: Alignment.center,
+        child: Icon(icon, size: (math.min(w, h) * 0.34).clamp(16.0, 56.0), color: scheme.onSurfaceVariant.withValues(alpha: 0.45)),
+      );
+    });
+  }
+}
+
 class AppNetworkImage extends StatelessWidget {
-  const AppNetworkImage({super.key, required this.url, this.fit = BoxFit.cover, this.width, this.height, this.radius = 0});
+  const AppNetworkImage({
+    super.key,
+    required this.url,
+    this.fit = BoxFit.cover,
+    this.width,
+    this.height,
+    this.radius = 0,
+    this.fallbackAsset,
+    this.placeholderIcon = Icons.storefront_rounded,
+  });
 
   final String? url;
   final BoxFit fit;
@@ -66,9 +102,15 @@ class AppNetworkImage extends StatelessWidget {
   final double? height;
   final double radius;
 
+  /// Bundled artwork for a missing/broken [url]; otherwise an [ImagePlaceholder].
+  final String? fallbackAsset;
+  final IconData placeholderIcon;
+
   @override
   Widget build(BuildContext context) {
-    Widget fallback() => Image.asset('assets/images/placeholder.jpg', fit: fit, width: width, height: height);
+    Widget fallback() => fallbackAsset != null
+        ? Image.asset(fallbackAsset!, fit: fit, width: width, height: height)
+        : ImagePlaceholder(width: width, height: height, icon: placeholderIcon);
     final image = (url == null || !url!.startsWith('http'))
         ? fallback()
         : CachedNetworkImage(
@@ -82,6 +124,45 @@ class AppNetworkImage extends StatelessWidget {
           );
     if (radius == 0) return image;
     return ClipRRect(borderRadius: BorderRadius.circular(radius), child: image);
+  }
+}
+
+/// A Premium item's photo: blurred beyond recognition, darkened, with a lock on top.
+class LockedImage extends StatelessWidget {
+  const LockedImage({super.key, required this.url, this.width, this.height, this.radius = 0, this.lockSize = 20});
+
+  final String? url;
+  final double? width;
+  final double? height;
+  final double radius;
+  final double lockSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      height: height,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            ImageFiltered(
+              imageFilter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16, tileMode: TileMode.clamp),
+              child: AppNetworkImage(url: url, width: width, height: height, placeholderIcon: Icons.diamond_rounded),
+            ),
+            const ColoredBox(color: Color(0x4D1C1917)),
+            Center(
+              child: Container(
+                padding: EdgeInsets.all(lockSize * 0.45),
+                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.92), shape: BoxShape.circle),
+                child: Icon(Icons.lock_rounded, size: lockSize, color: AppColors.premium, semanticLabel: 'Premium'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -148,7 +229,7 @@ class RatingPill extends StatelessWidget {
   }
 }
 
-enum BadgeKind { hiddenGem, famous, verified }
+enum BadgeKind { hiddenGem, famous, verified, premium }
 
 class VendorBadge extends StatelessWidget {
   const VendorBadge(this.kind, {super.key, this.small = false});
@@ -162,6 +243,7 @@ class VendorBadge extends StatelessWidget {
       BadgeKind.hiddenGem => ('Hidden Gem', Icons.diamond_rounded, AppColors.gem, AppColors.gemSoft),
       BadgeKind.famous => ('Local Legend', Icons.local_fire_department_rounded, AppColors.brandDeep, AppColors.brandLight),
       BadgeKind.verified => ('Verified', Icons.verified_rounded, AppColors.info, const Color(0xFFDBEAFE)),
+      BadgeKind.premium => ('Premium', Icons.workspace_premium_rounded, AppColors.premium, AppColors.premiumSoft),
     };
     return Container(
       padding: EdgeInsets.symmetric(horizontal: small ? 7 : 10, vertical: small ? 3 : 5),

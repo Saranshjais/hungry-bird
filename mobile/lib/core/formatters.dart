@@ -43,6 +43,16 @@ class Fmt {
     return '';
   }
 
+  /// Integer paise → "₹49", "₹1,299", "₹49.50".
+  static String rupees(int paise) {
+    final whole = paise % 100 == 0;
+    final f = NumberFormat.decimalPatternDigits(locale: 'en_IN', decimalDigits: whole ? 0 : 2);
+    return '₹${f.format(paise / 100)}';
+  }
+
+  /// "1 day", "30 days".
+  static String days(int count) => '$count ${count == 1 ? 'day' : 'days'}';
+
   /// Backend timestamps are naive UTC ISO strings.
   static DateTime? parseDate(Object? value) {
     if (value is! String || value.isEmpty) return null;

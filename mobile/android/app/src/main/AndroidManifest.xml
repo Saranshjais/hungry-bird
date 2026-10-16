@@ -4,10 +4,13 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
+    <!-- No auto-backup / device transfer of app data: it holds the cached profile and session (L9). -->
     <application
         android:label="HungryBird"
         android:name="${applicationName}"
-        android:icon="@mipmap/launcher_icon">
+        android:icon="@mipmap/launcher_icon"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -62,6 +65,11 @@
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="geo" />
+        </intent>
+        <!-- Razorpay Checkout: list the installed UPI apps (UPI intent flow, Android 11+) -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="upi" android:host="pay" />
         </intent>
     </queries>
 </manifest>

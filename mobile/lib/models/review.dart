@@ -75,6 +75,7 @@ class MyReview {
     required this.rating,
     this.text,
     this.createdAt,
+    this.vendorLocked = false,
   });
 
   final int id;
@@ -86,16 +87,26 @@ class MyReview {
   final String? text;
   final DateTime? createdAt;
 
-  factory MyReview.fromJson(Map<String, dynamic> json) => MyReview(
-        id: asInt(json['id']),
-        vendorId: json['vendor_id'] == null ? null : asInt(json['vendor_id']),
-        vendorName: asString(json['vendor_name']) ?? 'Vendor',
-        vendorImageUrl: asString(json['vendor_image_url']),
-        cityName: asString(json['city_name']),
-        rating: asDouble(json['rating_value']) ?? 0,
-        text: asString(json['review_text']),
-        createdAt: Fmt.parseDate(json['created_at']),
-      );
+  /// The stall is a Premium hidden gem this account can't open right now (no name is sent).
+  final bool vendorLocked;
+
+  factory MyReview.fromJson(Map<String, dynamic> json) {
+    final card = json['vendor'];
+    final locked = asBool(json['vendor_locked']) || (card is Map && asBool(card['locked']));
+    final name = asString(json['vendor_name']) ?? (card is Map ? asString(card['name']) : null);
+    return MyReview(
+      id: asInt(json['id']),
+      vendorId: json['vendor_id'] == null ? null : asInt(json['vendor_id']),
+      // `vendor` is null when the stall is no longer public.
+      vendorName: locked ? 'Premium hidden gem' : (name ?? 'A stall that\'s no longer listed'),
+      vendorImageUrl: asString(json['vendor_image_url']) ?? (card is Map ? asString(card['image_url']) : null),
+      cityName: asString(json['city_name']),
+      rating: asDouble(json['rating_value']) ?? 0,
+      text: asString(json['review_text']),
+      createdAt: Fmt.parseDate(json['created_at']),
+      vendorLocked: locked,
+    );
+  }
 }
 
 class RateResult {

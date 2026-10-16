@@ -1,4 +1,5 @@
 import '../core/formatters.dart';
+import 'premium.dart';
 
 class FoodCategory {
   const FoodCategory({required this.name, required this.slug, this.icon, this.imageUrl});
@@ -15,7 +16,8 @@ class FoodCategory {
         imageUrl: asString(json['image_url']),
       );
 
-  /// Used until the server's list loads (and if the server has none).
+  /// Offline fallback only: shown until the first config load and kept when that request
+  /// FAILED (no connection). A server that answers with an empty list gets an empty list.
   static const defaults = [
     FoodCategory(name: 'Street Food', slug: 'street-food', icon: '🌮'),
     FoodCategory(name: 'Kachori & Samosa', slug: 'kachori-samosa', icon: '🥟'),
@@ -63,7 +65,7 @@ class AppBanner {
         linkValue: asString(json['link_value']),
       );
 
-  /// Bundled brand artwork shown when the admin hasn't published banners yet.
+  /// Bundled brand artwork (slogans only, no claims) shown when the admin hasn't published banners.
   static const fallback = [
     AppBanner(title: 'Discover the zaika hiding in every gully', assetImage: 'assets/images/banner_1.jpg'),
     AppBanner(title: 'Find delicious street food near you', assetImage: 'assets/images/banner_2.jpg'),
@@ -71,6 +73,7 @@ class AppBanner {
   ];
 }
 
+/// Admin-managed configuration. Empty strings mean "not set": the app hides that link or number.
 class AppSettings {
   const AppSettings({
     this.maintenanceMode = false,
@@ -79,12 +82,19 @@ class AppSettings {
     this.latestAppVersion = '1.0.0',
     this.forceUpdateMessage = '',
     this.announcement = '',
-    this.supportEmail = 'support@hungrybird.in',
+    this.supportEmail = '',
+    this.supportPhone = '',
     this.playStoreUrl = '',
     this.appStoreUrl = '',
     this.websiteUrl = '',
+    this.instagramUrl = '',
+    this.facebookUrl = '',
+    this.xUrl = '',
+    this.youtubeUrl = '',
     this.allowGuestReviews = true,
     this.defaultCity = 'jaipur',
+    this.pushAvailable = false,
+    this.premium = const PremiumConfig(),
   });
 
   final bool maintenanceMode;
@@ -94,14 +104,34 @@ class AppSettings {
   final String forceUpdateMessage;
   final String announcement;
   final String supportEmail;
+  final String supportPhone;
   final String playStoreUrl;
   final String appStoreUrl;
   final String websiteUrl;
+  final String instagramUrl;
+  final String facebookUrl;
+  final String xUrl;
+  final String youtubeUrl;
   final bool allowGuestReviews;
   final String defaultCity;
 
+  /// Whether the server can send push notifications at all (no Firebase project yet → false).
+  final bool pushAvailable;
+  final PremiumConfig premium;
+
+  /// (label, url) for every social profile the admin has set.
+  List<(String, String)> get socialLinks => [
+        if (instagramUrl.isNotEmpty) ('Instagram', instagramUrl),
+        if (facebookUrl.isNotEmpty) ('Facebook', facebookUrl),
+        if (xUrl.isNotEmpty) ('X (Twitter)', xUrl),
+        if (youtubeUrl.isNotEmpty) ('YouTube', youtubeUrl),
+      ];
+
+  /// Reads `/api/app/config`'s `settings` map. New keys may sit there or at the top level of
+  /// the response; the caller merges both into [json].
   factory AppSettings.fromJson(Map<String, dynamic> json) {
     const d = AppSettings();
+    final premium = json['premium'];
     return AppSettings(
       maintenanceMode: asBool(json['maintenance_mode']),
       maintenanceMessage: asString(json['maintenance_message']) ?? d.maintenanceMessage,
@@ -109,12 +139,28 @@ class AppSettings {
       latestAppVersion: asString(json['latest_app_version']) ?? d.latestAppVersion,
       forceUpdateMessage: asString(json['force_update_message']) ?? d.forceUpdateMessage,
       announcement: asString(json['announcement']) ?? '',
-      supportEmail: asString(json['support_email']) ?? d.supportEmail,
+      supportEmail: asString(json['support_email']) ?? '',
+      supportPhone: asString(json['support_phone']) ?? '',
       playStoreUrl: asString(json['play_store_url']) ?? '',
       appStoreUrl: asString(json['app_store_url']) ?? '',
       websiteUrl: asString(json['website_url']) ?? '',
+      instagramUrl: asString(json['instagram_url']) ?? '',
+      facebookUrl: asString(json['facebook_url']) ?? '',
+      xUrl: asString(json['x_url']) ?? '',
+      youtubeUrl: asString(json['youtube_url']) ?? '',
       allowGuestReviews: json['allow_guest_reviews'] == null ? true : asBool(json['allow_guest_reviews']),
       defaultCity: asString(json['default_city']) ?? d.defaultCity,
+      pushAvailable: asBool(json['push_available']),
+      premium: premium is Map
+          ? PremiumConfig.fromJson(Map<String, dynamic>.from(premium))
+          // Flat admin keys, in case the block isn't nested.
+          : PremiumConfig.fromJson({
+              'enabled': json['premium_enabled'],
+              'payments_available': json['payments_available'],
+              'payment_methods': json['payment_methods'],
+              'plans': json['premium_plans'],
+              'benefits': json['premium_benefits'],
+            }),
     );
   }
 }
@@ -143,55 +189,5 @@ class AppNotification {
         linkType: parseLinkType(json['link_type']),
         linkValue: asString(json['link_value']),
         createdAt: Fmt.parseDate(json['created_at']),
-      );
-}
-
-class FoodTrail {
-  const FoodTrail({
-    required this.id,
-    required this.title,
-    this.description,
-    this.duration,
-    this.budget,
-    this.stops = const [],
-    this.imageUrl,
-  });
-
-  final int id;
-  final String title;
-  final String? description;
-  final String? duration;
-  final String? budget;
-  final List<String> stops;
-  final String? imageUrl;
-
-  factory FoodTrail.fromJson(Map<String, dynamic> json) => FoodTrail(
-        id: asInt(json['id']),
-        title: asString(json['title']) ?? '',
-        description: asString(json['description']),
-        duration: asString(json['duration']),
-        budget: asString(json['budget']),
-        stops: ((json['stops'] as List?) ?? const []).map((s) => s.toString()).toList(),
-        imageUrl: asString(json['image_url']),
-      );
-}
-
-class CityGuide {
-  const CityGuide({required this.id, required this.title, this.summary, this.category, this.vendorCount = 0, this.imageUrl});
-
-  final int id;
-  final String title;
-  final String? summary;
-  final String? category;
-  final int vendorCount;
-  final String? imageUrl;
-
-  factory CityGuide.fromJson(Map<String, dynamic> json) => CityGuide(
-        id: asInt(json['id']),
-        title: asString(json['title']) ?? '',
-        summary: asString(json['summary']),
-        category: asString(json['category']),
-        vendorCount: asInt(json['vendor_count']),
-        imageUrl: asString(json['image_url']),
       );
 }

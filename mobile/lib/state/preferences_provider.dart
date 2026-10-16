@@ -19,6 +19,7 @@ class PreferencesProvider extends ChangeNotifier {
   static const _kRecent = 'pref_recent_searches';
   static const _kCity = 'pref_city';
   static const _kSeenNotification = 'pref_seen_notification';
+  static const _kDismissedUpdate = 'pref_update_dismissed';
 
   late ThemeMode _themeMode;
 
@@ -63,4 +64,9 @@ class PreferencesProvider extends ChangeNotifier {
     await _store.setInt(_kSeenNotification, id);
     notifyListeners();
   }
+
+  /// The latest app version whose optional-update prompt was dismissed ("Later").
+  String? get dismissedUpdateVersion => _store.getString(_kDismissedUpdate);
+
+  Future<void> dismissUpdate(String version) => _store.setString(_kDismissedUpdate, version);
 }

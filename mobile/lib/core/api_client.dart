@@ -5,13 +5,78 @@ import 'package:http/http.dart' as http;
 
 import 'config.dart';
 
+/// Machine-readable `code` of an error response (`{"error": "…", "code": "RATE_LIMITED"}`).
+enum ApiErrorCode {
+  emailNotVerified,
+  paymentsNotConfigured,
+  premiumDisabled,
+  emailNotConfigured,
+  rateLimited,
+  invalidCode,
+  codeExpired,
+  tooManyAttempts,
+  weakPassword,
+  paymentVerificationFailed,
+  paymentProviderError,
+  validation,
+  emailInUse,
+  alreadyVerified,
+  emailSendFailed,
+  accountSuspended,
+  invalidCredentials,
+  invalidPassword,
+  premiumRequired,
+  unauthorized,
+  notFound,
+  unknown;
+
+  static ApiErrorCode? parse(Object? value, {int? statusCode}) {
+    final code = switch (value?.toString()) {
+      'EMAIL_NOT_VERIFIED' => emailNotVerified,
+      'PAYMENTS_NOT_CONFIGURED' => paymentsNotConfigured,
+      'PREMIUM_DISABLED' => premiumDisabled,
+      'EMAIL_NOT_CONFIGURED' => emailNotConfigured,
+      'RATE_LIMITED' => rateLimited,
+      'INVALID_CODE' => invalidCode,
+      'CODE_EXPIRED' => codeExpired,
+      'TOO_MANY_ATTEMPTS' => tooManyAttempts,
+      'WEAK_PASSWORD' => weakPassword,
+      'PAYMENT_VERIFICATION_FAILED' => paymentVerificationFailed,
+      'PAYMENT_PROVIDER_ERROR' => paymentProviderError,
+      'VALIDATION' => validation,
+      'EMAIL_IN_USE' => emailInUse,
+      'ALREADY_VERIFIED' => alreadyVerified,
+      'EMAIL_SEND_FAILED' => emailSendFailed,
+      'ACCOUNT_SUSPENDED' => accountSuspended,
+      'INVALID_CREDENTIALS' => invalidCredentials,
+      'INVALID_PASSWORD' => invalidPassword,
+      'PREMIUM_REQUIRED' => premiumRequired,
+      'UNAUTHORIZED' => unauthorized,
+      'NOT_FOUND' => notFound,
+      null || '' => null,
+      _ => unknown,
+    };
+    // A bare 429 (e.g. from a proxy's rate limiter) carries no code.
+    return code ?? (statusCode == 429 ? rateLimited : null);
+  }
+}
+
 class ApiException implements Exception {
-  ApiException(this.message, {this.statusCode});
+  ApiException(this.message, {this.statusCode, this.code, this.retryAfter, this.attemptsLeft});
 
   final String message;
 
   /// HTTP status, or null when the request never reached the server.
   final int? statusCode;
+
+  /// The server's error code (every JSON error carries one).
+  final ApiErrorCode? code;
+
+  /// Seconds to wait before retrying (`Retry-After`, `retry_after` or `resend_after`).
+  final int? retryAfter;
+
+  /// `INVALID_CODE`: wrong tries left for this code.
+  final int? attemptsLeft;
 
   bool get isUnauthorized => statusCode == 401;
   bool get isForbidden => statusCode == 403;
@@ -34,6 +99,11 @@ class ApiClient {
   /// Bearer token of the logged-in user (null for guests).
   String? token;
 
+  /// Called once when the server rejects the current token (401 on a request that sent it:
+  /// expired, revoked by a password change/reset, or issued before a server upgrade). The token
+  /// is dropped first, so later requests go out as a guest and can't loop on the same error.
+  void Function()? onSessionExpired;
+
   /// The free hosting tier sleeps when idle; the first request can take ~40s.
   static const defaultTimeout = Duration(seconds: 45);
 
@@ -45,7 +115,7 @@ class ApiClient {
 
   Future<dynamic> put(String path, {Object? body}) => _send('PUT', path, body: body);
 
-  Future<dynamic> delete(String path) => _send('DELETE', path);
+  Future<dynamic> delete(String path, {Object? body}) => _send('DELETE', path, body: body);
 
   Uri uri(String path, [Map<String, Object?>? query]) {
     final params = <String, String>{};
@@ -67,7 +137,8 @@ class ApiClient {
   }) async {
     final request = http.Request(method, uri(path, query));
     request.headers['Accept'] = 'application/json';
-    if (token != null) request.headers['Authorization'] = 'Bearer $token';
+    final sentToken = token;
+    if (sentToken != null) request.headers['Authorization'] = 'Bearer $sentToken';
     if (body != null) {
       request.headers['Content-Type'] = 'application/json';
       request.body = jsonEncode(body);
@@ -98,6 +169,12 @@ class ApiClient {
       return data;
     }
 
+    // Only the token that was actually sent counts (a concurrent login may have replaced it).
+    if (response.statusCode == 401 && sentToken != null && sentToken == token) {
+      token = null;
+      onSessionExpired?.call();
+    }
+
     String message;
     if (data is Map && (data['error'] ?? data['message']) != null) {
       message = (data['error'] ?? data['message']).toString();
@@ -108,6 +185,20 @@ class ApiClient {
     } else {
       message = 'Request failed (${response.statusCode}).';
     }
-    throw ApiException(message, statusCode: response.statusCode);
+    var retryAfter = int.tryParse(response.headers['retry-after'] ?? '');
+    if (data is Map) {
+      for (final key in const ['retry_after', 'resend_after']) {
+        final value = data[key];
+        if (value is num) retryAfter = value.ceil();
+      }
+    }
+    final attemptsLeft = data is Map && data['attempts_left'] is num ? (data['attempts_left'] as num).toInt() : null;
+    throw ApiException(
+      message,
+      statusCode: response.statusCode,
+      code: ApiErrorCode.parse(data is Map ? data['code'] : null, statusCode: response.statusCode),
+      retryAfter: retryAfter,
+      attemptsLeft: attemptsLeft,
+    );
   }
 }

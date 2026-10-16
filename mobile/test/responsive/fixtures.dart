@@ -5,12 +5,89 @@
 // lots of categories/cities/chips, missing images. `empty` returns empty lists
 // everywhere; `offline` fails everything but the config (splash error), `vendorsDown`
 // fails only the vendor endpoints so in-screen error states render.
+//
+// [Backend] layers the launch-build switches on top: Premium off / locked / without payments /
+// active for the viewer (locked vendors + trails, plans with long names), verified or
+// unverified users, an optional newer app version and endpoints forced to fail with an error code.
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 enum FixtureMode { stress, empty, offline, vendorsDown, maintenance, update }
+
+enum PremiumFixture {
+  /// Admin switch off (the launch default): nothing locked, no purchase UI.
+  disabled,
+
+  /// On, viewer without Premium: Premium vendors and trails come back locked.
+  locked,
+
+  /// On, but Razorpay keys missing (`payments_available: false`).
+  noPayments,
+
+  /// On, and the viewer's account has an active pass.
+  active,
+}
+
+/// Launch-build fixture switches (see the file comment).
+class Backend {
+  const Backend({
+    this.premium = PremiumFixture.disabled,
+    this.emailVerified = true,
+    this.latestVersion,
+    this.errors = const {},
+  });
+
+  final PremiumFixture premium;
+  final bool emailVerified;
+
+  /// `latest_app_version` (the installed test app is 1.0.0).
+  final String? latestVersion;
+
+  /// Path → error code the endpoint answers with (e.g. `'/api/auth/email/verify': 'INVALID_CODE'`).
+  final Map<String, String> errors;
+
+  bool get premiumEnabled => premium != PremiumFixture.disabled;
+}
+
+/// HTTP status and a long, realistic server message per error code (as the backend sends them).
+const errorResponses = <String, (int, String)>{
+  'INVALID_CODE': (400, 'That code is not right. Please check it and try again.'),
+  'CODE_EXPIRED': (400, 'That code has expired. Please request a new one.'),
+  'TOO_MANY_ATTEMPTS': (429, 'Too many wrong attempts. Please request a new code.'),
+  'WEAK_PASSWORD': (400, 'Password must be at least 8 characters long and contain at least one letter and one digit.'),
+  'RATE_LIMITED': (429, 'Please wait 42 seconds before asking for another code.'),
+  'EMAIL_NOT_CONFIGURED': (503, 'Email is not available right now. Please try again later.'),
+  'EMAIL_SEND_FAILED': (503, 'We couldn\'t send the email. Please try again in a moment.'),
+  'EMAIL_NOT_VERIFIED': (403, 'Please verify your email before buying Premium.'),
+  'EMAIL_IN_USE': (400, 'An account with this email already exists. Log in or reset your password.'),
+  'ALREADY_VERIFIED': (409, 'Your email is already verified.'),
+  'ACCOUNT_SUSPENDED': (403, 'Your account has been suspended. Please contact support.'),
+  'INVALID_CREDENTIALS': (401, 'Invalid email or password'),
+  'INVALID_PASSWORD': (400, 'Enter your current password to change your email'),
+  'UNAUTHORIZED': (401, 'Your session has expired. Please log in again.'),
+  'PREMIUM_REQUIRED': (403, 'This hidden gem is part of Premium.'),
+  'PAYMENTS_NOT_CONFIGURED': (503, 'Payments are not available right now.'),
+  'PAYMENT_PROVIDER_ERROR': (502, 'We couldn\'t start the payment. Please try again.'),
+  'PREMIUM_DISABLED': (409, 'Premium is not available yet.'),
+  'PAYMENT_VERIFICATION_FAILED': (400, 'We couldn\'t confirm this payment.'),
+};
+
+/// Extra fields the backend adds to some errors.
+const _errorExtras = <String, Map<String, Object>>{
+  'INVALID_CODE': {'attempts_left': 3},
+  'RATE_LIMITED': {'resend_after': 42},
+};
+
+http.Response _error(String code, [String? message]) {
+  final (status, text) = errorResponses[code] ?? (400, 'Something about that request was not right.');
+  return http.Response.bytes(
+    utf8.encode(jsonEncode({'error': message ?? text, 'code': code, ...?_errorExtras[code]})),
+    status,
+    headers: {'content-type': 'application/json'},
+  );
+}
 
 const longCityName = 'Chhatrapati Sambhajinagar (Aurangabad)';
 const longCitySlug = 'chhatrapati-sambhajinagar';
@@ -35,6 +112,7 @@ Map<String, dynamic> vendorJson(
   double? distance,
   double? lat,
   double? lng,
+  bool verified = false,
 }) =>
     {
       'id': id,
@@ -44,11 +122,13 @@ Map<String, dynamic> vendorJson(
       'city_name': city,
       'city': {'id': 1, 'name': city, 'slug': longCitySlug},
       'rating': rating,
-      'avg_rating': rating ?? 4.5,
+      'avg_rating': rating,
       'total_ratings': total,
       'is_hidden_gem': gem,
       'is_famous': famous,
-      'is_verified': true,
+      'is_verified': verified,
+      'is_premium': false,
+      'locked': false,
       'price_level': price,
       'specialty_dish': dish,
       'distance_km': distance,
@@ -73,6 +153,7 @@ List<Map<String, dynamic>> stressVendors() => [
         lat: 26.9150,
         lng: 75.7900,
         price: '₹₹₹',
+        verified: true,
       ),
       vendorJson(
         102,
@@ -169,6 +250,144 @@ Map<String, dynamic> minimalVendorDetail() => {
       'nearby': [],
     };
 
+/// The contract's locked shape: no name, address, coordinates or contact details.
+Map<String, dynamic> lockedVendorJson(int id, {String? area, String? category, double? rating, int total = 0, String? price}) => {
+      'id': id,
+      'locked': true,
+      'is_premium': true,
+      'is_hidden_gem': true,
+      'name': null,
+      'city_id': 1,
+      'city_name': longCityName,
+      'city_slug': longCitySlug,
+      'area': area,
+      'food_category': category,
+      'cuisine_type': category,
+      'avg_rating': rating,
+      'total_ratings': total,
+      'price_level': price,
+      'image_url': null,
+    };
+
+/// Locked Premium gems, worst first: long English area/category, Devanagari, every field null.
+List<Map<String, dynamic>> lockedVendors() => [
+      lockedVendorJson(
+        120,
+        area: 'Station Road, Sindhi Camp Bus Stand, Opposite Lane No. 4',
+        category: 'Kachori & Samosa, Mirchi Vada, Mawa Kachori and Traditional Rajasthani Sweets',
+        rating: 4.6,
+        total: 12873,
+        price: '₹₹₹',
+      ),
+      lockedVendorJson(121, area: 'जौहरी बाज़ार, बड़ी चौपड़ के पास', category: 'मिठाई और नमकीन', rating: 4.9, total: 98765, price: '₹'),
+      lockedVendorJson(122),
+    ];
+
+/// `GET /api/vendors/<id>` for a locked vendor: 200, the locked shape + `locked_reason` under
+/// `vendor`, and no reviews or nearby stalls (they would reveal it).
+Map<String, dynamic> lockedVendorDetail(int id) => {
+      'is_favorite': false,
+      'vendor': {...lockedVendors().firstWhere((v) => v['id'] == id), 'locked_reason': 'premium'},
+      'reviews': [],
+      'nearby': [],
+    };
+
+List<Map<String, dynamic>> stressTrailStops() => [
+      {'name': 'Shree Rawat Mishthan Bhandar & Famous Pyaz Kachori Wale', 'vendor_id': 101, 'note': 'Order the pyaz kachori hot, with both chutneys — and ask for the mawa kachori to share.'},
+      {'name': 'Lassiwala (The Original One, Not The Copies Next Door)', 'vendor_id': 105, 'note': null},
+      {'name': _hindiLong, 'vendor_id': 102, 'note': 'घेवर ज़रूर चखें'},
+      {'name': 'Pandit Kulfi', 'vendor_id': 106},
+      {'name': 'Sahu Chai', 'vendor_id': 109, 'note': 'Kulhad chai'},
+      {'name': 'Gopal Kachori', 'vendor_id': 104},
+      {'name': 'Masala Chowk Pani Puri & Chaat Corner', 'vendor_id': 107},
+      {'name': 'Samrat Gol Gappe', 'vendor_id': 108},
+      {'name': 'Shri Ganesh Ji Ki Kachori Aur Samose Ki Dukaan', 'vendor_id': 110},
+      {'name': 'Laxmi Misthan Bhandar (LMB)', 'vendor_id': null, 'note': 'Not on HungryBird yet — it\'s the big pink building on the corner.'},
+      {'name': 'Kanha Sweets', 'vendor_id': null},
+      {'name': 'Rawat Kachori (second branch)', 'vendor_id': null},
+    ];
+
+/// Trails for the selected city; with Premium locking, the long one arrives locked (no stops).
+List<Map<String, dynamic>> stressTrails({bool locked = false}) => [
+      {
+        'id': 1,
+        'city_id': 1,
+        'title': 'The Great Walled City Breakfast Crawl: Kachori, Lassi, Jalebi and Chai Before the Shops Open',
+        'description': 'A two-hour walk through the pink city\'s oldest breakfast institutions, ending with a kulhad '
+            'chai at the stall that has been pouring since 1968. Wear comfortable shoes and come hungry. '
+            '$_hindiLong.',
+        'image_url': null,
+        'duration_text': '2.5 hours (morning)',
+        'price_text': '₹350 – ₹600 per person',
+        'is_premium': true,
+        'locked': locked,
+        'stop_count': 12,
+        'stops': locked ? [] : stressTrailStops(),
+      },
+      {
+        'id': 2,
+        'city_id': 1,
+        'title': 'Chai trail',
+        'stops': [
+          {'name': 'Sahu Chai', 'vendor_id': 109},
+        ],
+        'duration_text': '1 h',
+        'is_premium': false,
+        'locked': false,
+      },
+    ];
+
+List<Map<String, dynamic>> stressPlans() => [
+      {'id': 1, 'name': 'Monthly pass', 'description': '30 days of every Premium hidden gem and food trail', 'price_paise': 4900, 'price_display': '₹49', 'duration_days': 30},
+      {
+        'id': 2,
+        'name': 'Festive season super-saver pass — Diwali, Navratri & Durga Puja food walks (limited time)',
+        'description': 'A whole year of Premium across every city we map, including the late-night festive trails and '
+            'every new hidden gem as it lands. त्योहारों का खास पास!',
+        'price_paise': 129900,
+        'price_display': '₹1,299',
+        'duration_days': 365,
+      },
+      {'id': 3, 'name': 'Week', 'description': null, 'price_paise': 1950, 'price_display': null, 'duration_days': 7},
+    ];
+
+List<String> stressBenefits() => [
+      'Every hidden gem with its name, exact address, opening hours and turn-by-turn walking directions',
+      'All curated food trails in every city — including the festive-season night walks',
+      'हर शहर के सभी छिपे हुए रत्न और फ़ूड ट्रेल्स',
+      'Support independent street-food vendors',
+    ];
+
+String _iso(DateTime d) => '${d.toUtc().toIso8601String().split('.').first}Z';
+
+Map<String, dynamic> premiumStatusJson({required bool active}) {
+  final now = DateTime.now().toUtc();
+  return {
+    'is_premium': active,
+    'premium_until': active ? _iso(now.add(const Duration(days: 40))) : null,
+    'history': [
+      if (active) ...[
+        {'kind': 'purchase', 'days': 30, 'ends_at': _iso(now.add(const Duration(days: 40))), 'created_at': _iso(now.subtract(const Duration(days: 2))), 'amount_paise': 4900},
+        {'kind': 'grant', 'days': 12, 'ends_at': _iso(now.add(const Duration(days: 10))), 'created_at': _iso(now.subtract(const Duration(days: 20)))},
+      ],
+      {'kind': 'purchase', 'days': 365, 'ends_at': _iso(now.subtract(const Duration(days: 30))), 'created_at': _iso(now.subtract(const Duration(days: 395))), 'amount_paise': 129900},
+      {'kind': 'revoke', 'days': 0, 'ends_at': _iso(now.subtract(const Duration(days: 400))), 'created_at': _iso(now.subtract(const Duration(days: 400)))},
+    ],
+  };
+}
+
+Map<String, dynamic> paymentOrderJson(int planId) => {
+      'order_id': 'order_TEST123',
+      'amount_paise': 4900,
+      'currency': 'INR',
+      'key_id': 'rzp_test_key',
+      'name': 'HungryBird',
+      'description': 'Monthly pass — 30 days of Premium',
+      'prefill': {'name': longUserName, 'email': longUserEmail, 'contact': '+919829012345'},
+      'method': {'upi': true, 'card': false, 'netbanking': false, 'wallet': false, 'emi': false, 'paylater': false},
+      'plan': stressPlans().firstWhere((p) => p['id'] == planId, orElse: () => stressPlans().first),
+    };
+
 List<Map<String, dynamic>> stressCities() => [
       {
         'id': 1,
@@ -205,64 +424,62 @@ List<Map<String, dynamic>> stressCategories() => [
       {'name': 'Breakfast', 'slug': 'breakfast', 'icon': '🍳'},
     ];
 
-Map<String, dynamic> appConfig(FixtureMode mode) => {
-      'settings': {
-        'maintenance_mode': mode == FixtureMode.maintenance,
-        'maintenance_message': 'We are upgrading our kitchen to serve you faster. HungryBird will be back in about '
-            'thirty minutes — thanks for your patience while we tidy up the masala dabba. हम जल्द लौटेंगे!',
-        'min_app_version': mode == FixtureMode.update ? '99.0.0' : '0.0.1',
-        'force_update_message': 'This version of HungryBird is too old to talk to our new servers. Please update '
-            'from the store to keep finding the best street food near you.',
-        'announcement': mode == FixtureMode.stress || mode == FixtureMode.vendorsDown
-            ? 'Monsoon menus are here! Hot pakoras, bhutta and masala chai at 140+ stalls across the city this week only. '
-                'बारिश में गरम पकौड़े!'
-            : '',
-        'default_city': longCitySlug,
-        'support_email': 'support-team-for-street-food-lovers@hungrybird-app.example.in',
-        'allow_guest_reviews': true,
-      },
-      'banners': mode == FixtureMode.stress || mode == FixtureMode.vendorsDown
-          ? [
-              {
-                'title': 'Discover the zaika hiding in every gully of the old walled city this festive season',
-                'subtitle': 'Handpicked hidden gems, trusted by locals and food walkers for decades',
-                // Non-http URL: AppNetworkImage falls back to the bundled placeholder.
-                'image_url': 'banner-1.jpg',
-                'link_type': 'url',
-                'link_value': 'https://example.com',
-              },
-              {'title': 'घेवर उत्सव', 'subtitle': 'जयपुर की सबसे अच्छी मिठाइयाँ', 'image_url': 'banner-2.jpg'},
-            ]
-          : [],
-      'categories': mode == FixtureMode.empty ? [] : stressCategories(),
-    };
+/// Like the backend: every setting flat at the top level AND under `settings`; `premium` and
+/// `push_available` only at the top level.
+Map<String, dynamic> appConfig(FixtureMode mode, [Backend backend = const Backend()]) {
+  final settings = _settings(mode, backend);
+  return {
+    ...settings,
+    'settings': settings,
+    'premium': {
+      'enabled': backend.premiumEnabled,
+      'payments_available': backend.premium != PremiumFixture.noPayments,
+      'payment_methods': ['upi'],
+      'plans': stressPlans(),
+      'benefits': stressBenefits(),
+    },
+    'push_available': false,
+    'banners': mode == FixtureMode.stress || mode == FixtureMode.vendorsDown
+        ? [
+            {
+              'title': 'Discover the zaika hiding in every gully of the old walled city this festive season',
+              'subtitle': 'Handpicked hidden gems, trusted by locals and food walkers for decades',
+              // Non-http URL: AppNetworkImage falls back to the neutral placeholder.
+              'image_url': 'banner-1.jpg',
+              'link_type': 'url',
+              'link_value': 'https://example.com',
+            },
+            {'title': 'घेवर उत्सव', 'subtitle': 'जयपुर की सबसे अच्छी मिठाइयाँ', 'image_url': 'banner-2.jpg'},
+          ]
+        : [],
+    'categories': mode == FixtureMode.empty ? [] : stressCategories(),
+  };
+}
 
-List<Map<String, dynamic>> stressTrails() => [
-      {
-        'id': 1,
-        'title': 'The Great Walled City Breakfast Crawl: Kachori, Lassi, Jalebi and Chai Before the Shops Open',
-        'description': 'A two-hour walk through the pink city\'s oldest breakfast institutions, ending with a kulhad '
-            'chai at the stall that has been pouring since 1968. Wear comfortable shoes and come hungry. '
-            '$_hindiLong.',
-        'duration': '2.5 hours (morning)',
-        'budget': '₹350 – ₹600 per person',
-        'stops': [
-          'Shree Rawat Mishthan Bhandar & Famous Pyaz Kachori Wale',
-          'Lassiwala (The Original One, Not The Copies Next Door)',
-          _hindiLong,
-          'Pandit Kulfi',
-          'Sahu Chai',
-          'Gopal Kachori',
-          'Masala Chowk Pani Puri & Chaat Corner',
-          'Samrat Gol Gappe',
-          'Shri Ganesh Ji Ki Kachori Aur Samose Ki Dukaan',
-          'Laxmi Misthan Bhandar (LMB)',
-          'Kanha Sweets',
-          'Rawat Kachori (second branch)',
-        ],
-      },
-      {'id': 2, 'title': 'Chai trail', 'stops': ['Sahu Chai'], 'duration': '1 h'},
-    ];
+Map<String, dynamic> _settings(FixtureMode mode, Backend backend) => {
+      'premium_enabled': backend.premiumEnabled,
+      'support_phone': '+91 98290 12345',
+      'instagram_url': 'https://instagram.com/hungrybird.in',
+      'facebook_url': '',
+      'x_url': 'https://x.com/hungrybird',
+      'youtube_url': '',
+      'website_url': 'https://hungry-bird-gamma.vercel.app',
+      'latest_app_version': backend.latestVersion ?? '1.0.0',
+      'play_store_url': 'https://play.google.com/store/apps/details?id=com.hungrybird.hungry_bird_app',
+      'maintenance_mode': mode == FixtureMode.maintenance,
+      'maintenance_message': 'We are upgrading our kitchen to serve you faster. HungryBird will be back in about '
+          'thirty minutes — thanks for your patience while we tidy up the masala dabba. हम जल्द लौटेंगे!',
+      'min_app_version': mode == FixtureMode.update ? '99.0.0' : '0.0.1',
+      'force_update_message': 'This version of HungryBird is too old to talk to our new servers. Please update '
+          'from the store to keep finding the best street food near you.',
+      'announcement': mode == FixtureMode.stress || mode == FixtureMode.vendorsDown
+          ? 'Monsoon menus are here! Hot pakoras, bhutta and masala chai at 140+ stalls across the city this week only. '
+              'बारिश में गरम पकौड़े!'
+          : '',
+      'default_city': longCitySlug,
+      'support_email': 'support-team-for-street-food-lovers@hungrybird-app.example.in',
+      'allow_guest_reviews': true,
+    };
 
 List<Map<String, dynamic>> stressCommunity() => [
       {
@@ -308,28 +525,49 @@ List<Map<String, dynamic>> stressNotifications() => [
       {'id': 7, 'title': 'Hi', 'body': 'Short.', 'created_at': '2024-01-01T09:00:00'},
     ];
 
-Map<String, dynamic> stressUser() => {
+Map<String, dynamic> stressUser({bool verified = true, bool premium = false}) => {
       'id': 5,
       'name': longUserName,
       'email': longUserEmail,
       'phone': '+91 98290 12345',
       'notifications_enabled': true,
-      'created_at': '2024-02-29T10:00:00',
+      'email_verified': verified,
+      'is_premium': premium,
+      'premium_until': premium ? _iso(DateTime.now().add(const Duration(days: 40))) : null,
     };
 
-List<Map<String, dynamic>> stressMyReviews() => [
+/// `/api/user/reviews`: each item carries the serialized `vendor` card (locked → no name) and
+/// `vendor_locked`; `vendor` is null for a stall that is no longer public.
+List<Map<String, dynamic>> stressMyReviews({bool locks = false}) {
+  Map<String, dynamic> card(int id) => stressVendors().firstWhere((v) => v['id'] == id);
+  return [
+    {
+      'id': 1,
+      'vendor_id': 101,
+      'vendor_name': 'Shree Rawat Mishthan Bhandar & Famous Pyaz Kachori Wale (Since 1952) — Original Shop',
+      'vendor_locked': false,
+      'vendor': card(101),
+      'rating_value': 5,
+      'review_text': 'Best pyaz kachori in the city, hands down. Crispy shell, spicy onion filling, and the tamarind '
+          'chutney is perfectly balanced.',
+      'created_at': '2026-10-01T10:00:00',
+    },
+    if (locks)
       {
-        'id': 1,
-        'vendor_id': 101,
-        'vendor_name': 'Shree Rawat Mishthan Bhandar & Famous Pyaz Kachori Wale (Since 1952) — Original Shop',
+        'id': 4,
+        'vendor_id': 120,
+        'vendor_name': null,
+        'vendor_image_url': null,
+        'vendor_locked': true,
+        'vendor': lockedVendors().first,
         'rating_value': 5,
-        'review_text': 'Best pyaz kachori in the city, hands down. Crispy shell, spicy onion filling, and the tamarind '
-            'chutney is perfectly balanced.',
-        'created_at': '2026-10-01T10:00:00',
+        'review_text': 'Worth every rupee of the pass — the best mawa kachori I have had in years.',
+        'created_at': '2026-09-15T10:00:00',
       },
-      {'id': 2, 'vendor_id': 102, 'vendor_name': _hindiLong, 'rating_value': 4, 'review_text': 'बहुत स्वादिष्ट!', 'created_at': '2026-09-01T10:00:00'},
-      {'id': 3, 'vendor_id': null, 'vendor_name': 'Chai', 'rating_value': 3, 'created_at': null},
-    ];
+    {'id': 2, 'vendor_id': 102, 'vendor_name': _hindiLong, 'vendor_locked': false, 'vendor': card(102), 'rating_value': 4, 'review_text': 'बहुत स्वादिष्ट!', 'created_at': '2026-09-01T10:00:00'},
+    {'id': 3, 'vendor_id': 103, 'vendor_name': null, 'vendor_locked': false, 'vendor': null, 'rating_value': 3, 'created_at': null},
+  ];
+}
 
 List<Map<String, dynamic>> stressSubmissions() => [
       {
@@ -352,59 +590,119 @@ List<Map<String, dynamic>> stressSubmissions() => [
       {'id': 3, 'stall_name': 'Chai', 'status': 'approved', 'city_name': 'Jaipur', 'created_at': '2026-01-10T10:00:00'},
     ];
 
-/// MockClient answering every endpoint the app calls.
-http.Client fakeBackend(FixtureMode mode) {
+/// MockClient answering every endpoint the app calls, in the backend's shapes (every JSON error
+/// has a `code`). [calls] (optional) records "METHOD path".
+http.Client fakeBackend(FixtureMode mode, [Backend backend = const Backend(), List<String>? calls]) {
   final stress = mode == FixtureMode.stress || mode == FixtureMode.vendorsDown;
+  // Mutable account state, so verifying an email or paying actually changes later answers.
+  var verified = backend.emailVerified;
+  var premium = backend.premium == PremiumFixture.active;
   return MockClient((request) async {
     final path = request.url.path;
+    calls?.add('${request.method} $path');
     Object? body;
     var status = 200;
+    final locks = backend.premiumEnabled && !premium;
 
     final down = (mode == FixtureMode.offline && path != '/api/app/config') ||
         (mode == FixtureMode.vendorsDown && path.startsWith('/api/vendors'));
     if (down) {
+      // A gateway / cold-start failure: not one of the API's own (coded) errors.
       return http.Response(
         jsonEncode({'error': 'The server is taking too long to respond. Please check your connection and try again.'}),
         503,
       );
     }
+    final failWith = backend.errors[path];
+    if (failWith != null) return _error(failWith);
 
+    final trailId = RegExp(r'^/api/trails/(\d+)$').firstMatch(path);
     if (path == '/api/app/config') {
-      body = appConfig(mode);
+      body = appConfig(mode, backend);
     } else if (path == '/api/cities') {
       body = {'cities': stress || mode != FixtureMode.empty ? stressCities() : stressCities().take(1).toList()};
+    } else if (path == '/api/categories') {
+      body = {'categories': stress ? stressCategories().take(8).toList() : []};
     } else if (path == '/api/vendors' || path == '/api/vendors/nearby') {
-      final vendors = stress ? stressVendors() : <Map<String, dynamic>>[];
+      // Locked Premium gems first (so lazy lists build them); never in nearby (no coordinates).
+      final vendors = stress ? [if (locks && path == '/api/vendors') ...lockedVendors(), ...stressVendors()] : <Map<String, dynamic>>[];
       body = {'vendors': vendors, 'count': vendors.length, 'total': stress ? 12873 : 0};
     } else if (path == '/api/vendors/103') {
       body = minimalVendorDetail();
+    } else if (locks && lockedVendors().any((v) => path == '/api/vendors/${v['id']}')) {
+      body = lockedVendorDetail(int.parse(path.split('/').last));
     } else if (path.startsWith('/api/vendors/')) {
       body = stressVendorDetail();
     } else if (path == '/api/trails') {
-      body = {'trails': stress ? stressTrails() : []};
+      body = {'trails': stress ? stressTrails(locked: locks) : [], 'count': stress ? 2 : 0};
+    } else if (trailId != null) {
+      // The trail at the top level and again under `trail`.
+      final trail = stressTrails(locked: locks).firstWhere((t) => '${t['id']}' == trailId.group(1), orElse: () => const {});
+      if (trail.isEmpty) return _error('NOT_FOUND', 'Not found');
+      body = {...trail, 'trail': trail};
     } else if (path == '/api/vendor-reviews') {
       body = {'reviews': stress ? stressCommunity() : []};
     } else if (path == '/api/notifications') {
       body = {'notifications': stress ? stressNotifications() : []};
     } else if (path == '/api/auth/me') {
-      body = {'user': stressUser()};
+      body = {'user': stressUser(verified: verified, premium: premium)};
     } else if (path == '/api/favorites') {
-      body = {'favorites': stress ? stressVendors().take(3).toList() : []};
+      body = {'favorites': stress ? [if (locks) lockedVendors().first, ...stressVendors().take(3)] : []};
     } else if (path == '/api/favorites/sync') {
       body = {'vendor_ids': []};
     } else if (path == '/api/user/reviews') {
-      body = {'reviews': stress ? stressMyReviews() : []};
+      body = {'reviews': stress ? stressMyReviews(locks: locks) : []};
     } else if (path == '/api/user/submissions') {
       body = {'submissions': stress ? stressSubmissions() : []};
     } else if (path == '/api/auth/login') {
-      status = 401;
-      body = {'error': "That email and password don't match any HungryBird account. Check for typos or reset it from Help."};
+      return _error('INVALID_CREDENTIALS');
+    } else if (path == '/api/auth/register') {
+      verified = false;
+      status = 201;
+      body = {'message': 'Registered successfully', 'token': 'new-token', 'user': stressUser(verified: false), 'verification_sent': true};
+    } else if (path == '/api/auth/email/send-code') {
+      if (verified) return _error('ALREADY_VERIFIED');
+      body = {'sent': true, 'resend_after': 60};
+    } else if (path == '/api/auth/email/verify') {
+      verified = true;
+      body = {'user': stressUser(premium: premium)};
+    } else if (path == '/api/auth/password/forgot' || path == '/api/auth/password/reset') {
+      body = {'ok': true};
+    } else if (path == '/api/auth/profile') {
+      final sent = jsonDecode(request.body) as Map<String, dynamic>;
+      final changed = sent['email'] != longUserEmail;
+      // A new email needs the current password (the fixture's "wrong" one is literally `wrong`).
+      final password = sent['current_password'];
+      if (changed && (password is! String || password.isEmpty || password == 'wrong')) return _error('INVALID_PASSWORD');
+      if (changed) verified = false;
+      body = {
+        'message': 'Profile updated successfully',
+        'user': {...stressUser(verified: verified, premium: premium), 'name': sent['name'], 'email': sent['email']},
+        if (changed) 'verification_sent': true,
+      };
+    } else if (path == '/api/auth/account' && request.method == 'DELETE') {
+      // Permanent, so the password is re-checked (the fixture's wrong one is literally `wrong`).
+      final password = request.body.isEmpty ? null : (jsonDecode(request.body) as Map)['current_password'];
+      if (password is! String || password.isEmpty || password == 'wrong') return _error('INVALID_PASSWORD', 'Current password is incorrect');
+      body = {'message': 'Account deleted successfully'};
+    } else if (path == '/api/auth/password') {
+      body = {'message': 'Password updated', 'token': 'fresh-token', 'user': stressUser(verified: verified, premium: premium)};
+    } else if (path == '/api/premium/plans') {
+      body = stressPlans();
+    } else if (path == '/api/premium/status') {
+      body = premiumStatusJson(active: premium);
+    } else if (path == '/api/payments/order') {
+      body = paymentOrderJson(asPlanId((jsonDecode(request.body) as Map)['plan_id']));
+    } else if (path == '/api/payments/verify') {
+      premium = true;
+      body = {'ok': true, 'user': stressUser(verified: verified, premium: true)};
     } else if (path == '/api/submit-vendor') {
       body = {'message': 'Thanks! Our team will verify it shortly.'};
     } else {
-      status = 404;
-      body = {'error': 'not found'};
+      return _error('NOT_FOUND', 'Not found');
     }
     return http.Response.bytes(utf8.encode(jsonEncode(body)), status, headers: {'content-type': 'application/json'});
   });
 }
+
+int asPlanId(Object? value) => value is int ? value : int.tryParse('$value') ?? 1;

@@ -79,7 +79,12 @@ class _ReviewSheetState extends State<_ReviewSheet> {
         context.push('/login?reason=review');
         return;
       }
-      setState(() => _error = e.message);
+      setState(() => _error = switch (e.code) {
+            ApiErrorCode.premiumRequired => 'This hidden gem is part of HungryBird Premium.',
+            ApiErrorCode.rateLimited => 'You\'ve already rated this stall today. Try again tomorrow.',
+            ApiErrorCode.accountSuspended => 'This account has been suspended, so it can\'t post reviews.',
+            _ => e.message,
+          });
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -97,7 +102,7 @@ class _ReviewSheetState extends State<_ReviewSheet> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(widget.existing == null ? 'Rate ${widget.vendor.name}' : 'Update your review',
+              Text(widget.existing == null ? 'Rate ${widget.vendor.displayName}' : 'Update your review',
                   style: theme.textTheme.titleLarge, textAlign: TextAlign.center),
               const SizedBox(height: 4),
               Text(

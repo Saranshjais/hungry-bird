@@ -6,12 +6,14 @@ import 'package:provider/provider.dart';
 
 import '../core/api_client.dart';
 import '../core/theme.dart';
+import '../models/app_content.dart';
 import '../models/vendor.dart';
 import '../services/hungry_bird_api.dart';
 import '../services/location_service.dart';
 import '../state/app_config_provider.dart';
 import '../state/city_provider.dart';
 import '../state/preferences_provider.dart';
+import '../state/premium_provider.dart';
 import 'common.dart';
 import 'vendor_cards.dart';
 
@@ -86,6 +88,7 @@ class _VendorBrowserState extends State<VendorBrowser> {
   String? _error;
   int _generation = 0;
   String? _citySlug;
+  String? _unlockKey;
 
   @override
   void initState() {
@@ -98,10 +101,15 @@ class _VendorBrowserState extends State<VendorBrowser> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final slug = context.watch<CityProvider>().selectedSlug;
-    if (slug != _citySlug) {
+    // Gaining/losing Premium (or the admin switch) changes which results are locked.
+    final unlock = context.watch<PremiumProvider>().unlockKey;
+    final unlockChanged = _unlockKey != null && unlock != _unlockKey;
+    _unlockKey = unlock;
+    if (slug != _citySlug || unlockChanged) {
       _citySlug = slug;
       _reload();
     }
+    if (slug != null && widget.showSearch) context.read<AppConfigProvider>().loadCityCategories(slug);
   }
 
   @override
@@ -272,7 +280,17 @@ class _VendorBrowserState extends State<VendorBrowser> {
             ),
           ),
         if (showSuggestions)
-          SliverToBoxAdapter(child: _Suggestions(recent: recent, onPick: _useSuggestion)),
+          SliverToBoxAdapter(
+            child: _Suggestions(
+              recent: recent,
+              onPick: _useSuggestion,
+              categories: context.watch<AppConfigProvider>().cityCategories(_citySlug) ?? const [],
+              onCategory: (c) {
+                _searchFocus.unfocus();
+                _update(_filters.copyWith(category: c.slug));
+              },
+            ),
+          ),
         SliverToBoxAdapter(child: _filterChips(cityName)),
         SliverToBoxAdapter(
           child: Padding(
@@ -404,13 +422,15 @@ class _VendorBrowserState extends State<VendorBrowser> {
   }
 }
 
+/// Recent searches, plus the selected city's own categories (`/api/categories?city=`) as
+/// quick filters — nothing city-specific is hard-coded; the section hides when there are none.
 class _Suggestions extends StatelessWidget {
-  const _Suggestions({required this.recent, required this.onPick});
+  const _Suggestions({required this.recent, required this.onPick, required this.categories, required this.onCategory});
 
   final List<String> recent;
   final ValueChanged<String> onPick;
-
-  static const _popular = ['Pyaz kachori', 'Lassi', 'Kulfi', 'Chai', 'Mirchi vada', 'Pani puri', 'Ghewar', 'Samosa'];
+  final List<FoodCategory> categories;
+  final ValueChanged<FoodCategory> onCategory;
 
   @override
   Widget build(BuildContext context) {
@@ -444,21 +464,22 @@ class _Suggestions extends StatelessWidget {
             ),
             const SizedBox(height: 8),
           ],
-          Text('Popular right now', style: theme.textTheme.titleSmall),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            children: [
-              for (final s in _popular)
-                ActionChip(
-                  label: Text(s),
-                  avatar: const Icon(Icons.trending_up_rounded, size: 16, color: AppColors.brand),
-                  onPressed: () => onPick(s),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
+          if (categories.isNotEmpty) ...[
+            Text('Browse by category', style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                for (final c in categories.take(10))
+                  ActionChip(
+                    label: Text('${c.icon ?? ''} ${c.name}'.trim(), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    onPressed: () => onCategory(c),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
         ],
       ),
     );

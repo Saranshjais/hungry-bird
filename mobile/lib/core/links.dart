@@ -6,9 +6,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/app_content.dart';
 import '../models/vendor.dart';
+import '../state/app_config_provider.dart';
 import '../state/city_provider.dart';
 import '../widgets/common.dart';
-import 'config.dart';
 
 class Links {
   Links._();
@@ -24,7 +24,7 @@ class Links {
   static Future<void> directions(BuildContext context, Vendor vendor) async {
     final destination = vendor.hasLocation
         ? '${vendor.lat},${vendor.lng}'
-        : Uri.encodeComponent('${vendor.name} ${vendor.fullAddress}');
+        : Uri.encodeComponent('${vendor.name ?? ''} ${vendor.fullAddress}'.trim());
     final uri = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$destination&travelmode=walking');
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!ok && context.mounted) showSnack(context, 'Could not open maps', error: true);
@@ -42,14 +42,18 @@ class Links {
     if (!ok && context.mounted) showSnack(context, 'No email app found. Write to $address', error: true);
   }
 
-  static String vendorWebUrl(Vendor vendor) => '${AppConfig.websiteUrl}/vendor/${vendor.id}';
+  /// The public website: the admin's `website_url`, else the build-time default.
+  static String websiteUrl(BuildContext context) => context.read<AppConfigProvider>().websiteUrl;
 
-  static Future<void> shareVendor(Vendor vendor) async {
-    final buffer = StringBuffer('${vendor.name} on HungryBird');
+  static String vendorWebUrl(BuildContext context, Vendor vendor) => '${websiteUrl(context)}/vendor/${vendor.id}';
+
+  static Future<void> shareVendor(BuildContext context, Vendor vendor) async {
+    final url = vendorWebUrl(context, vendor);
+    final buffer = StringBuffer('${vendor.displayName} on HungryBird');
     if (vendor.specialtyDish != null) buffer.write(' — try the ${vendor.specialtyDish}!');
     if (vendor.fullAddress.isNotEmpty) buffer.write('\n📍 ${vendor.fullAddress}');
-    buffer.write('\n${vendorWebUrl(vendor)}');
-    await SharePlus.instance.share(ShareParams(text: buffer.toString(), subject: vendor.name));
+    buffer.write('\n$url');
+    await SharePlus.instance.share(ShareParams(text: buffer.toString(), subject: vendor.displayName));
   }
 
   /// Follows a banner / notification deep link.

@@ -39,13 +39,23 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     try {
       await context.read<AuthProvider>().changePassword(_current.text, _next.text);
       if (!mounted) return;
-      showSnack(context, 'Password changed');
+      showSnack(context, 'Password changed. Your other devices have been logged out.');
       context.pop();
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (mounted) setState(() => _error = authErrorMessage(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Resetting by email signs the account out everywhere, so it ends at the login screen.
+  Future<void> _forgot() async {
+    final email = context.read<AuthProvider>().user?.email ?? '';
+    final reset = await context.push<String>(
+      Uri(path: '/forgot-password', queryParameters: {if (email.isNotEmpty) 'email': email}).toString(),
+    );
+    if (reset == null || !mounted) return;
+    context.pushReplacement(Uri(path: '/login', queryParameters: {'email': reset}).toString());
   }
 
   @override
@@ -65,6 +75,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               ),
               const SizedBox(height: 14),
               PasswordField(controller: _next, label: 'New password', validator: validateNewPassword),
+              PasswordRulesHint(controller: _next),
               const SizedBox(height: 14),
               PasswordField(
                 controller: _confirm,
@@ -80,6 +91,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
                     : const Text('Update password'),
               ),
+              const SizedBox(height: 8),
+              TextButton(onPressed: _busy ? null : _forgot, child: const Text('Forgot your current password?')),
             ],
           ),
         ),

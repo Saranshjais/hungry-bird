@@ -9,9 +9,12 @@ import '../../widgets/common.dart';
 import 'auth_widgets.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key, this.reason});
+  const LoginScreen({super.key, this.reason, this.email});
 
   final String? reason;
+
+  /// Pre-filled email (e.g. right after a password reset).
+  final String? email;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -19,17 +22,33 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _form = GlobalKey<FormState>();
-  final _email = TextEditingController();
+  late final _email = TextEditingController(text: widget.email ?? '');
   final _password = TextEditingController();
   bool _busy = false;
   String? _error;
+  String? _info;
 
   String get _subtitle => switch (widget.reason) {
         'review' => 'Log in to post and manage your reviews.',
         'saved' => 'Log in to keep your saved stalls on every device.',
         'submit' => 'Log in to track the stalls you suggest.',
+        'premium' => 'Log in to use HungryBird Premium on this device.',
         _ => 'Welcome back! Log in to continue your food trail.',
       };
+
+  Future<void> _forgotPassword() async {
+    final typed = _email.text.trim();
+    final email = await context.push<String>(
+      Uri(path: '/forgot-password', queryParameters: {if (validateEmail(typed) == null) 'email': typed}).toString(),
+    );
+    if (email == null || !mounted) return;
+    _email.text = email;
+    _password.clear();
+    setState(() {
+      _error = null;
+      _info = 'Password updated. Log in with your new password.';
+    });
+  }
 
   @override
   void dispose() {
@@ -44,6 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _info = null;
     });
     try {
       final auth = context.read<AuthProvider>();
@@ -51,12 +71,12 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       showSnack(context, 'Welcome back, ${auth.user?.name.split(' ').first ?? 'foodie'}!');
       if (context.canPop()) {
-        context.pop();
+        context.pop(true);
       } else {
         context.go('/profile');
       }
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (mounted) setState(() => _error = authErrorMessage(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -99,8 +119,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     onSubmitted: (_) => _submit(),
                     validator: (v) => (v == null || v.isEmpty) ? 'Enter your password' : null,
                   ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(onPressed: _busy ? null : _forgotPassword, child: const Text('Forgot password?')),
+                  ),
                   if (_error != null) FormErrorBanner(message: _error!),
-                  const SizedBox(height: 24),
+                  if (_info != null && _error == null) FormInfoBanner(message: _info!, icon: Icons.lock_reset_rounded),
+                  const SizedBox(height: 16),
                   FilledButton(
                     onPressed: _busy ? null : _submit,
                     child: _busy
@@ -118,12 +143,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: const Text('Create account'),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Forgot your password? Write to us from Help & support and we\'ll sort it out.',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   ),
                   TextButton(
                     style: TextButton.styleFrom(foregroundColor: AppColors.muted),

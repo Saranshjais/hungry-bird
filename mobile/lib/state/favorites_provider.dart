@@ -22,6 +22,7 @@ class FavoritesProvider extends ChangeNotifier {
   bool _loading = false;
   String? _error;
   bool _signedIn = false;
+  bool _premium = false;
 
   List<Vendor> get items => _items.values.toList().reversed.toList();
   int get count => _items.length;
@@ -34,8 +35,17 @@ class FavoritesProvider extends ChangeNotifier {
   void bindAuth(AuthProvider auth) {
     if (auth.status == AuthStatus.unknown) return;
     final signedIn = auth.isLoggedIn;
-    if (signedIn == _signedIn) return;
+    final premium = auth.user?.hasActivePremium ?? false;
+    if (signedIn == _signedIn) {
+      // Gaining or losing Premium changes which saved stalls the server locks.
+      if (signedIn && premium != _premium) {
+        _premium = premium;
+        Future.microtask(refresh);
+      }
+      return;
+    }
     _signedIn = signedIn;
+    _premium = premium;
     // This runs while the provider tree rebuilds; notify listeners only after the frame.
     Future.microtask(() {
       if (signedIn) {

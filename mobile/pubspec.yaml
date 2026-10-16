@@ -19,6 +19,7 @@ dependencies:
   latlong2: ^0.10.1
   package_info_plus: ^10.2.2
   provider: ^6.1.5+1
+  razorpay_flutter: ^1.4.7
   share_plus: ^13.3.1
   shared_preferences: ^2.5.6
   shimmer: ^4.0.0

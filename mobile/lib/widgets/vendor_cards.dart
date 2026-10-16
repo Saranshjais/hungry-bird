@@ -6,7 +6,9 @@ import '../core/api_client.dart';
 import '../core/formatters.dart';
 import '../core/theme.dart';
 import '../models/vendor.dart';
+import '../screens/premium/paywall.dart';
 import '../state/favorites_provider.dart';
+import '../state/premium_provider.dart';
 import 'common.dart';
 
 class FavoriteButton extends StatelessWidget {
@@ -30,7 +32,7 @@ class FavoriteButton extends StatelessWidget {
           try {
             final nowSaved = await context.read<FavoritesProvider>().toggle(vendor);
             if (context.mounted) {
-              showSnack(context, nowSaved ? 'Saved ${vendor.name}' : 'Removed from saved');
+              showSnack(context, nowSaved ? 'Saved ${vendor.displayName}' : 'Removed from saved');
             }
           } on ApiException catch (e) {
             if (context.mounted) showSnack(context, e.message, error: true);
@@ -55,6 +57,14 @@ class FavoriteButton extends StatelessWidget {
   }
 }
 
+/// Opens the paywall for a locked (Premium) vendor.
+void openLockedVendor(BuildContext context, Vendor vendor) =>
+    showPaywallSheet(context, title: vendor.displayName, subtitle: vendor.lockedSubtitle);
+
+/// "Unlock with Premium" where this build sells passes, a plain "Premium" label elsewhere (iOS).
+String lockedCta(BuildContext context) =>
+    context.select<PremiumProvider, bool>((p) => p.purchaseOffered) ? 'Unlock with Premium' : 'Premium';
+
 /// Image-forward card for horizontal carousels.
 class VendorCard extends StatelessWidget {
   const VendorCard({super.key, required this.vendor, this.width = 230, this.imageHeight = 140});
@@ -65,6 +75,7 @@ class VendorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (vendor.locked) return _LockedVendorCard(vendor: vendor, width: width, imageHeight: imageHeight);
     final theme = Theme.of(context);
     return SizedBox(
       width: width,
@@ -89,7 +100,7 @@ class VendorCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(vendor.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall?.copyWith(fontSize: 15)),
+                    Text(vendor.displayName, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall?.copyWith(fontSize: 15)),
                     const SizedBox(height: 3),
                     Text(
                       vendor.specialtyDish ?? vendor.subtitle,
@@ -134,6 +145,7 @@ class VendorTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (vendor.locked) return _LockedVendorTile(vendor: vendor, trailing: trailing);
     final theme = Theme.of(context);
     final muted = theme.colorScheme.onSurfaceVariant;
     return Card(
@@ -153,7 +165,7 @@ class VendorTile extends StatelessWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: Text(vendor.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall?.copyWith(fontSize: 15)),
+                          child: Text(vendor.displayName, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall?.copyWith(fontSize: 15)),
                         ),
                         trailing ?? FavoriteButton(vendor: vendor, onImage: false, size: 20),
                       ],
@@ -180,6 +192,152 @@ class VendorTile extends StatelessWidget {
                               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.success)),
                       ],
                     ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// [VendorCard] for a locked Premium vendor: blurred photo, no name, area · category · rating.
+class _LockedVendorCard extends StatelessWidget {
+  const _LockedVendorCard({required this.vendor, required this.width, required this.imageHeight});
+
+  final Vendor vendor;
+  final double width;
+  final double imageHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurfaceVariant;
+    return SizedBox(
+      width: width,
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => openLockedVendor(context, vendor),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                children: [
+                  LockedImage(url: vendor.imageUrl, height: imageHeight, width: width, lockSize: 22),
+                  Positioned(top: 10, left: 10, child: RatingPill(rating: vendor.rating, count: vendor.totalRatings, onImage: true, compact: true)),
+                  const Positioned(bottom: 8, left: 10, child: VendorBadge(BadgeKind.premium, small: true)),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(vendor.displayName, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall?.copyWith(fontSize: 15)),
+                    const SizedBox(height: 3),
+                    Text(
+                      vendor.lockedSubtitle.isEmpty ? (vendor.cityName ?? '') : vendor.lockedSubtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(color: muted),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(Icons.lock_rounded, size: 14, color: AppColors.premium),
+                        const SizedBox(width: 3),
+                        Expanded(
+                          child: Text(
+                            lockedCta(context),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.labelSmall?.copyWith(color: AppColors.premium, fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                        if (vendor.priceLevel != null)
+                          Text(vendor.priceLevel!, style: theme.textTheme.labelSmall?.copyWith(color: AppColors.success, fontWeight: FontWeight.w800)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// [VendorTile] for a locked Premium vendor.
+class _LockedVendorTile extends StatelessWidget {
+  const _LockedVendorTile({required this.vendor, this.trailing});
+
+  final Vendor vendor;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurfaceVariant;
+    final offered = context.select<PremiumProvider, bool>((p) => p.purchaseOffered);
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => openLockedVendor(context, vendor),
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Row(
+            children: [
+              LockedImage(url: vendor.imageUrl, width: 92, height: 92, radius: 14),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(vendor.displayName, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall?.copyWith(fontSize: 15)),
+                        ),
+                        trailing ??
+                            const Padding(
+                              padding: EdgeInsets.all(4),
+                              child: Icon(Icons.lock_outline_rounded, size: 20, color: AppColors.premium),
+                            ),
+                      ],
+                    ),
+                    Text(
+                      vendor.lockedSubtitle.isEmpty ? (vendor.cityName ?? '') : vendor.lockedSubtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(color: muted),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        RatingPill(rating: vendor.rating, count: vendor.totalRatings, compact: true),
+                        const VendorBadge(BadgeKind.premium, small: true),
+                        if (vendor.priceLevel != null)
+                          Text(vendor.priceLevel!,
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.success)),
+                      ],
+                    ),
+                    if (offered) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        'Unlock with Premium',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelMedium?.copyWith(color: AppColors.premium, fontWeight: FontWeight.w800),
+                      ),
+                    ],
                   ],
                 ),
               ),

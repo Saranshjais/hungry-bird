@@ -4,41 +4,69 @@ import 'package:provider/provider.dart';
 import '../core/api_client.dart';
 import '../core/links.dart';
 import '../core/theme.dart';
+import '../models/app_content.dart';
 import '../services/hungry_bird_api.dart';
 import '../state/app_config_provider.dart';
 import '../state/auth_provider.dart';
+import '../state/premium_provider.dart';
 import '../widgets/common.dart';
 import 'auth/auth_widgets.dart';
 
-const _faqs = [
-  (
-    'How do you find these stalls?',
-    'Our team maps stalls from public sources and field visits, and the community suggests hidden gems. '
-        'Every suggestion is checked by a moderator before it goes live.'
-  ),
-  (
-    'What makes a stall a "Hidden Gem"?',
-    'Hidden gems are much-loved local spots that rarely show up on big food apps — small carts, decades-old '
-        'shops and neighbourhood favourites.'
-  ),
-  (
-    'I suggested a stall. When will it appear?',
-    'Usually within a few days. You can follow the status under Profile → My suggestions.'
-  ),
-  (
-    'Something about a stall is wrong.',
-    'Open the stall, tap the ⋮ menu and choose "Report a problem". Our moderators will fix it.'
-  ),
-  (
-    'Do I need an account?',
-    'No. You can browse, save stalls on your phone and even post reviews as a guest. An account keeps your '
-        'saved list and reviews across devices.'
-  ),
-  (
-    'I forgot my password.',
-    'Send us a message below from the email on your account and we\'ll help you get back in.'
-  ),
-];
+/// FAQ answers that match the live settings: guest reviews and Premium are admin switches, and
+/// the iOS app never talks about buying Premium (App Store rule 3.1.1).
+List<(String, String)> _faqs(AppSettings settings, {required bool sellsPremium}) => [
+      (
+        'How do you find these stalls?',
+        'Our team maps stalls from public sources and field visits, and the community suggests hidden gems. '
+            'Every suggestion is checked by a moderator before it goes live. Stalls with the Verified badge have '
+            'been checked by the HungryBird team.'
+      ),
+      (
+        'What makes a stall a "Hidden Gem"?',
+        'Hidden gems are much-loved local spots that rarely show up on big food apps — small carts, decades-old '
+            'shops and neighbourhood favourites.'
+      ),
+      if (settings.premium.enabled)
+        sellsPremium
+            ? (
+                'What is HungryBird Premium?',
+                'A pass that unlocks every Premium hidden gem — name, address and directions — and every food trail '
+                    'for a fixed number of days. You pay once with UPI; it never renews by itself, and buying again adds '
+                    'the days to your current pass. You need an account with a verified email.'
+              )
+            : (
+                'What does the "Premium" label mean?',
+                'Some hidden gems and food trails are part of HungryBird Premium. They unlock automatically on '
+                    'accounts that have Premium — just log in.'
+              ),
+      (
+        'I suggested a stall. When will it appear?',
+        'Usually within a few days. You can follow the status under Profile → My suggestions.'
+      ),
+      (
+        'Something about a stall is wrong.',
+        'Open the stall, tap the ⋮ menu and choose "Report a problem". Our moderators will fix it.'
+      ),
+      (
+        'Do I need an account?',
+        settings.allowGuestReviews
+            ? 'No. You can browse, save stalls on your phone and even post reviews as a guest. An account keeps your '
+                'saved list and reviews across devices.'
+            : 'Not to browse or save stalls on your phone. To post a review you need a free account, which also keeps '
+                'your saved list across devices.'
+      ),
+      (
+        'Why should I verify my email?',
+        'Verifying proves the address is yours, so we can send you a code if you ever forget your password'
+            '${settings.premium.enabled && sellsPremium ? ' — and it\'s needed to buy Premium' : ''}. Tap the '
+            '"Email not verified" banner on your profile to get a 6-digit code.'
+      ),
+      (
+        'I forgot my password.',
+        'On the Log in screen tap "Forgot password?" and enter your email. We\'ll send a 6-digit code to set a new '
+            'password. For your security this logs your account out on all devices.'
+      ),
+    ];
 
 class HelpScreen extends StatefulWidget {
   const HelpScreen({super.key});
@@ -97,7 +125,10 @@ class _HelpScreenState extends State<HelpScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final supportEmail = context.watch<AppConfigProvider>().settings.supportEmail;
+    final settings = context.watch<AppConfigProvider>().settings;
+    final supportEmail = settings.supportEmail;
+    final supportPhone = settings.supportPhone;
+    final faqs = _faqs(settings, sellsPremium: PremiumProvider.storeAllowed);
     return Scaffold(
       appBar: AppBar(title: const Text('Help & support')),
       body: ListView(
@@ -109,7 +140,7 @@ class _HelpScreenState extends State<HelpScreen> {
             clipBehavior: Clip.antiAlias,
             child: Column(
               children: [
-                for (final (q, a) in _faqs)
+                for (final (q, a) in faqs)
                   ExpansionTile(
                     shape: const Border(),
                     collapsedShape: const Border(),
@@ -170,12 +201,20 @@ class _HelpScreenState extends State<HelpScreen> {
                       : const Icon(Icons.send_rounded),
                   label: const Text('Send message'),
                 ),
-                const SizedBox(height: 8),
-                TextButton.icon(
-                  onPressed: () => Links.email(context, supportEmail, subject: 'HungryBird app support'),
-                  icon: const Icon(Icons.mail_outline_rounded),
-                  label: Text('Or email $supportEmail'),
-                ),
+                if (supportEmail.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: () => Links.email(context, supportEmail, subject: 'HungryBird app support'),
+                    icon: const Icon(Icons.mail_outline_rounded),
+                    label: Text('Or email $supportEmail'),
+                  ),
+                ],
+                if (supportPhone.isNotEmpty)
+                  TextButton.icon(
+                    onPressed: () => Links.call(context, supportPhone),
+                    icon: const Icon(Icons.call_outlined),
+                    label: Text('Or call $supportPhone'),
+                  ),
               ],
             ),
           ),

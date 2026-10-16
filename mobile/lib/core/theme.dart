@@ -24,6 +24,8 @@ class AppColors {
   static const star = Color(0xFFF59E0B);
   static const gem = Color(0xFF7C3AED);
   static const gemSoft = Color(0xFFEDE9FE);
+  static const premium = Color(0xFFB45309);
+  static const premiumSoft = Color(0xFFFEF3C7);
   static const success = Color(0xFF16A34A);
   static const successSoft = Color(0xFFDCFCE7);
   static const danger = Color(0xFFDC2626);

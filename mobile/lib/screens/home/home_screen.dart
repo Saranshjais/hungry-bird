@@ -6,14 +6,15 @@ import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
-import '../../models/app_content.dart';
 import '../../models/review.dart';
+import '../../models/trail.dart';
 import '../../models/vendor.dart';
 import '../../services/hungry_bird_api.dart';
 import '../../services/location_service.dart';
 import '../../state/app_config_provider.dart';
 import '../../state/city_provider.dart';
 import '../../state/notifications_provider.dart';
+import '../../state/premium_provider.dart';
 import '../../widgets/common.dart';
 import '../../widgets/vendor_cards.dart';
 import 'home_widgets.dart';
@@ -41,6 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String? _citySlug;
   String? _nearbyKey;
+  String? _unlockKey;
   late final LocationProvider _location;
 
   HungryBirdApi get _api => context.read<HungryBirdApi>();
@@ -50,7 +52,6 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _location = context.read<LocationProvider>();
     _location.addListener(_onLocationChanged);
-    _trailsAndCommunity();
     // The splash screen may already have a GPS fix before Home is built.
     if (_location.position != null) _onLocationChanged();
   }
@@ -59,9 +60,17 @@ class _HomeScreenState extends State<HomeScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final slug = context.watch<CityProvider>().selectedSlug;
-    if (slug != null && slug != _citySlug) {
+    // Gaining/losing Premium (or the admin switch) changes what the server locks.
+    final unlock = context.watch<PremiumProvider>().unlockKey;
+    final unlockChanged = _unlockKey != null && unlock != _unlockKey;
+    _unlockKey = unlock;
+    if (slug != null && (slug != _citySlug || unlockChanged)) {
       _citySlug = slug;
       _loadCitySections();
+    }
+    if (unlockChanged) {
+      _nearbyKey = null;
+      _onLocationChanged();
     }
   }
 
@@ -92,12 +101,15 @@ class _HomeScreenState extends State<HomeScreen> {
     final city = _citySlug;
     unawaited(_run(_gems, () async => (await _api.getVendors(city: city, hiddenGem: true, limit: 10)).vendors));
     unawaited(_run(_top, () async => (await _api.getVendors(city: city, sort: VendorSort.popular, limit: 6)).vendors));
+    if (city != null) {
+      // A previous city's trails must not linger while this city's load.
+      _trails.data = null;
+      unawaited(_run(_trails, () => _api.getTrails(city: city)));
+    }
+    _loadCommunity();
   }
 
-  void _trailsAndCommunity() {
-    unawaited(_run(_trails, _api.getTrails));
-    unawaited(_run(_community, _api.getCommunityReviews));
-  }
+  void _loadCommunity() => unawaited(_run(_community, () => _api.getCommunityReviews(city: _citySlug)));
 
   void _onLocationChanged() {
     final pos = _location.position;
@@ -117,7 +129,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final notifications = context.read<NotificationsProvider>();
     _nearbyKey = null;
     _loadCitySections();
-    _trailsAndCommunity();
     await Future.wait([
       config.load(),
       notifications.load(city: _citySlug),
@@ -141,8 +152,10 @@ class _HomeScreenState extends State<HomeScreen> {
             const SliverToBoxAdapter(child: HomeHeader()),
             if (announcement.isNotEmpty) SliverToBoxAdapter(child: AnnouncementStrip(text: announcement)),
             SliverToBoxAdapter(child: BannerCarousel(banners: config.banners)),
-            const SliverToBoxAdapter(child: SectionHeader(title: 'What are you craving?')),
-            SliverToBoxAdapter(child: CategoryStrip(categories: config.categories)),
+            if (config.categories.isNotEmpty) ...[
+              const SliverToBoxAdapter(child: SectionHeader(title: 'What are you craving?')),
+              SliverToBoxAdapter(child: CategoryStrip(categories: config.categories)),
+            ],
             SliverToBoxAdapter(
               child: SectionHeader(
                 title: 'Hidden gems 💎',

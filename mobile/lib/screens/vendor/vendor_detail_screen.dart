@@ -13,8 +13,10 @@ import '../../models/review.dart';
 import '../../models/vendor.dart';
 import '../../services/hungry_bird_api.dart';
 import '../../state/favorites_provider.dart';
+import '../../state/premium_provider.dart';
 import '../../widgets/common.dart';
 import '../../widgets/vendor_cards.dart';
+import '../premium/paywall.dart';
 import 'vendor_sheets.dart';
 
 class VendorDetailScreen extends StatefulWidget {
@@ -38,6 +40,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
   bool _collapsed = false;
   bool _showAllReviews = false;
   bool _expandAbout = false;
+  String? _unlockKey;
 
   @override
   void initState() {
@@ -47,6 +50,16 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
       if (collapsed != _collapsed) setState(() => _collapsed = collapsed);
     });
     _load();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Premium bought (or lost) while this page is open: reload the full / locked shape.
+    final unlock = context.watch<PremiumProvider>().unlockKey;
+    final changed = _unlockKey != null && unlock != _unlockKey;
+    _unlockKey = unlock;
+    if (changed) _load();
   }
 
   @override
@@ -63,7 +76,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
     try {
       final detail = await context.read<HungryBirdApi>().getVendor(widget.vendorId);
       if (!mounted) return;
-      context.read<FavoritesProvider>().reconcile(detail.vendor, detail.isFavorite);
+      if (!detail.locked) context.read<FavoritesProvider>().reconcile(detail.vendor, detail.isFavorite);
       setState(() {
         _vendor = detail.vendor;
         _reviews = detail.reviews;
@@ -113,6 +126,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
             : ErrorState(message: _error ?? 'Something went wrong.', onRetry: _load),
       );
     }
+    if (vendor.locked) return _LockedDetail(vendor: vendor, onRefresh: _load);
 
     final theme = Theme.of(context);
     return Scaffold(
@@ -130,10 +144,10 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
               title: AnimatedOpacity(
                 opacity: _collapsed ? 1 : 0,
                 duration: const Duration(milliseconds: 200),
-                child: Text(vendor.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                child: Text(vendor.displayName, maxLines: 1, overflow: TextOverflow.ellipsis),
               ),
               actions: [
-                _CircleAction(icon: Icons.ios_share_rounded, tooltip: 'Share', onTap: () => Links.shareVendor(vendor), plain: _collapsed),
+                _CircleAction(icon: Icons.ios_share_rounded, tooltip: 'Share', onTap: () => Links.shareVendor(context, vendor), plain: _collapsed),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: FavoriteButton(vendor: vendor, onImage: !_collapsed),
@@ -254,7 +268,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
             ],
           ),
           const SizedBox(height: 10),
-          Text(vendor.name, style: theme.textTheme.headlineSmall),
+          Text(vendor.displayName, style: theme.textTheme.headlineSmall),
           const SizedBox(height: 4),
           Text(
             [vendor.cuisineType, vendor.area, vendor.cityName].whereType<String>().toSet().join(' • '),
@@ -309,7 +323,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
     final actions = <(IconData, String, VoidCallback)>[
       (Icons.directions_rounded, 'Directions', () => Links.directions(context, vendor)),
       if (vendor.phone != null) (Icons.call_rounded, 'Call', () => Links.call(context, vendor.phone!)),
-      (Icons.ios_share_rounded, 'Share', () => Links.shareVendor(vendor)),
+      (Icons.ios_share_rounded, 'Share', () => Links.shareVendor(context, vendor)),
       (Icons.rate_review_rounded, 'Review', _writeReview),
     ];
     return Padding(
@@ -583,6 +597,79 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
               ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// A Premium hidden gem seen without Premium: what the server reveals, then the paywall.
+class _LockedDetail extends StatelessWidget {
+  const _LockedDetail({required this.vendor, required this.onRefresh});
+
+  final Vendor vendor;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurfaceVariant;
+    final meta = [vendor.area, vendor.category, vendor.cityName].whereType<String>().toSet().join(' • ');
+    return Scaffold(
+      appBar: AppBar(title: const Text('Premium hidden gem')),
+      body: RefreshIndicator(
+        onRefresh: onRefresh,
+        child: ListView(
+          padding: readableInsets(context, EdgeInsets.fromLTRB(16, 4, 16, 24 + MediaQuery.paddingOf(context).bottom)),
+          children: [
+            LockedImage(url: vendor.imageUrl, height: 200, radius: 22, lockSize: 30),
+            const SizedBox(height: 18),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      const VendorBadge(BadgeKind.premium),
+                      if (vendor.isHiddenGem) const VendorBadge(BadgeKind.hiddenGem),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(vendor.displayName, style: theme.textTheme.headlineSmall),
+                  if (meta.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(meta, style: theme.textTheme.bodyMedium?.copyWith(color: muted, fontWeight: FontWeight.w600)),
+                  ],
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      RatingPill(rating: vendor.rating, count: vendor.totalRatings),
+                      if (vendor.priceLevel != null)
+                        Text(vendor.priceLevel!, style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.w800)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            const SurfaceCard(
+              padding: EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  LockedHeading(title: 'Name, address & directions are Premium'),
+                  SizedBox(height: 14),
+                  PaywallPanel(),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

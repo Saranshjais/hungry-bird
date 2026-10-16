@@ -8,7 +8,6 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/api_client.dart';
-import '../../core/config.dart';
 import '../../core/formatters.dart';
 import '../../core/links.dart';
 import '../../core/theme.dart';
@@ -18,6 +17,7 @@ import '../../state/auth_provider.dart';
 import '../../state/city_provider.dart';
 import '../../state/favorites_provider.dart';
 import '../../state/preferences_provider.dart';
+import '../../state/premium_provider.dart';
 import '../../widgets/city_picker.dart';
 import '../../widgets/common.dart';
 
@@ -28,9 +28,13 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final auth = context.watch<AuthProvider>();
-    final settings = context.watch<AppConfigProvider>().settings;
+    final config = context.watch<AppConfigProvider>();
+    final settings = config.settings;
+    final premium = context.watch<PremiumProvider>();
     final storeUrl = defaultTargetPlatform == TargetPlatform.iOS ? settings.appStoreUrl : settings.playStoreUrl;
-    final websiteUrl = settings.websiteUrl.isNotEmpty ? settings.websiteUrl : AppConfig.websiteUrl;
+    final websiteUrl = config.websiteUrl;
+    // iOS only ever shows an existing pass (no "Get Premium": App Store rule 3.1.1).
+    final showPremium = premium.enabled && (premium.isPremium || PremiumProvider.storeAllowed);
 
     return Scaffold(
       body: SafeArea(
@@ -43,6 +47,14 @@ class ProfileScreen extends StatelessWidget {
               child: Text('Profile', style: theme.textTheme.headlineMedium),
             ),
             auth.isLoggedIn ? const _UserCard() : const _GuestCard(),
+            if (auth.needsEmailVerification) ...[
+              const SizedBox(height: 12),
+              _VerifyEmailBanner(email: auth.user!.email, forPremium: premium.enabled && PremiumProvider.storeAllowed),
+            ],
+            if (showPremium) ...[
+              const SizedBox(height: 12),
+              _PremiumCard(active: premium.isPremium, until: premium.premiumUntil),
+            ],
             const SizedBox(height: 20),
             _Section(
               title: 'Your activity',
@@ -312,6 +324,91 @@ class _GuestCard extends StatelessWidget {
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VerifyEmailBanner extends StatelessWidget {
+  const _VerifyEmailBanner({required this.email, required this.forPremium});
+
+  final String email;
+  final bool forPremium;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.brandSoft,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: AppColors.brandLight)),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.push('/verify-email'),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+          child: Row(
+            children: [
+              const Icon(Icons.mark_email_unread_outlined, color: AppColors.brandDark),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Email not verified', style: TextStyle(color: AppColors.ink, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Verify $email so you can always reset your password${forPremium ? ' and buy Premium' : ''}.',
+                      style: const TextStyle(color: AppColors.inkSoft, fontSize: 13, height: 1.35),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: AppColors.brandDark),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PremiumCard extends StatelessWidget {
+  const _PremiumCard({required this.active, required this.until});
+
+  final bool active;
+  final DateTime? until;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SurfaceCard(
+      onTap: () => context.push('/premium'),
+      padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: const BoxDecoration(color: AppColors.premiumSoft, shape: BoxShape.circle),
+            child: const Icon(Icons.workspace_premium_rounded, color: AppColors.premium),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(active ? 'Premium is active' : 'Get Premium', style: theme.textTheme.titleSmall),
+                const SizedBox(height: 2),
+                Text(
+                  active
+                      ? (until == null ? 'Every hidden gem and food trail is unlocked' : 'Unlocked until ${Fmt.date(until)}')
+                      : 'Unlock every hidden gem and food trail',
+                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right_rounded, color: theme.colorScheme.onSurfaceVariant),
         ],
       ),
     );

@@ -4,9 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
-import '../../core/config.dart';
 import '../../core/links.dart';
 import '../../core/theme.dart';
+import '../../state/app_config_provider.dart';
 import '../../state/auth_provider.dart';
 import '../../widgets/common.dart';
 import 'auth_widgets.dart';
@@ -25,9 +25,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _password = TextEditingController();
   final _confirm = TextEditingController();
   late final TapGestureRecognizer _termsTap = TapGestureRecognizer()
-    ..onTap = () => Links.open(context, '${AppConfig.websiteUrl}/terms', inApp: true);
+    ..onTap = () => Links.open(context, '${context.read<AppConfigProvider>().websiteUrl}/terms', inApp: true);
   late final TapGestureRecognizer _privacyTap = TapGestureRecognizer()
-    ..onTap = () => Links.open(context, '${AppConfig.websiteUrl}/privacy', inApp: true);
+    ..onTap = () => Links.open(context, '${context.read<AppConfigProvider>().websiteUrl}/privacy', inApp: true);
   bool _busy = false;
   String? _error;
 
@@ -50,16 +50,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _error = null;
     });
     try {
-      await context.read<AuthProvider>().register(_name.text, _email.text, _password.text);
+      final sent = await context.read<AuthProvider>().register(_name.text, _email.text, _password.text);
       if (!mounted) return;
       showSnack(context, 'Welcome to HungryBird, ${_name.text.trim().split(' ').first}!');
-      if (context.canPop()) {
-        context.pop();
-      } else {
-        context.go('/profile');
-      }
+      // Verifying is optional for browsing; the screen offers "I'll do this later".
+      context.pushReplacement(Uri(path: '/verify-email', queryParameters: {if (sent) 'sent': '1'}).toString());
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (mounted) setState(() => _error = authErrorMessage(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -111,6 +108,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     textInputAction: TextInputAction.next,
                     validator: validateNewPassword,
                   ),
+                  PasswordRulesHint(controller: _password),
                   const SizedBox(height: 14),
                   PasswordField(
                     controller: _confirm,

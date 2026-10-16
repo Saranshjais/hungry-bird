@@ -89,7 +89,11 @@ class SavedScreen extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   sliver: SliverVendorTiles(
                     itemCount: items.length,
-                    itemBuilder: (_, i) => VendorTile(vendor: items[i]),
+                    // Locked (Premium) stalls keep a heart so they can still be removed.
+                    itemBuilder: (_, i) => VendorTile(
+                      vendor: items[i],
+                      trailing: items[i].locked ? FavoriteButton(vendor: items[i], onImage: false, size: 20) : null,
+                    ),
                   ),
                 ),
               SliverToBoxAdapter(child: SizedBox(height: navBarSpace(context))),

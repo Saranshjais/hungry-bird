@@ -145,11 +145,20 @@ class Scenario {
     this.located = false,
     this.keyboard = false,
     this.modal = false,
+    this.backend = const Backend(),
+    this.platform,
     this.open,
   });
 
   final String name;
   final FixtureMode mode;
+
+  /// Premium / verification / error-code switches of the fake backend.
+  final Backend backend;
+
+  /// Forces this platform on every device (e.g. the iOS paywall on Samsung widths);
+  /// by default iOS devices run as iOS and the rest as Android.
+  final TargetPlatform? platform;
   final bool loggedIn;
   final bool onboarded;
   final bool located;
@@ -240,6 +249,8 @@ void _mockPlatform(WidgetTester tester, Scenario s) {
   final cacheDir = Directory.systemTemp.createTempSync('hb_responsive_').path;
   messenger.setMockMethodCallHandler(pathProvider, (_) async => cacheDir);
   addTearDown(() => messenger.setMockMethodCallHandler(pathProvider, null));
+  mockRazorpay(messenger);
+  addTearDown(() => messenger.setMockMethodCallHandler(razorpayChannel, null));
   for (final name in ['flutter.baseflow.com/geolocator', 'flutter.baseflow.com/geolocator_android']) {
     final channel = MethodChannel(name);
     messenger.setMockMethodCallHandler(channel, (call) async {
@@ -259,8 +270,29 @@ void _mockPlatform(WidgetTester tester, Scenario s) {
   }
 }
 
+/// `razorpay_flutter`'s platform channel: never reaches the real checkout.
+const razorpayChannel = MethodChannel('razorpay_flutter');
+
+/// Answers Razorpay Checkout with [result] (`{type: 0 success | 1 error, data: {...}}`).
+void mockRazorpay(TestDefaultBinaryMessenger messenger, {Map<String, Object?>? result, List<Map<dynamic, dynamic>>? opened}) {
+  messenger.setMockMethodCallHandler(razorpayChannel, (call) async {
+    switch (call.method) {
+      case 'open':
+        opened?.add(call.arguments as Map<dynamic, dynamic>);
+        return result ??
+            {
+              'type': 0,
+              'data': {'razorpay_payment_id': 'pay_TEST', 'razorpay_order_id': 'order_TEST123', 'razorpay_signature': 'sig_TEST'},
+            };
+      case 'resync':
+        return null;
+    }
+    return null;
+  });
+}
+
 /// Resizes the test view to [d]; returns true when the target platform flipped (needs a rebuild).
-bool _applyDevice(WidgetTester tester, DeviceSpec d, double scale, {required bool keyboard}) {
+bool _applyDevice(WidgetTester tester, DeviceSpec d, double scale, {required bool keyboard, TargetPlatform? platform}) {
   final view = tester.view;
   view.devicePixelRatio = d.dpr;
   view.physicalSize = d.size * d.dpr;
@@ -269,9 +301,9 @@ bool _applyDevice(WidgetTester tester, DeviceSpec d, double scale, {required boo
   view.padding = FakeViewPadding(top: d.top * d.dpr, bottom: keyboard ? 0 : d.bottom * d.dpr);
   view.viewInsets = keyboard ? FakeViewPadding(bottom: keyboardHeight * d.dpr) : FakeViewPadding.zero;
   tester.platformDispatcher.textScaleFactorTestValue = scale;
-  final platform = d.ios ? TargetPlatform.iOS : TargetPlatform.android;
-  final changed = debugDefaultTargetPlatformOverride != platform;
-  debugDefaultTargetPlatformOverride = platform;
+  final target = platform ?? (d.ios ? TargetPlatform.iOS : TargetPlatform.android);
+  final changed = debugDefaultTargetPlatformOverride != target;
+  debugDefaultTargetPlatformOverride = target;
   return changed;
 }
 
@@ -661,7 +693,7 @@ Future<Set<String>> _auditConfig(
   Set<String> errors,
 ) async {
   final issues = <String>{};
-  if (_applyDevice(tester, d, scale, keyboard: s.keyboard)) await _rebuildAll(tester);
+  if (_applyDevice(tester, d, scale, keyboard: s.keyboard, platform: s.platform)) await _rebuildAll(tester);
   try {
     await _auditLaidOut(tester, s, d, scale, issues);
   } on TypeError catch (e) {
@@ -761,10 +793,10 @@ void responsiveScenario(Scenario s, {List<DeviceSpec>? devices}) {
       _mockPlatform(tester, s);
       await _precacheAssets(tester);
       final first = matrix.first;
-      _applyDevice(tester, first, first.scales.first, keyboard: s.keyboard);
+      _applyDevice(tester, first, first.scales.first, keyboard: s.keyboard, platform: s.platform);
 
       final store = await LocalStore.create();
-      final api = HungryBirdApi(ApiClient(client: fakeBackend(s.mode), baseUrl: 'https://api.test'));
+      final api = HungryBirdApi(ApiClient(client: fakeBackend(s.mode, s.backend), baseUrl: 'https://api.test'));
       await tester.pumpWidget(HungryBirdApp(store: store, api: api));
       await settle(tester, const Duration(seconds: 2));
       try {

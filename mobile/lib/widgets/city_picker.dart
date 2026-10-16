@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/theme.dart';
 import '../state/city_provider.dart';
 import '../state/notifications_provider.dart';
+import 'common.dart';
 
 Future<void> showCityPicker(BuildContext context) {
   return showModalBottomSheet<void>(
@@ -65,7 +66,14 @@ class _CityPickerSheet extends StatelessWidget {
                           children: [
                             ClipRRect(
                               borderRadius: BorderRadius.circular(14),
-                              child: Image.asset(city.imageAsset, width: 56, height: 56, fit: BoxFit.cover),
+                              // Admin artwork, else bundled art for the launch cities, else a neutral tile.
+                              child: AppNetworkImage(
+                                url: city.imageUrl,
+                                fallbackAsset: city.imageAsset,
+                                placeholderIcon: Icons.location_city_rounded,
+                                width: 56,
+                                height: 56,
+                              ),
                             ),
                             const SizedBox(width: 14),
                             Expanded(

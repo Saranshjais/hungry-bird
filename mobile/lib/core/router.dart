@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../screens/about_screen.dart';
+import '../screens/auth/forgot_password_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
+import '../screens/auth/reset_password_screen.dart';
+import '../screens/auth/verify_email_screen.dart';
 import '../screens/explore_screen.dart';
 import '../screens/help_screen.dart';
 import '../screens/home/home_screen.dart';
@@ -11,6 +14,7 @@ import '../screens/main_shell.dart';
 import '../screens/map_screen.dart';
 import '../screens/notifications_screen.dart';
 import '../screens/onboarding_screen.dart';
+import '../screens/premium/premium_screen.dart';
 import '../screens/profile/change_password_screen.dart';
 import '../screens/profile/edit_profile_screen.dart';
 import '../screens/profile/my_reviews_screen.dart';
@@ -84,11 +88,38 @@ GoRouter buildRouter() {
       GoRoute(
         path: '/login',
         parentNavigatorKey: rootNavigatorKey,
-        builder: (_, state) => LoginScreen(reason: state.uri.queryParameters['reason']),
+        builder: (_, state) => LoginScreen(
+          reason: state.uri.queryParameters['reason'],
+          email: state.uri.queryParameters['email'],
+        ),
       ),
       GoRoute(path: '/register', parentNavigatorKey: rootNavigatorKey, builder: (_, __) => const RegisterScreen()),
+      GoRoute(
+        path: '/verify-email',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, state) => VerifyEmailScreen(codeSent: state.uri.queryParameters['sent'] == '1'),
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, state) => ForgotPasswordScreen(email: state.uri.queryParameters['email']),
+      ),
+      GoRoute(
+        path: '/reset-password',
+        parentNavigatorKey: rootNavigatorKey,
+        redirect: (_, state) => (state.uri.queryParameters['email'] ?? '').isEmpty ? '/forgot-password' : null,
+        builder: (_, state) => ResetPasswordScreen(
+          email: state.uri.queryParameters['email'] ?? '',
+          codeSent: state.uri.queryParameters['sent'] == '1',
+        ),
+      ),
+      GoRoute(path: '/premium', parentNavigatorKey: rootNavigatorKey, builder: (_, __) => const PremiumScreen()),
       GoRoute(path: '/notifications', parentNavigatorKey: rootNavigatorKey, builder: (_, __) => const NotificationsScreen()),
-      GoRoute(path: '/profile/edit', parentNavigatorKey: rootNavigatorKey, builder: (_, __) => const EditProfileScreen()),
+      GoRoute(
+        path: '/profile/edit',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, state) => EditProfileScreen(fromVerify: state.uri.queryParameters['from'] == 'verify'),
+      ),
       GoRoute(path: '/profile/password', parentNavigatorKey: rootNavigatorKey, builder: (_, __) => const ChangePasswordScreen()),
       GoRoute(path: '/profile/submissions', parentNavigatorKey: rootNavigatorKey, builder: (_, __) => const MySubmissionsScreen()),
       GoRoute(path: '/profile/reviews', parentNavigatorKey: rootNavigatorKey, builder: (_, __) => const MyReviewsScreen()),

@@ -68,7 +68,9 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                AppNetworkImage(url: r.vendorImageUrl, width: 60, height: 60, radius: 12),
+                                r.vendorLocked
+                                    ? LockedImage(url: r.vendorImageUrl, width: 60, height: 60, radius: 12, lockSize: 16)
+                                    : AppNetworkImage(url: r.vendorImageUrl, width: 60, height: 60, radius: 12),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(

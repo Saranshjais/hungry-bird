@@ -8,6 +8,9 @@ class AppUser {
     this.phone,
     this.notificationsEnabled = true,
     this.createdAt,
+    this.emailVerified = true,
+    this.isPremium = false,
+    this.premiumUntil,
   });
 
   final int id;
@@ -16,6 +19,17 @@ class AppUser {
   final String? phone;
   final bool notificationsEnabled;
   final DateTime? createdAt;
+  final bool emailVerified;
+
+  /// Server's `premium_until > now` at the time of the response (independent of the admin switch).
+  final bool isPremium;
+  final DateTime? premiumUntil;
+
+  /// Premium right now: a cached profile can outlive its pass, so trust the end date when known.
+  bool get hasActivePremium {
+    final until = premiumUntil;
+    return until != null ? until.isAfter(DateTime.now().toUtc()) : isPremium;
+  }
 
   factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
         id: asInt(json['id']),
@@ -24,6 +38,10 @@ class AppUser {
         phone: asString(json['phone']),
         notificationsEnabled: json['notifications_enabled'] == null ? true : asBool(json['notifications_enabled']),
         createdAt: Fmt.parseDate(json['created_at']),
+        // Servers from before email verification don't send the flag (and can't verify): no nagging.
+        emailVerified: json['email_verified'] == null ? true : asBool(json['email_verified']),
+        isPremium: asBool(json['is_premium']),
+        premiumUntil: Fmt.parseDate(json['premium_until']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -33,15 +51,21 @@ class AppUser {
         'phone': phone,
         'notifications_enabled': notificationsEnabled,
         'created_at': createdAt?.toUtc().toIso8601String(),
+        'email_verified': emailVerified,
+        'is_premium': isPremium,
+        'premium_until': premiumUntil?.toUtc().toIso8601String(),
       };
 
-  AppUser copyWith({String? name, String? email, String? phone, bool? notificationsEnabled}) => AppUser(
+  AppUser copyWith({String? name, String? email, String? phone, bool? notificationsEnabled, bool? emailVerified}) => AppUser(
         id: id,
         name: name ?? this.name,
         email: email ?? this.email,
         phone: phone ?? this.phone,
         notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
         createdAt: createdAt,
+        emailVerified: emailVerified ?? this.emailVerified,
+        isPremium: isPremium,
+        premiumUntil: premiumUntil,
       );
 }
 

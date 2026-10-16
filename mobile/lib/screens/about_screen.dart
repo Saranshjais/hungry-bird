@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:provider/provider.dart';
 
-import '../core/config.dart';
 import '../core/links.dart';
 import '../core/theme.dart';
+import '../state/app_config_provider.dart';
 import '../widgets/common.dart';
 
 class AboutScreen extends StatelessWidget {
@@ -12,6 +13,7 @@ class AboutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final socials = context.select<AppConfigProvider, List<(String, String)>>((c) => c.settings.socialLinks);
     return Scaffold(
       appBar: AppBar(title: const Text('About')),
       body: ListView(
@@ -36,7 +38,9 @@ class AboutScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'Every listing is checked by our team, and every suggestion and review comes from food lovers like you.',
+            'Listings come from our own research and from community suggestions, which a moderator reviews before '
+            'they go live. Stalls marked Verified have been checked by the HungryBird team, and every rating and '
+            'review comes from food lovers like you.',
             style: theme.textTheme.bodyLarge?.copyWith(height: 1.6, color: theme.colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 24),
@@ -48,8 +52,17 @@ class AboutScreen extends StatelessWidget {
                   leading: const Icon(Icons.language_rounded, color: AppColors.brand),
                   title: const Text('Visit our website'),
                   trailing: const Icon(Icons.open_in_new_rounded, size: 18),
-                  onTap: () => Links.open(context, AppConfig.websiteUrl),
+                  onTap: () => Links.open(context, Links.websiteUrl(context)),
                 ),
+                for (final (label, url) in socials) ...[
+                  const Divider(indent: 56),
+                  ListTile(
+                    leading: const Icon(Icons.public_rounded, color: AppColors.brand),
+                    title: Text('HungryBird on $label'),
+                    trailing: const Icon(Icons.open_in_new_rounded, size: 18),
+                    onTap: () => Links.open(context, url),
+                  ),
+                ],
                 const Divider(indent: 56),
                 ListTile(
                   leading: const Icon(Icons.map_outlined, color: AppColors.brand),

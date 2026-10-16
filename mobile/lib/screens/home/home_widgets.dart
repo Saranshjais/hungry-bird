@@ -10,10 +10,12 @@ import '../../core/links.dart';
 import '../../core/theme.dart';
 import '../../models/app_content.dart';
 import '../../models/review.dart';
+import '../../models/trail.dart';
 import '../../state/city_provider.dart';
 import '../../state/notifications_provider.dart';
 import '../../widgets/city_picker.dart';
 import '../../widgets/common.dart';
+import '../premium/paywall.dart';
 
 class HomeHeader extends StatefulWidget {
   const HomeHeader({super.key});
@@ -398,77 +400,23 @@ class TrailCard extends StatelessWidget {
 
   final FoodTrail trail;
 
-  void _open(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (sheetContext) {
-        final theme = Theme.of(sheetContext);
-        // Long trails scroll instead of overflowing short screens.
-        return SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(trail.title, style: theme.textTheme.titleLarge),
-                const SizedBox(height: 6),
-                if (trail.description != null)
-                  Text(trail.description!, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-                const SizedBox(height: 12),
-                Wrap(spacing: 8, children: [
-                  if (trail.duration != null)
-                    Chip(
-                      avatar: const Icon(Icons.schedule_rounded, size: 16),
-                      label: Text(trail.duration!, overflow: TextOverflow.ellipsis),
-                    ),
-                  if (trail.budget != null)
-                    Chip(
-                      avatar: const Icon(Icons.payments_outlined, size: 16),
-                      label: Text(trail.budget!, overflow: TextOverflow.ellipsis),
-                    ),
-                ]),
-                const SizedBox(height: 8),
-                Text('Stops', style: theme.textTheme.titleSmall),
-                const SizedBox(height: 4),
-                ...trail.stops.asMap().entries.map((e) => ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: CircleAvatar(
-                        radius: 14,
-                        backgroundColor: AppColors.brandSoft,
-                        child: Text('${e.key + 1}', style: const TextStyle(color: AppColors.brand, fontWeight: FontWeight.w800, fontSize: 13)),
-                      ),
-                      title: Text(e.value),
-                      trailing: const Icon(Icons.search_rounded),
-                      onTap: () {
-                        Navigator.of(sheetContext).pop();
-                        context.go(Uri(path: '/explore', queryParameters: {'q': e.value}).toString());
-                      },
-                    )),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final stops = trail.stopsLabel;
     return SizedBox(
       width: 280,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(22),
         child: Material(
           child: InkWell(
-            onTap: () => _open(context),
+            onTap: () => showTrailSheet(context, trail),
             child: Stack(
               fit: StackFit.expand,
               children: [
-                AppNetworkImage(url: trail.imageUrl),
+                if (trail.locked)
+                  LockedImage(url: trail.imageUrl, lockSize: 22)
+                else
+                  AppNetworkImage(url: trail.imageUrl, placeholderIcon: Icons.route_rounded),
                 const DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -484,10 +432,18 @@ class TrailCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(color: AppColors.brand, borderRadius: BorderRadius.circular(20)),
-                        child: Text('${trail.stops.length} stops', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          if (trail.locked) const VendorBadge(BadgeKind.premium, small: true),
+                          if (stops.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(color: AppColors.brand, borderRadius: BorderRadius.circular(20)),
+                              child: Text(stops, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -498,7 +454,9 @@ class TrailCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        [trail.duration, trail.budget].whereType<String>().join(' • '),
+                        [trail.duration, trail.price].whereType<String>().join(' • '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.w600),
                       ),
                     ],
@@ -511,6 +469,87 @@ class TrailCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A trail's details. Unlocked: its stops (a stop linked to a listed stall opens it).
+/// Locked (Premium): what it is and how many stops, plus the paywall.
+Future<void> showTrailSheet(BuildContext context, FoodTrail trail) {
+  return showModalBottomSheet<void>(
+    context: context,
+    useRootNavigator: true,
+    isScrollControlled: true,
+    useSafeArea: true,
+    builder: (sheetContext) {
+      final theme = Theme.of(sheetContext);
+      final muted = theme.colorScheme.onSurfaceVariant;
+      // Long trails scroll instead of overflowing short screens.
+      return SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (trail.locked) ...[
+                const Align(alignment: Alignment.centerLeft, child: VendorBadge(BadgeKind.premium)),
+                const SizedBox(height: 8),
+              ],
+              Text(trail.title, style: theme.textTheme.titleLarge),
+              if (trail.description != null) ...[
+                const SizedBox(height: 6),
+                Text(trail.description!, style: theme.textTheme.bodyMedium?.copyWith(color: muted)),
+              ],
+              if (trail.duration != null || trail.price != null) ...[
+                const SizedBox(height: 12),
+                Wrap(spacing: 8, runSpacing: 8, children: [
+                  if (trail.duration != null)
+                    Chip(
+                      avatar: const Icon(Icons.schedule_rounded, size: 16),
+                      label: Text(trail.duration!, overflow: TextOverflow.ellipsis),
+                    ),
+                  if (trail.price != null)
+                    Chip(
+                      avatar: const Icon(Icons.payments_outlined, size: 16),
+                      label: Text(trail.price!, overflow: TextOverflow.ellipsis),
+                    ),
+                ]),
+              ],
+              const SizedBox(height: 16),
+              if (trail.locked) ...[
+                LockedHeading(
+                  title: trail.stopsLabel.isEmpty ? 'Premium food trail' : '${trail.stopsLabel} to discover',
+                  subtitle: 'The stops are part of HungryBird Premium.',
+                ),
+                const SizedBox(height: 16),
+                PaywallPanel(onUnlocked: () => Navigator.of(sheetContext).pop()),
+              ] else if (trail.stops.isNotEmpty) ...[
+                Text('Stops', style: theme.textTheme.titleSmall),
+                const SizedBox(height: 4),
+                for (final (i, stop) in trail.stops.indexed)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: CircleAvatar(
+                      radius: 14,
+                      backgroundColor: AppColors.brandSoft,
+                      child: Text('${i + 1}', style: const TextStyle(color: AppColors.brand, fontWeight: FontWeight.w800, fontSize: 13)),
+                    ),
+                    title: Text(stop.name),
+                    subtitle: stop.note == null ? null : Text(stop.note!),
+                    trailing: stop.vendorId == null ? null : const Icon(Icons.chevron_right_rounded),
+                    onTap: stop.vendorId == null
+                        ? null
+                        : () {
+                            Navigator.of(sheetContext).pop();
+                            context.push('/vendor/${stop.vendorId}');
+                          },
+                  ),
+              ],
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }
 
 class CommunityReviewCard extends StatelessWidget {

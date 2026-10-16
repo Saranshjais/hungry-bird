@@ -8,7 +8,11 @@ import '../../widgets/common.dart';
 import '../auth/auth_widgets.dart';
 
 class EditProfileScreen extends StatefulWidget {
-  const EditProfileScreen({super.key});
+  const EditProfileScreen({super.key, this.fromVerify = false});
+
+  /// Opened from "Wrong email? Change it": pop `true` after an email change instead of
+  /// opening another verify screen.
+  final bool fromVerify;
 
   @override
   State<EditProfileScreen> createState() => _EditProfileScreenState();
@@ -19,6 +23,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late final TextEditingController _name;
   late final TextEditingController _email;
   late final TextEditingController _phone;
+  final _password = TextEditingController();
+  late final String _originalEmail;
   bool _busy = false;
   String? _error;
 
@@ -26,8 +32,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void initState() {
     super.initState();
     final user = context.read<AuthProvider>().user;
+    _originalEmail = user?.email ?? '';
     _name = TextEditingController(text: user?.name ?? '');
-    _email = TextEditingController(text: user?.email ?? '');
+    _email = TextEditingController(text: _originalEmail);
     _phone = TextEditingController(text: user?.phone ?? '');
   }
 
@@ -36,22 +43,38 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _name.dispose();
     _email.dispose();
     _phone.dispose();
+    _password.dispose();
     super.dispose();
   }
 
+  bool get _emailChanged => _email.text.trim().toLowerCase() != _originalEmail.toLowerCase();
+
   Future<void> _save() async {
     if (!_form.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      await context.read<AuthProvider>().updateProfile(name: _name.text, email: _email.text, phone: _phone.text);
+      final needsVerification = await context.read<AuthProvider>().updateProfile(
+            name: _name.text,
+            email: _email.text,
+            phone: _phone.text,
+            currentPassword: _emailChanged ? _password.text : null,
+          );
       if (!mounted) return;
-      showSnack(context, 'Profile updated');
-      context.pop();
+      if (!needsVerification) {
+        showSnack(context, 'Profile updated');
+        context.pop();
+      } else if (widget.fromVerify) {
+        context.pop(true);
+      } else {
+        showSnack(context, 'Profile updated. Now verify your new email.');
+        context.pushReplacement('/verify-email?sent=1');
+      }
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (mounted) setState(() => _error = authErrorMessage(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -59,6 +82,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Edit profile')),
       body: SafeArea(
@@ -80,9 +104,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               TextFormField(
                 controller: _email,
                 keyboardType: TextInputType.emailAddress,
+                autofocus: widget.fromVerify,
+                onChanged: (_) => setState(() {}),
                 decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.alternate_email_rounded)),
                 validator: validateEmail,
               ),
+              if (_emailChanged) ...[
+                const SizedBox(height: 14),
+                PasswordField(
+                  controller: _password,
+                  label: 'Current password',
+                  autofillHints: const [AutofillHints.password],
+                  validator: (v) => (v == null || v.isEmpty) ? 'Enter your current password to change your email' : null,
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8, left: 4),
+                  child: Text(
+                    'We\'ll send a 6-digit code to the new address to verify it.',
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                ),
+              ],
               const SizedBox(height: 14),
               TextFormField(
                 controller: _phone,
@@ -102,12 +144,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
                     : const Text('Save changes'),
               ),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: () => context.push('/profile/password'),
-                icon: const Icon(Icons.lock_reset_rounded),
-                label: const Text('Change password'),
-              ),
+              if (!widget.fromVerify) ...[
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () => context.push('/profile/password'),
+                  icon: const Icon(Icons.lock_reset_rounded),
+                  label: const Text('Change password'),
+                ),
+              ],
             ],
           ),
         ),

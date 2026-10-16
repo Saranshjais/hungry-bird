@@ -45,12 +45,8 @@ class CityProvider extends ChangeNotifier {
     _loading = true;
     notifyListeners();
     try {
+      // Active cities in the admin's order (sort_order, then name).
       final list = await _api.getCities();
-      // Cities with vendors first, then alphabetical.
-      list.sort((a, b) {
-        final byCount = (b.vendorCount > 0 ? 1 : 0).compareTo(a.vendorCount > 0 ? 1 : 0);
-        return byCount != 0 ? byCount : a.name.compareTo(b.name);
-      });
       _cities = list;
       _error = null;
       await _store.setJson(_kCache, list.map((c) => c.toJson()).toList());

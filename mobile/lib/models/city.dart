@@ -10,6 +10,7 @@ class City {
     this.lng,
     this.vendorCount = 0,
     this.description,
+    this.imageUrl,
   });
 
   final int id;
@@ -21,10 +22,13 @@ class City {
   final int vendorCount;
   final String? description;
 
-  /// Bundled artwork for launch cities; others fall back to a generic image.
-  String get imageAsset {
+  /// Admin-managed artwork; null → [imageAsset] or a neutral placeholder.
+  final String? imageUrl;
+
+  /// Bundled artwork for the three launch cities (null for every other city).
+  String? get imageAsset {
     const known = {'jaipur', 'delhi', 'mumbai'};
-    return known.contains(slug) ? 'assets/images/city_$slug.jpg' : 'assets/images/placeholder.jpg';
+    return known.contains(slug) ? 'assets/images/city_$slug.jpg' : null;
   }
 
   factory City.fromJson(Map<String, dynamic> json) => City(
@@ -35,7 +39,8 @@ class City {
         lat: asDouble(json['lat']),
         lng: asDouble(json['lng']),
         vendorCount: asInt(json['vendor_count']),
-        description: asString(json['desc']),
+        description: asString(json['description']) ?? asString(json['desc']),
+        imageUrl: asString(json['image_url']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -46,6 +51,7 @@ class City {
         'lat': lat,
         'lng': lng,
         'vendor_count': vendorCount,
-        'desc': description,
+        'description': description,
+        'image_url': imageUrl,
       };
 }

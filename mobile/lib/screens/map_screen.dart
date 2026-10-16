@@ -16,6 +16,7 @@ import '../models/vendor.dart';
 import '../services/hungry_bird_api.dart';
 import '../services/location_service.dart';
 import '../state/city_provider.dart';
+import '../state/premium_provider.dart';
 import '../widgets/common.dart';
 import '../widgets/vendor_cards.dart';
 
@@ -35,16 +36,23 @@ class _MapScreenState extends State<MapScreen> {
   bool _gemsOnly = false;
   Vendor? _selected;
   City? _city;
+  String? _unlockKey;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final city = context.watch<CityProvider>().selected;
+    // Premium gems only get coordinates once unlocked.
+    final unlock = context.watch<PremiumProvider>().unlockKey;
+    final unlockChanged = _unlockKey != null && unlock != _unlockKey;
+    _unlockKey = unlock;
     if (city != null && city.slug != _city?.slug) {
       _city = city;
       _selected = null;
       _load();
       if (_mapReady) _map.move(_cityCenter(city), 13);
+    } else if (unlockChanged && city != null) {
+      _load();
     }
   }
 
@@ -59,7 +67,8 @@ class _MapScreenState extends State<MapScreen> {
     try {
       final page = await context.read<HungryBirdApi>().getVendors(city: _city?.slug, limit: 500);
       if (!mounted) return;
-      setState(() => _vendors = page.vendors.where((v) => v.hasLocation).toList());
+      // Only pins with real coordinates (locked Premium gems never carry any).
+      setState(() => _vendors = page.vendors.where((v) => v.hasLocation && !v.locked).toList());
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {
@@ -377,7 +386,7 @@ class _PreviewCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(vendor.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall?.copyWith(fontSize: 16)),
+                        Text(vendor.displayName, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall?.copyWith(fontSize: 16)),
                         Text(
                           [vendor.subtitle, if (distance != null) '$distance away'].where((s) => s.isNotEmpty).join(' • '),
                           maxLines: 1,
