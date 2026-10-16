@@ -1,6 +1,10 @@
 import * as React from "react";
+import Link from "next/link";
 import { cn } from "@/lib/utils"; // Your utility for merging class names
 import { ArrowRight } from "lucide-react";
+
+// Shown underneath the city photo, so a missing / broken image still leaves a neutral card.
+const FALLBACK_IMAGE = "/city-placeholder.svg";
 
 // Define the props for the DestinationCard component
 interface DestinationCardProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -25,7 +29,7 @@ const DestinationCard = React.forwardRef<HTMLDivElement, DestinationCardProps>(
         className={cn("group w-full h-full", className)}
         {...props}
       >
-        <a
+        <Link
           href={href}
           className="relative block w-full h-full rounded-[1.25rem] overflow-hidden shadow-sm 
                      transition-all duration-500 ease-in-out 
@@ -36,7 +40,7 @@ const DestinationCard = React.forwardRef<HTMLDivElement, DestinationCardProps>(
           <div
             className="absolute inset-0 bg-cover bg-center 
                        transition-transform duration-700 ease-in-out group-hover:scale-110"
-            style={{ backgroundImage: `url(${imageUrl})` }}
+            style={{ backgroundImage: imageUrl && imageUrl !== FALLBACK_IMAGE ? `url("${imageUrl}"), url("${FALLBACK_IMAGE}")` : `url("${FALLBACK_IMAGE}")` }}
           />
 
           {/* Dark Base Gradient for Text Contrast */}
@@ -68,7 +72,7 @@ const DestinationCard = React.forwardRef<HTMLDivElement, DestinationCardProps>(
               <ArrowRight className="text-white h-5 w-5 transform transition-transform duration-300 group-hover:translate-x-1.5" />
             </div>
           </div>
-        </a>
+        </Link>
       </div>
     );
   }

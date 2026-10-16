@@ -1,65 +1,55 @@
 "use client";
 
-import { useState, useRef } from 'react';
-import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
-import { UtensilsCrossed, Star, MapPin, Heart, ArrowRight, Sun, MessageSquareQuote, Smile, ThumbsUp } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { motion, useScroll, useTransform } from 'framer-motion';
+import { Star, Heart, ArrowRight, Smile, ThumbsUp, Smartphone, MapPin } from 'lucide-react';
 import Link from 'next/link';
-import { FinancialHero } from '@/components/ui/hero-section';
-const TEAM = [
-  {
-    name: "Saransh Jaiswal",
-    role: "Founder & Developer",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400&auto=format&fit=crop",
-    favorites: [
-      { label: "Go-to Spot", value: "Jaipur, Rajasthan" },
-      { label: "Favorite Food", value: "Aloo Tikki, Dal baati" },
-      { label: "Spice Tolerance", value: "Extreme 🌶️🌶️🌶️" }
-    ]
-  },
-  {
-    name: "Priya Patel",
-    role: "Head of Discovery",
-    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=400&auto=format&fit=crop",
-    favorites: [
-      { label: "Go-to Spot", value: "Manek Chowk, Ahmedabad" },
-      { label: "Favorite Chaat", value: "Pani Puri (Sooji)" },
-      { label: "Spice Tolerance", value: "Moderate 🌶️" }
-    ]
-  },
-  {
-    name: "Amit Kumar",
-    role: "Top Reviewer",
-    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=400&auto=format&fit=crop",
-    favorites: [
-      { label: "Go-to Spot", value: "Bada Bazar, Kolkata" },
-      { label: "Favorite Chaat", value: "Jhalmuri" },
-      { label: "Spice Tolerance", value: "High 🌶️🌶️" }
-    ]
-  }
-];
+import { api } from '@/lib/api';
 
-const TESTIMONIALS = [
-  {
-    text: "“I never leave reviews, but I’ve been using HungryBird weekly for almost a year now... it is truly stellar. The recommendations are perfect and it feels so authentic.”",
-    name: "Vikram S."
-  },
-  {
-    text: "“Ok I LOVED this app! I found a 40-year-old chole bhature spot right in my neighborhood that I never knew existed. You can really tell the community puts thought into it.”",
-    name: "Aarti M."
-  },
-  {
-    text: "“Hands down my favorite food discovery platform. Everyone here is genuinely so passionate about street food.”",
-    name: "Karan D."
-  },
-  {
-    text: "“Best street food guide! Very reliable with multiple options. I love the clean interface and the fact that it highlights small vendors.”",
-    name: "Neha R."
-  }
-];
+// Approved platform reviews from /api/site-reviews (moderated in the admin panel).
+function useSiteReviews() {
+  const [reviews, setReviews] = useState([]);
+  useEffect(() => {
+    api('/api/site-reviews', { auth: false })
+      .then((d) => setReviews((d.site_reviews || []).filter((r) => r && r.review_text && r.author_name)))
+      .catch(() => setReviews([]));
+  }, []);
+  return reviews;
+}
+
+function TestimonialCard({ item, i, className = '' }) {
+  const isEven = i % 2 === 0;
+  const rotationClass = isEven ? 'rotate-2' : '-rotate-[3deg]';
+  return (
+    <div
+      className={`w-[min(320px,calc(100vw-3rem))] sm:w-[350px] shrink-0 bg-white rounded-3xl p-8 border border-stone-300 shadow-sm whitespace-normal flex flex-col justify-between transition-transform duration-300 hover:scale-105 hover:z-10 ${rotationClass} ${className}`}
+    >
+      <p className="text-stone-800 font-semibold leading-relaxed mb-8 text-sm break-words">
+        &ldquo;{item.review_text}&rdquo;
+      </p>
+      <div className="flex items-end justify-between mt-auto gap-3">
+        <div className="min-w-0">
+          <div className="font-black text-stone-900 text-xs uppercase tracking-widest break-words">{item.author_name}</div>
+          {Number(item.rating_value) > 0 && (
+            <div className="flex items-center gap-0.5 mt-1" aria-label={`${Number(item.rating_value)} out of 5`}>
+              {[1, 2, 3, 4, 5].map((s) => (
+                <Star key={s} size={11} className={Math.round(item.rating_value) >= s ? 'fill-brand-500 text-brand-500' : 'fill-stone-100 text-stone-200'} />
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="text-brand-500 bg-brand-50 p-2 rounded-full flex-shrink-0">
+          {i % 4 === 0 ? <Smile size={24} strokeWidth={1.5} /> : i % 4 === 1 ? <Star size={24} strokeWidth={1.5} /> : i % 4 === 2 ? <ThumbsUp size={24} strokeWidth={1.5} /> : <Heart size={24} strokeWidth={1.5} />}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function AboutPage() {
   const containerRef = useRef(null);
   const [activePic, setActivePic] = useState('markets');
+  const testimonials = useSiteReviews();
   
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -91,8 +81,8 @@ export default function AboutPage() {
               HungryBird isn't just a food app. It's a feeling. That electric energy of a bustling market, the smell of roasted spices, the sizzle of a hot tawa, and easy conversation over a paper plate: that's what we're capturing, every single day.
             </p>
             <div className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-white border border-stone-200 shadow-sm">
-              <Star className="text-brand-500 fill-brand-500" size={24} />
-              <span className="font-bold text-stone-800 tracking-tight">"The happiest way to explore!"</span>
+              <MapPin className="text-brand-500 flex-shrink-0" size={24} />
+              <span className="font-bold text-stone-800 tracking-tight">Bhaiya! Hungry Bird Pe Ho Kya?</span>
             </div>
           </motion.div>
 
@@ -131,23 +121,6 @@ export default function AboutPage() {
       {/* ── 2. The Creator (The Guy Behind the Bagels Inspired) ── */}
       <section className="py-32 bg-brand-50 relative overflow-hidden flex items-center justify-center min-h-[80vh] border-y border-stone-200">
         
-        {/* Tilted Image - Absolute Positioned on the left */}
-        <motion.div 
-          initial={{ opacity: 0, rotate: -15, x: -100 }}
-          whileInView={{ opacity: 1, rotate: -6, x: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8, type: "spring" }}
-          className="hidden lg:block absolute left-[5%] xl:left-[10%] top-1/2 -translate-y-1/2 z-20"
-        >
-          <div className="w-[280px] h-[400px] rounded-3xl overflow-hidden shadow-2xl border-[8px] border-white/50 bg-white">
-            <img 
-              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=600&auto=format&fit=crop" 
-              alt="Saransh Jaiswal" 
-              className="w-full h-full object-cover"
-            />
-          </div>
-        </motion.div>
-
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center flex flex-col items-center">
           <div className="text-brand-500 text-2xl md:text-3xl mb-4 italic font-bold" style={{ fontFamily: 'cursive' }}>
             Building Spaces Foodies Love
@@ -232,53 +205,60 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* ── 4. Testimonials Marquee (What People Are Saying) ── */}
-      <section className="py-24 bg-brand-50 overflow-hidden">
-        <div className="text-center mb-16">
-          <div className="text-brand-600 font-bold uppercase tracking-widest text-sm mb-2">Kind Words from Wonderful People</div>
-          <h2 className="text-4xl md:text-5xl font-black text-stone-900">What People are Saying.</h2>
-        </div>
+      {/* ── 4. Testimonials (approved reviews of HungryBird; hidden until there are some) ── */}
+      {testimonials.length > 0 && (
+        <section className="py-24 bg-brand-50 overflow-hidden">
+          <div className="text-center mb-16 px-4">
+            <div className="text-brand-600 font-bold uppercase tracking-widest text-sm mb-2">Kind Words from Wonderful People</div>
+            <h2 className="text-4xl md:text-5xl font-black text-stone-900">What People are Saying.</h2>
+            <Link href="/reviews" className="inline-flex items-center gap-1.5 mt-5 text-sm font-bold text-brand-600 hover:text-brand-700 py-2">
+              Read all reviews <ArrowRight size={14} />
+            </Link>
+          </div>
 
-        <div className="relative flex overflow-x-hidden group py-8">
-          <div className="animate-marquee flex gap-8 px-4 whitespace-nowrap items-center group-hover:pause-animate">
-            {TESTIMONIALS.concat(TESTIMONIALS).map((item, i) => {
-              const isEven = i % 2 === 0;
-              const rotationClass = isEven ? 'rotate-2' : '-rotate-[3deg]';
-              return (
-              <div 
-                key={i} 
-                className={`w-[320px] sm:w-[350px] shrink-0 bg-white rounded-3xl p-8 border border-stone-300 shadow-sm whitespace-normal flex flex-col justify-between transition-transform duration-300 hover:scale-105 hover:z-10 ${rotationClass}`}
-              >
-                <p className="text-stone-800 font-semibold leading-relaxed mb-8 text-sm">
-                  {item.text}
-                </p>
-                <div className="flex items-end justify-between mt-auto">
-                  <div className="font-black text-stone-900 text-xs uppercase tracking-widest">{item.name}</div>
-                  <div className="text-brand-500 bg-brand-50 p-2 rounded-full">
-                    {i % 4 === 0 ? <Smile size={24} strokeWidth={1.5} /> : i % 4 === 1 ? <Star size={24} strokeWidth={1.5} /> : i % 4 === 2 ? <ThumbsUp size={24} strokeWidth={1.5} /> : <Heart size={24} strokeWidth={1.5} />}
-                  </div>
-                </div>
+          {testimonials.length >= 4 ? (
+            <div className="relative flex overflow-x-hidden group py-8">
+              <div className="animate-marquee flex gap-8 px-4 whitespace-nowrap items-center group-hover:pause-animate">
+                {testimonials.concat(testimonials).map((item, i) => (
+                  <TestimonialCard key={`${item.id}-${i}`} item={item} i={i} />
+                ))}
               </div>
-            )})}
+            </div>
+          ) : (
+            <div className="flex flex-wrap justify-center gap-8 px-4 py-8">
+              {testimonials.map((item, i) => <TestimonialCard key={item.id} item={item} i={i} />)}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* ── Call to Action ── */}
+      <section className="relative overflow-hidden bg-stone-950 text-white">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-500/20 rounded-full blur-[120px] pointer-events-none" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="text-center lg:text-left">
+            <img src="/logo.png" alt="HungryBird" className="h-24 w-auto object-contain mx-auto lg:mx-0 mb-6 drop-shadow-lg" />
+            <h2 className="text-4xl md:text-5xl font-black text-white leading-tight tracking-tight mb-5">
+              Ready to explore your <br className="hidden sm:block" />
+              <span className="text-brand-500">city&apos;s street food?</span>
+            </h2>
+            <p className="text-lg mb-8 max-w-xl mx-auto lg:mx-0" style={{ color: '#a8a29e' }}>
+              Find stalls near you, save your favourites and share the hidden gems only locals know about.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
+              <Link href="/download" className="btn-orange">
+                <Smartphone size={16} /> Get the app
+              </Link>
+              <Link href="/#cities" className="btn-ghost">
+                Explore cities <ArrowRight size={16} />
+              </Link>
+            </div>
+          </div>
+          <div className="relative max-w-xl w-full mx-auto">
+            <img src="/3-phones-1.png" alt="The HungryBird app on three phones" className="w-full h-auto drop-shadow-2xl" loading="lazy" />
           </div>
         </div>
       </section>
-
-      {/* ── Call to Action ── */}
-      <FinancialHero
-        title={
-          <>
-            Ready to Transform Your <br />
-            <span className="text-brand-500">Street Food Experience?</span>
-          </>
-        }
-        description="Experience the future of discovery with our cutting-edge app. Start optimizing your culinary adventures today!"
-        buttonText="Download app"
-        buttonLink="/download"
-        imageUrl1="https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=900&auto=format&fit=crop"
-        imageUrl2="https://images.unsplash.com/photo-1601050690597-df0568f70950?q=80&w=900&auto=format&fit=crop"
-      />
-      
     </div>
   );
 }

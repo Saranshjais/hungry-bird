@@ -1,5 +1,8 @@
+import { LEGAL_LAST_UPDATED } from '../../lib/site';
+
 export const metadata = {
   title: 'Cookie Policy | HungryBird',
+  alternates: { canonical: '/cookies' },
 };
 
 export default function CookiePage() {
@@ -7,7 +10,7 @@ export default function CookiePage() {
     <div className="min-h-screen bg-stone-50 pt-28 pb-20 px-4">
       <div className="max-w-3xl mx-auto bg-white p-8 md:p-12 rounded-3xl shadow-sm border border-stone-100">
         <h1 className="text-3xl md:text-4xl font-black text-stone-900 mb-2">Cookie Policy</h1>
-        <p className="text-stone-500 mb-8 font-medium">Last updated: {new Date().toLocaleDateString()}</p>
+        <p className="text-stone-500 mb-8 font-medium">Last updated: {LEGAL_LAST_UPDATED}</p>
         
         <div className="prose prose-stone max-w-none text-stone-600 space-y-6 leading-relaxed">
           <section>
@@ -28,7 +31,7 @@ export default function CookiePage() {
             <ul className="list-disc pl-5 mt-2 space-y-2">
               <li>To enable certain functions of the Service</li>
               <li>To provide analytics</li>
-              <li>To store your preferences (such as Admin login sessions)</li>
+              <li>To keep you logged in and remember small preferences (such as a dismissed announcement), using your browser&apos;s local storage</li>
             </ul>
           </section>
 
@@ -36,8 +39,9 @@ export default function CookiePage() {
             <h2 className="text-xl font-bold text-stone-900 mb-3">3. Third-Party Cookies</h2>
             <p>
               In addition to our own cookies, we may also use various third-parties cookies to report usage statistics of the 
-              Service, deliver advertisements on and through the Service, and so on. Specifically, we use mapping services 
-              (such as OpenStreetMap/Leaflet or Google Maps) which may utilize cookies to enhance map rendering and analytics.
+              Service, and so on. Specifically, we use mapping services (such as OpenStreetMap/Leaflet or Google Maps) which may
+              utilize cookies to enhance map rendering, and when you buy HungryBird Premium the Razorpay payment window may set
+              cookies needed to process the payment securely.
             </p>
           </section>
 

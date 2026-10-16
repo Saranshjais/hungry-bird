@@ -1,10 +1,18 @@
 "use client";
 
 import { motion } from 'framer-motion';
-import Image from 'next/image';
-import { Apple, Play, Download, Star, CheckCircle2 } from 'lucide-react';
+import Link from 'next/link';
+import { Apple, Play, Smartphone, CheckCircle2, Clock } from 'lucide-react';
+import { useConfig } from '../../context/ConfigContext';
+
+const isUrl = (u) => /^https?:\/\//i.test(u || '');
 
 export default function DownloadPage() {
+  const config = useConfig();
+  const appStore = isUrl(config.appStoreUrl) ? config.appStoreUrl : '';
+  const playStore = isUrl(config.playStoreUrl) ? config.playStoreUrl : '';
+  const noStores = config.loaded && !appStore && !playStore;
+
   return (
     <div className="min-h-screen bg-stone-50 pt-24 pb-16 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -18,9 +26,9 @@ export default function DownloadPage() {
             transition={{ duration: 0.6 }}
             className="flex flex-col gap-6 lg:pr-12"
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-100 text-brand-600 font-bold text-sm w-max mb-4">
-              <Star size={16} fill="currentColor" />
-              <span>Rated 4.9/5 by Foodies</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-100 text-brand-600 font-bold text-sm w-max max-w-full mb-4">
+              <Smartphone size={16} className="flex-shrink-0" />
+              <span>Street food, wherever you are</span>
             </div>
             
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-stone-900 leading-tight">
@@ -31,24 +39,40 @@ export default function DownloadPage() {
               Discover hidden gems, legendary street stalls, and local favourites hand-picked by India's food community. Your ultimate street food companion.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 mt-4">
-              <button className="flex items-center justify-center gap-3 bg-stone-900 hover:bg-stone-800 text-white px-6 py-4 rounded-2xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">
-                <Apple size={28} />
-                <div className="flex flex-col items-start text-left">
-                  <span className="text-xs text-stone-300 font-medium leading-none mb-1">Download on the</span>
-                  <span className="text-lg font-bold leading-none">App Store</span>
-                </div>
-              </button>
-              
-              <button className="flex items-center justify-center gap-3 bg-brand-500 hover:bg-brand-600 text-white px-6 py-4 rounded-2xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 shadow-brand-500/20">
-                <Play size={28} fill="currentColor" className="text-white" />
-                <div className="flex flex-col items-start text-left">
-                  <span className="text-xs text-white/80 font-medium leading-none mb-1">GET IT ON</span>
-                  <span className="text-lg font-bold leading-none">Google Play</span>
-                </div>
-              </button>
-            </div>
-            
+            {(appStore || playStore) && (
+              <div className="flex flex-col sm:flex-row gap-4 mt-4">
+                {appStore && (
+                  <a href={appStore} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-3 bg-stone-900 hover:bg-stone-800 text-white px-6 py-4 rounded-2xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">
+                    <Apple size={28} />
+                    <div className="flex flex-col items-start text-left">
+                      <span className="text-xs text-stone-300 font-medium leading-none mb-1">Download on the</span>
+                      <span className="text-lg font-bold leading-none">App Store</span>
+                    </div>
+                  </a>
+                )}
+
+                {playStore && (
+                  <a href={playStore} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-3 bg-brand-500 hover:bg-brand-600 text-white px-6 py-4 rounded-2xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 shadow-brand-500/20">
+                    <Play size={28} fill="currentColor" className="text-white" />
+                    <div className="flex flex-col items-start text-left">
+                      <span className="text-xs text-white/80 font-medium leading-none mb-1">GET IT ON</span>
+                      <span className="text-lg font-bold leading-none">Google Play</span>
+                    </div>
+                  </a>
+                )}
+              </div>
+            )}
+
+            {noStores && (
+              <div className="mt-4 flex items-start gap-3 bg-white border border-stone-200 rounded-2xl p-4 max-w-lg">
+                <Clock size={20} className="text-brand-500 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-stone-600 m-0">
+                  The app is coming soon to Android and iOS. Until then, everything works right here on the website —{' '}
+                  <Link href="/#cities" className="font-bold text-brand-600 hover:text-brand-700">start exploring</Link>.
+                </p>
+              </div>
+            )}
+
             <div className="mt-8 space-y-3">
               {[
                 "Find street food near your exact location",
@@ -115,21 +139,6 @@ export default function DownloadPage() {
                 </div>
               </div>
             </div>
-            
-            {/* Floating badges */}
-            <motion.div 
-              animate={{ y: [-5, 5, -5] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-              className="absolute top-1/4 -left-4 sm:-left-8 bg-white p-4 rounded-2xl shadow-xl flex items-center gap-3 z-20"
-            >
-              <div className="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
-                <Download size={20} />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-stone-900">100K+</p>
-                <p className="text-xs text-stone-500 font-medium">Downloads</p>
-              </div>
-            </motion.div>
             
           </div>
           

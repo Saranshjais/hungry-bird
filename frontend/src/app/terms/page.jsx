@@ -1,5 +1,9 @@
+import Link from 'next/link';
+import { LEGAL_LAST_UPDATED } from '../../lib/site';
+
 export const metadata = {
   title: 'Terms of Service | HungryBird',
+  alternates: { canonical: '/terms' },
 };
 
 export default function TermsPage() {
@@ -7,7 +11,7 @@ export default function TermsPage() {
     <div className="min-h-screen bg-stone-50 pt-28 pb-20 px-4">
       <div className="max-w-3xl mx-auto bg-white p-8 md:p-12 rounded-3xl shadow-sm border border-stone-100">
         <h1 className="text-3xl md:text-4xl font-black text-stone-900 mb-2">Terms of Service</h1>
-        <p className="text-stone-500 mb-8 font-medium">Last updated: {new Date().toLocaleDateString()}</p>
+        <p className="text-stone-500 mb-8 font-medium">Last updated: {LEGAL_LAST_UPDATED}</p>
         
         <div className="prose prose-stone max-w-none text-stone-600 space-y-6 leading-relaxed">
           <section>
@@ -28,7 +32,25 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-bold text-stone-900 mb-3">3. Disclaimer of Warranties</h2>
+            <h2 className="text-xl font-bold text-stone-900 mb-3">3. Your Account</h2>
+            <p>
+              You are responsible for keeping your password safe and for activity on your account. We email you one-time codes to
+              verify your email address and to reset your password; never share these codes. You can delete your account at any time on
+              the <Link href="/account/delete" className="font-bold text-brand-600">account deletion page</Link>.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold text-stone-900 mb-3">4. Premium Passes</h2>
+            <p>
+              When offered, HungryBird Premium is sold as a one-time pass for the number of days shown before you pay. Payments are
+              processed by Razorpay. A pass does not renew automatically; buying another pass adds its days to your current Premium
+              period. Premium is linked to your HungryBird account and ends if the account is deleted.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold text-stone-900 mb-3">5. Disclaimer of Warranties</h2>
             <p>
               HungryBird is provided on an "as is" and "as available" basis. We do not guarantee the accuracy, completeness, or usefulness 
               of any information on the site. We are not responsible for the food quality, hygiene, or business practices of any vendor 
@@ -37,7 +59,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-bold text-stone-900 mb-3">4. Limitation of Liability</h2>
+            <h2 className="text-xl font-bold text-stone-900 mb-3">6. Limitation of Liability</h2>
             <p>
               HungryBird shall not be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, 
               loss of profits, data, use, goodwill, or other intangible losses, resulting from your access to or use of or inability to access 
@@ -46,7 +68,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-bold text-stone-900 mb-3">5. Changes to Terms</h2>
+            <h2 className="text-xl font-bold text-stone-900 mb-3">7. Changes to Terms</h2>
             <p>
               We reserve the right, at our sole discretion, to modify or replace these Terms at any time. What constitutes a material change 
               will be determined at our sole discretion.

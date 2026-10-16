@@ -1,40 +1,18 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import axios from 'axios';
-import { Sparkles, ChevronRight, MapPin, Star, TrendingUp, Users, Award, ArrowDown, Flame, X, Camera } from 'lucide-react';
+import { ChevronRight, MapPin, Star, TrendingUp, Award, Flame, ArrowRight, Store, RefreshCw, MapPinned, MessageSquarePlus, ShieldCheck, Crown } from 'lucide-react';
 import { DestinationCard } from "@/components/ui/card-21";
 import ReelsSection from '@/components/ReelsSection';
-function Counter({ end, suffix = '', decimals = 0 }) {
-  const [val, setVal] = useState(0);
-
-  useEffect(() => {
-    let start = 0;
-    const duration = 1500;
-    const startTime = performance.now();
-
-    const animate = (now) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      
-      // Ease out quad
-      const easeProgress = progress * (2 - progress);
-      const current = easeProgress * end;
-      
-      setVal(decimals ? parseFloat(current.toFixed(decimals)) : Math.round(current));
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      }
-    };
-
-    requestAnimationFrame(animate);
-  }, [end, decimals]);
-
-  return <span>{val}{suffix}</span>;
-}
+import LockedVendorCard from '@/components/vendors/LockedVendorCard';
+import { useConfig } from '@/context/ConfigContext';
+import { useAuth } from '@/context/AuthContext';
+import { useCategories, useCities } from '@/lib/hooks';
+import { api, errorMessage } from '@/lib/api';
+import { cityImage } from '@/lib/site';
+import { formatRating, isLocked, vendorArea, vendorCategory, vendorImageOrPlaceholder, vendorPrice } from '@/lib/vendors';
 
 const THEME_COLORS = [
   "22 100% 50%", // Orange
@@ -48,7 +26,9 @@ const THEME_COLORS = [
 function CityCard({ city, index }) {
   const isHero = index === 0;
   const color = THEME_COLORS[index % THEME_COLORS.length];
-  
+  const count = Number(city.vendor_count) || 0;
+  const stats = city.description || city.desc || (count > 0 ? `${count} ${count === 1 ? 'stall' : 'stalls'} to explore` : 'Street food guide');
+
   return (
     <div
       className={
@@ -56,9 +36,9 @@ function CityCard({ city, index }) {
       }
     >
       <DestinationCard
-        imageUrl={`/city-${city.slug}.png`}
+        imageUrl={cityImage(city)}
         location={city.name}
-        stats={city.desc || 'Legendary Street Food'}
+        stats={stats}
         href={`/city/${city.slug}`}
         themeColor={color}
       />
@@ -66,95 +46,104 @@ function CityCard({ city, index }) {
   );
 }
 
+function SpecialtyCard({ vendor }) {
+  const premiumOn = useConfig().premium.enabled;
+  if (isLocked(vendor)) return <LockedVendorCard vendor={vendor} />;
+  const category = vendorCategory(vendor);
+  const rating = formatRating(vendor);
+  const price = vendorPrice(vendor);
+  const area = vendorArea(vendor);
+
+  return (
+    <Link href={`/vendor/${vendor.id}`} className="card group cursor-pointer flex flex-col h-full">
+      <div className="relative h-48 overflow-hidden bg-stone-100">
+        <img src={vendorImageOrPlaceholder(vendor)} alt={vendor.name || ''} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+        {category && (
+          <div className="absolute top-3 left-3 max-w-[calc(100%-1.5rem)] truncate bg-white/90 backdrop-blur-sm text-brand-600 font-bold px-3 py-1 rounded-full text-xs shadow-sm">
+            {category}
+          </div>
+        )}
+        {premiumOn && vendor.is_premium && (
+          <div className="absolute top-3 right-3 bg-amber-400 text-stone-900 font-black px-2 py-0.5 rounded-full text-[10px] shadow-sm flex items-center gap-1">
+            <Crown size={10} /> Premium
+          </div>
+        )}
+      </div>
+      <div className="p-5 flex flex-col flex-1">
+        <div className="flex justify-between items-start gap-3 mb-1">
+          <h4 className="font-extrabold text-stone-900 text-lg leading-tight min-w-0 break-words group-hover:text-brand-600 transition-colors">{vendor.name}</h4>
+          {rating ? <span className="star-badge flex-shrink-0">★ {rating}</span> : <span className="text-[10px] font-bold text-stone-400 bg-stone-100 px-2 py-0.5 rounded-md flex-shrink-0">New</span>}
+        </div>
+        {area && <p className="text-sm text-stone-500 m-0 flex items-center gap-1"><MapPin size={12} className="text-brand-500 flex-shrink-0" /> <span className="truncate">{area}</span></p>}
+        {price && (
+          <div className="flex justify-between items-center gap-3 mt-auto pt-3 border-t border-stone-100" style={{ marginTop: 'auto' }}>
+            <span className="text-stone-500 font-medium text-sm">Price</span>
+            <span className="text-brand-600 font-bold text-right">{price}</span>
+          </div>
+        )}
+      </div>
+    </Link>
+  );
+}
+
+function StateBox({ icon: Icon, title, text, action }) {
+  return (
+    <div className="panel bg-white p-10 text-center max-w-xl mx-auto">
+      <div className="w-12 h-12 rounded-full bg-stone-50 border border-stone-200 flex items-center justify-center mx-auto mb-4">
+        <Icon size={20} className="text-stone-400" />
+      </div>
+      <h3 className="text-lg font-extrabold text-stone-900 mb-2">{title}</h3>
+      {text && <p className="text-sm text-stone-500 mb-6">{text}</p>}
+      {action}
+    </div>
+  );
+}
+
+const HOW_IT_WORKS = [
+  { Icon: MapPinned, title: 'Drop a pin', text: 'Mark the stall on the map, or use your current location.' },
+  { Icon: MessageSquarePlus, title: "Tell us what's good", text: 'Add its name, what it serves and your rating.' },
+  { Icon: ShieldCheck, title: 'We take a look', text: 'Our team reviews every suggestion before it goes live.' },
+];
+
 export default function HomePage() {
-  const [cities, setCities] = useState([]);
-  const [vendors, setVendors] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [lightboxImage, setLightboxImage] = useState(null);
+  const config = useConfig();
+  const { user } = useAuth();
+  const { cities, loading: citiesLoading, error: citiesError, reload: reloadCities } = useCities();
+  const { categories } = useCategories();
+  const [activeCategory, setActiveCategory] = useState(null); // category slug or null = All
+  const [feed, setFeed] = useState({ loading: true, error: null, vendors: [] });
+  const [feedKey, setFeedKey] = useState(0);
+
+  // Admin's default city first (falls back to the first active city).
+  const orderedCities = useMemo(() => {
+    const list = [...cities];
+    const i = list.findIndex(c => c.slug === config.defaultCity);
+    if (i > 0) list.unshift(list.splice(i, 1)[0]);
+    return list;
+  }, [cities, config.defaultCity]);
+
+  const homeCity = config.loaded && !citiesLoading ? (orderedCities[0] || null) : null;
+  const waitingForCity = !config.loaded || citiesLoading;
 
   useEffect(() => {
-    let isMounted = true;
-    
-    async function fetchData() {
-      try {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
-        
-        const [citiesRes, vendorsRes] = await Promise.all([
-          axios.get(`${API_URL}/api/cities?t=${Date.now()}`, { timeout: 5000 }).catch(() => null),
-          axios.get(`${API_URL}/api/vendors?city=jaipur&limit=18`, { timeout: 5000 }).catch(() => null)
-        ]);
+    if (!homeCity) return undefined;
+    let alive = true;
+    setFeed(f => ({ ...f, loading: true, error: null }));
+    const cat = activeCategory ? `&category=${encodeURIComponent(activeCategory)}` : '';
+    api(`/api/vendors?city=${encodeURIComponent(homeCity.slug)}&limit=18${cat}`, { timeout: 30000 })
+      .then(d => alive && setFeed({ loading: false, error: null, vendors: d.vendors || [] }))
+      .catch(err => alive && setFeed({ loading: false, error: err, vendors: [] }));
+    return () => { alive = false; };
+  }, [homeCity?.slug, activeCategory, feedKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-        if (!isMounted) return;
-
-        if (citiesRes?.data?.cities) {
-          const list = citiesRes.data.cities;
-          const jaipurIndex = list.findIndex(c => c.slug === 'jaipur');
-          if (jaipurIndex > -1) {
-            const jaipur = list.splice(jaipurIndex, 1)[0];
-            list.unshift(jaipur);
-          }
-          setCities(list);
-        }
-
-        if (vendorsRes?.data?.vendors) {
-          setVendors(vendorsRes.data.vendors);
-        }
-      } catch (err) {
-        console.warn('Backend offline - falling back to default view state.', err);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    }
-
-    fetchData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const mapCategory = (cat) => {
-    if (!cat) return 'Snacks';
-    const c = cat.toLowerCase();
-    if (c.includes('chaat') || c.includes('patashi')) return 'Chaat';
-    if (c.includes('sweet') || c.includes('ghewar') || c.includes('kulfi') || c.includes('lassi')) return 'Sweets';
-    if (c.includes('eatery') || c.includes('traditional') || c.includes('meal')) return 'Meals';
-    if (c.includes('chai') || c.includes('tea') || c.includes('snack') || c.includes('samosa') || c.includes('kachori')) return 'Snacks';
-    return 'Snacks';
-  };
-
-  const formattedVendors = vendors.length > 0 
-    ? vendors.map(v => ({
-        id: v.id,
-        name: v.name,
-        category: mapCategory(v.food_category || v.cuisine_type),
-        rawCategory: v.food_category || v.cuisine_type,
-        price: v.price_min ? `₹${v.price_min}${v.price_max ? ' - ₹' + v.price_max : ''}` : (v.price_level || '₹'),
-        rating: v.avg_rating ? v.avg_rating.toFixed(1) : '4.8',
-        img: v.image_url || 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=600',
-        area: v.area || 'Jaipur'
-      }))
-    : [
-        { id: 1, name: 'Rawat Misthan Bhandar', category: 'Snacks', price: '₹30 - ₹40', rating: '4.9', img: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?q=80&w=600', area: 'Sindhi Camp' },
-        { id: 2, name: 'Lassiwala (Shop 312)', category: 'Sweets', price: '₹30 - ₹60', rating: '4.9', img: 'https://images.unsplash.com/photo-1571006682862-3cd6145277d1?q=80&w=600', area: 'MI Road' },
-        { id: 3, name: 'Laxmi Misthan Bhandar (LMB)', category: 'Sweets', price: '₹50 - ₹150', rating: '4.8', img: 'https://images.unsplash.com/photo-1589301760014-d929f39ce9b1?q=80&w=600', area: 'Johari Bazaar' },
-        { id: 4, name: 'Gulab Ji Chai Wale', category: 'Snacks', price: '₹20', rating: '4.8', img: 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?q=80&w=600', area: 'MI Road' },
-        { id: 5, name: 'Sahu Chaiwala', category: 'Snacks', price: '₹20', rating: '4.7', img: 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?q=80&w=600', area: 'Chandpole' },
-        { id: 6, name: 'Pandit Kulfi', category: 'Sweets', price: '₹40 - ₹80', rating: '4.8', img: 'https://images.unsplash.com/photo-1560008511-11c63416e52d?q=80&w=600', area: 'Hawa Mahal' }
-      ];
-
-  const filteredItems = activeCategory === 'All' ? formattedVendors : formattedVendors.filter(item => item.category === activeCategory);
-
-
-
+  const feedLoading = waitingForCity || (homeCity && feed.loading);
+  const activeCategoryName = activeCategory ? categories.find(c => c.slug === activeCategory)?.name : null;
 
   return (
     <>
       {/* ══ HERO ══ */}
       <section className="relative w-full overflow-hidden bg-[#FDF8EE] font-jakarta pb-24 lg:min-h-screen flex items-center justify-center">
-        {/* Texture / Ambient Background */}
-        <div className="absolute inset-0 z-0 opacity-40 mix-blend-multiply pointer-events-none" style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")' }} />
+        {/* Ambient Background */}
         <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-brand-500/10 rounded-full blur-[120px] pointer-events-none" />
 
         {/* Decorative Dotted Path & Pins */}
@@ -264,12 +253,9 @@ export default function HomePage() {
         </div>
       </section>
 
-
-
-
       {/* ══ CITIES BENTO ══ */}
       <section id="cities" className="py-10 sm:py-20 px-4 sm:px-6 lg:px-8 scroll-mt-20">
-        <motion.div 
+        <motion.div
           className="max-w-7xl mx-auto"
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -284,17 +270,26 @@ export default function HomePage() {
               Pick Your City
             </h2>
             <p className="text-stone-500 font-medium text-[15px] sm:text-[16px] leading-[1.7]">
-              Every city hides a thousand flavours. Dive into our curated street food guides and start exploring the ones you love.
+              Every city hides a thousand flavours. Dive into our street food guides and start exploring the ones you love.
             </p>
           </div>
 
-          {loading ? (
+          {citiesLoading ? (
             <div className="flex justify-center py-32">
               <div className="w-9 h-9 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
             </div>
+          ) : citiesError ? (
+            <StateBox
+              icon={RefreshCw}
+              title="We couldn't load the cities"
+              text={errorMessage(citiesError)}
+              action={<button type="button" onClick={reloadCities} className="btn-primary"><RefreshCw size={15} /> Try again</button>}
+            />
+          ) : orderedCities.length === 0 ? (
+            <StateBox icon={MapPin} title="Cities are coming soon" text="We're mapping our first city right now. Know a great stall? Tell us about it." action={<Link href="/submit-vendor" className="btn-orange">Suggest a stall</Link>} />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 auto-rows-[240px]">
-              {cities.map((city, i) => <CityCard key={city.id} city={city} index={i} />)}
+              {orderedCities.map((city, i) => <CityCard key={city.id ?? city.slug} city={city} index={i} />)}
             </div>
           )}
         </motion.div>
@@ -306,7 +301,8 @@ export default function HomePage() {
       </div>
 
       {/* ══ INTERACTIVE DISCOVER CATEGORIES ══ */}
-      <motion.section 
+      {(waitingForCity || homeCity) && (
+      <motion.section
         className="py-10 sm:py-20 bg-white"
         initial={{ opacity: 0, y: 40 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -320,60 +316,91 @@ export default function HomePage() {
               <span className="gradient-text">Legendary</span> Specialties
             </h2>
             <p className="text-stone-500 text-sm max-w-md mx-auto mb-8">
-              Explore the most celebrated street foods across categories. Hand-picked and community-verified.
+              {homeCity ? `Top-rated stalls in ${homeCity.name}, rated by the HungryBird community.` : 'Top-rated stalls, rated by the HungryBird community.'}
             </p>
 
-            {/* Filter Buttons */}
-            <div className="flex flex-wrap justify-center gap-3 mb-10">
-              {['All', 'Chaat', 'Meals', 'Snacks', 'Sweets'].map((cat) => (
+            {/* Filter Buttons (admin-managed categories) */}
+            {categories.length > 0 && (
+              <div className="flex sm:flex-wrap sm:justify-center gap-3 mb-10 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 pb-1">
                 <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  className={`chip ${activeCategory === cat ? 'active' : ''}`}
+                  type="button"
+                  onClick={() => setActiveCategory(null)}
+                  aria-pressed={!activeCategory}
+                  className={`chip flex-shrink-0 ${!activeCategory ? 'active' : ''}`}
                 >
-                  {cat}
+                  All
                 </button>
-              ))}
-            </div>
+                {categories.map((cat) => (
+                  <button
+                    key={cat.id ?? cat.slug}
+                    type="button"
+                    onClick={() => setActiveCategory(cat.slug)}
+                    aria-pressed={activeCategory === cat.slug}
+                    className={`chip flex-shrink-0 ${activeCategory === cat.slug ? 'active' : ''}`}
+                  >
+                    {cat.icon && <span aria-hidden="true">{cat.icon}</span>} {cat.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Filterable Grid */}
-          <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <AnimatePresence>
-              {filteredItems.map(item => (
-                <motion.div
-                  key={item.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.3 }}
-                  className="card group cursor-pointer"
-                >
-                  <div className="relative h-48 overflow-hidden">
-                    <img src={item.img} alt={item.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-brand-600 font-bold px-3 py-1 rounded-full text-xs shadow-sm">
-                      {item.category}
-                    </div>
+          {feedLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" aria-busy="true" aria-label="Loading stalls">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="card overflow-hidden">
+                  <div className="h-48 bg-stone-100 animate-pulse" />
+                  <div className="p-5 space-y-3">
+                    <div className="h-4 bg-stone-100 rounded w-2/3 animate-pulse" />
+                    <div className="h-3 bg-stone-100 rounded w-1/3 animate-pulse" />
                   </div>
-                  <div className="p-5">
-                    <div className="flex justify-between items-center mb-2">
-                      <h4 className="font-extrabold text-stone-900 text-lg leading-tight">{item.name}</h4>
-                      <span className="star-badge">★ {item.rating}</span>
-                    </div>
-                    <div className="flex justify-between items-center mt-4 pt-3 border-t border-stone-100">
-                      <span className="text-stone-500 font-medium text-sm">Avg. Price</span>
-                      <span className="text-brand-600 font-bold">{item.price}</span>
-                    </div>
-                  </div>
-                </motion.div>
+                </div>
               ))}
-            </AnimatePresence>
-          </motion.div>
+            </div>
+          ) : feed.error ? (
+            <StateBox
+              icon={RefreshCw}
+              title="We couldn't load the stalls"
+              text={errorMessage(feed.error)}
+              action={<button type="button" onClick={() => setFeedKey(k => k + 1)} className="btn-primary"><RefreshCw size={15} /> Try again</button>}
+            />
+          ) : feed.vendors.length === 0 ? (
+            <StateBox
+              icon={Store}
+              title={activeCategoryName ? `No ${activeCategoryName} stalls yet` : 'No stalls listed yet'}
+              text="Know a great one? Add it and help the community discover it."
+              action={<Link href="/submit-vendor" className="btn-orange">Add a stall</Link>}
+            />
+          ) : (
+            <>
+              <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <AnimatePresence>
+                  {feed.vendors.map(v => (
+                    <motion.div
+                      key={v.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <SpecialtyCard vendor={v} />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+              {homeCity && (
+                <div className="text-center mt-10">
+                  <Link href={`/city/${homeCity.slug}`} className="btn-primary">
+                    See all stalls in {homeCity.name} <ArrowRight size={15} />
+                  </Link>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </motion.section>
-
-
+      )}
 
       <ReelsSection />
 
@@ -384,8 +411,8 @@ export default function HomePage() {
       </div>
 
       {/* ══ CTA ══ */}
-      <section className="py-28 px-4 sm:px-6 lg:px-8 bg-stone-50">
-        <motion.div 
+      <section className="py-16 sm:py-28 px-4 sm:px-6 lg:px-8 bg-stone-50">
+        <motion.div
           className="max-w-7xl mx-auto"
           initial={{ opacity: 0, y: 40, scale: 0.98 }}
           whileInView={{ opacity: 1, y: 0, scale: 1 }}
@@ -397,7 +424,7 @@ export default function HomePage() {
 
             <div className="relative grid grid-cols-1 lg:grid-cols-2">
               {/* Text */}
-              <div className="p-12 md:p-16 flex flex-col justify-center">
+              <div className="p-8 sm:p-12 md:p-16 flex flex-col justify-center">
                 <span className="eyebrow mb-5 inline-flex w-fit"><Star size={11} /> Be a Food Hero</span>
                 <h2 className="text-[34px] md:text-[42px] font-extrabold text-stone-900 leading-tight tracking-[-0.03em] mb-4">
                   Know a hidden gem?
@@ -407,84 +434,37 @@ export default function HomePage() {
                 <p className="text-stone-500 font-normal leading-[1.7] mb-9 max-w-[300px] text-[14px]">
                   Help fellow foodies discover your favourite street stall. Every submission strengthens the community.
                 </p>
-                <Link href="/submit-vendor" className="btn-orange w-fit gap-2 px-8 text-[0.875rem]" style={{ minHeight: 50 }}>
-                  <Award size={15} /> Submit a Vendor
-                </Link>
+                <div className="flex flex-wrap gap-3">
+                  <Link href="/submit-vendor" className="btn-orange w-fit gap-2 px-8 text-[0.875rem]" style={{ minHeight: 50 }}>
+                    <Award size={15} /> Submit a Vendor
+                  </Link>
+                  {user && (
+                    <Link href="/user/submissions" className="btn-ghost w-fit" style={{ minHeight: 50 }}>
+                      My submissions
+                    </Link>
+                  )}
+                </div>
               </div>
 
-              {/* Interactive side with premium overlapping card deck */}
-              <div className="relative h-[480px] lg:h-auto overflow-hidden bg-stone-50/50 flex items-center justify-center p-6 sm:p-12 border-t lg:border-t-0 lg:border-l border-stone-200/60">
-                {/* Clean background dot grid and soft radial glow */}
+              {/* How it works */}
+              <div className="relative overflow-hidden bg-stone-50/50 flex items-center justify-center p-6 sm:p-12 border-t lg:border-t-0 lg:border-l border-stone-200/60">
                 <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'radial-gradient(#f97316 1.5px, transparent 1.5px)', backgroundSize: '24px 24px' }} />
                 <div className="absolute w-64 h-64 bg-brand-100/40 rounded-full blur-[90px] pointer-events-none" />
 
-                {/* Overlapping Card Stack */}
-                <div className="relative w-full max-w-[320px] h-[340px] flex items-center justify-center">
-
-                  {/* Card 1: Back Left (Kalkatta Chat) */}
-                  <div className="absolute bg-white rounded-2xl border border-stone-200/60 p-4 w-full shadow-md pointer-events-none opacity-60 origin-bottom-left rotate-[-6deg] -translate-x-[30px] -translate-y-[15px] scale-[0.92] hover:rotate-[-8deg] hover:-translate-x-[45px] hover:-translate-y-[25px] hover:scale-[0.95] transition-all duration-300">
-                    <div className="h-24 rounded-lg overflow-hidden mb-2 bg-stone-100">
-                      <img
-                        src="https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=300&auto=format&fit=crop"
-                        alt="Kalkatta Chat"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest">Sweets & Chaat</span>
-                      <span className="text-[10px] text-stone-500 font-bold">★ 4.5</span>
-                    </div>
-                    <h4 className="font-bold text-stone-800 text-xs truncate">Kalkatta Chat Bhandar</h4>
-                  </div>
-
-                  {/* Card 2: Back Right (Jaipur Truckista) */}
-                  <div className="absolute bg-white rounded-2xl border border-stone-200/60 p-4 w-full shadow-md pointer-events-none opacity-60 origin-bottom-right rotate-[5deg] translate-x-[30px] translate-y-[15px] scale-[0.92] hover:rotate-[8deg] hover:translate-x-[45px] hover:translate-y-[25px] hover:scale-[0.95] transition-all duration-300">
-                    <div className="h-24 rounded-lg overflow-hidden mb-2 bg-stone-100">
-                      <img
-                        src="https://images.unsplash.com/photo-1555126634-323283e090fa?q=80&w=300&auto=format&fit=crop"
-                        alt="Momos"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest">Street Snacks</span>
-                      <span className="text-[10px] text-stone-500 font-bold">★ 4.7</span>
-                    </div>
-                    <h4 className="font-bold text-stone-800 text-xs truncate">Jaipur Truckista</h4>
-                  </div>
-
-                  {/* Card 3: Main Active Front Card (Raju's Pav Bhaji) */}
-                  <div className="relative bg-white rounded-2xl border border-stone-200 p-5 w-full z-10 shadow-[0_20px_48px_-12px_rgba(0,0,0,0.08)] cursor-pointer hover:-translate-y-2 hover:scale-[1.02] transition-all duration-300">
-                    <div className="relative h-32 rounded-xl overflow-hidden mb-3.5 bg-stone-100">
-                      <img
-                        src="https://images.unsplash.com/photo-1601050690597-df0568f70950?q=80&w=600&auto=format&fit=crop"
-                        alt="Pav Bhaji"
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute top-2.5 left-2.5 bg-stone-900/80 backdrop-blur-md text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
-                        <MapPin size={9} className="text-amber-400" /> C-Scheme
+                <ol className="relative w-full max-w-[360px] space-y-4">
+                  {HOW_IT_WORKS.map(({ Icon, title, text }, i) => (
+                    <li key={title} className="flex items-start gap-4 bg-white rounded-2xl border border-stone-200/70 p-4 shadow-sm">
+                      <div className="w-11 h-11 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center flex-shrink-0">
+                        <Icon size={20} />
                       </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-bold text-brand-600 uppercase tracking-widest">Chaat / Street Food</span>
-                      <span className="star-badge text-[10px] py-0.5">★ 4.8</span>
-                    </div>
-                    
-                    <h4 className="font-extrabold text-stone-900 text-sm mb-1 leading-snug">Raju's Special Pav Bhaji</h4>
-                    <p className="text-stone-500 text-[11px] leading-[1.6] line-clamp-2">
-                      "The butter pav is perfectly toasted and the bhaji is cooked to order on a massive tawa..."
-                    </p>
-                    
-                    <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between">
-                      <span className="text-[10px] text-stone-400 font-medium">Submitted by Amit K.</span>
-                      <span className="text-[9px] text-emerald-600 font-bold bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded flex items-center gap-1">
-                        ✓ Verified Gem
-                      </span>
-                    </div>
-                  </div>
-
-                </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-black text-brand-600 uppercase tracking-widest m-0">Step {i + 1}</p>
+                        <h4 className="font-extrabold text-stone-900 text-sm leading-snug">{title}</h4>
+                        <p className="text-stone-500 text-[12px] leading-[1.6] m-0">{text}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
               </div>
             </div>
           </div>

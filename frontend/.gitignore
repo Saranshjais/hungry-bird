@@ -25,3 +25,6 @@ dist-ssr
 
 .next
 .env*
+
+# The repo-root .gitignore ignores Python "lib/" dirs; the website keeps source code in src/lib.
+!src/lib/

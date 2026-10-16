@@ -1,10 +1,12 @@
+import { SITE_URL } from '../lib/api';
+
 export default function robots() {
   return {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/admin/', '/api/', '/user/'],
+      disallow: ['/admin/', '/api/', '/user/', '/verify-email', '/reset-password'],
     },
-    sitemap: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://hungrybird.com'}/sitemap.xml`,
-  }
+    sitemap: `${SITE_URL}/sitemap.xml`,
+  };
 }

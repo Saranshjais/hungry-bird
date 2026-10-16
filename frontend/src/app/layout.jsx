@@ -1,8 +1,9 @@
 import './globals.css';
 import { Plus_Jakarta_Sans, Kalam } from 'next/font/google';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import Link from 'next/link';
+import SiteShell from '../components/SiteShell';
+import { AuthProvider } from '../context/AuthContext';
+import { ConfigProvider } from '../context/ConfigContext';
+import { SITE_URL } from '../lib/api';
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -18,45 +19,53 @@ const kalam = Kalam({
   display: 'swap',
 });
 
+const TITLE = 'HungryBird — Discover India\'s Best Street Food';
+const DESCRIPTION = 'Find hidden gems, legendary street stalls, and local favourites shared by India\'s food community.';
+
 export const metadata = {
-  title: 'HungryBird — Discover India\'s Best Street Food',
-  description: 'Find hidden gems, legendary street stalls, and local favourites hand-picked by India\'s food community.',
-  keywords: ['street food', 'indian food', 'food delivery', 'hidden gems', 'chaat', 'food community'],
+  metadataBase: new URL(SITE_URL),
+  title: TITLE,
+  description: DESCRIPTION,
+  keywords: ['street food', 'indian food', 'hidden gems', 'chaat', 'food community', 'food trails'],
   authors: [{ name: 'HungryBird Team' }],
   openGraph: {
-    title: 'HungryBird — Discover India\'s Best Street Food',
-    description: 'Find hidden gems, legendary street stalls, and local favourites hand-picked by India\'s food community.',
-    url: 'https://hungrybird.com',
+    title: TITLE,
+    description: DESCRIPTION,
+    url: SITE_URL,
     siteName: 'HungryBird',
     images: [
       {
-        url: '/app-mockup.png', 
+        url: '/app-mockup.png',
         width: 1200,
         height: 630,
         alt: 'HungryBird - Street Food Compass',
       },
     ],
-    locale: 'en_US',
+    locale: 'en_IN',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'HungryBird — Discover India\'s Best Street Food',
-    description: 'Find hidden gems, legendary street stalls, and local favourites hand-picked by India\'s food community.',
+    title: TITLE,
+    description: DESCRIPTION,
     images: ['/app-mockup.png'],
   },
 };
 
-import { AuthProvider } from '../context/AuthContext';
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: '#f97316',
+};
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${jakarta.variable} ${kalam.variable}`}>
       <body>
         <AuthProvider>
-          <Navbar />
-          <main>{children}</main>
-          <Footer />
+          <ConfigProvider>
+            <SiteShell>{children}</SiteShell>
+          </ConfigProvider>
         </AuthProvider>
       </body>
     </html>

@@ -1,7 +1,6 @@
-import { Mail, MapPin, Phone, Send, Heart, AtSign, ArrowRight } from 'lucide-react';
-import Image from 'next/image';
-import Link from 'next/link';
+import { Send } from 'lucide-react';
 import ContactForm from './ContactForm';
+import ContactDetails from './ContactDetails';
 
 export const metadata = {
   title: 'Contact Us | HungryBird',
@@ -44,79 +43,15 @@ export default function ContactPage() {
               </div>
               <div>
                 <h2 className="text-xl font-extrabold text-stone-900 mb-1">Send us a message</h2>
-                <p className="text-stone-500 text-sm font-medium">We usually reply within <span className="text-brand-500 font-bold">24 hours</span>.</p>
+                <p className="text-stone-500 text-sm font-medium">Questions, feedback or a problem with a listing — tell us.</p>
               </div>
             </div>
 
             <ContactForm />
           </div>
 
-          {/* Right Column - Contact Info */}
-          <div className="flex flex-col space-y-4 pt-2 lg:pt-0">
-            <h2 className="font-kalam text-3xl font-bold text-stone-800 mb-1 drop-shadow-sm">Get in touch</h2>
-            
-            {/* Email */}
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 flex items-center justify-between group hover:shadow-md transition-shadow">
-              <div className="flex items-center gap-4 min-w-0">
-                <div className="w-12 h-12 bg-orange-50 text-brand-500 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                  <Mail size={20} />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="font-bold text-stone-900 mb-0.5">Email</h3>
-                  <p className="text-stone-500 text-sm font-medium break-all">hungrybird733@gmail.com</p>
-                </div>
-              </div>
-              <div className="text-right hidden sm:block">
-                 <p className="text-xs text-stone-400 font-medium">We aim to reply</p>
-                 <p className="text-sm font-bold text-brand-500">within 24 hours.</p>
-              </div>
-            </div>
-
-
-            {/* Phone */}
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 flex items-center justify-between group hover:shadow-md transition-shadow">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                  <Phone size={20} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-stone-900 mb-0.5">Phone</h3>
-                  <p className="text-stone-500 text-sm font-medium">+91 98765 43210</p>
-                </div>
-              </div>
-              <div className="text-right hidden sm:block">
-                 <p className="text-xs text-stone-400 font-medium">Mon-Fri,</p>
-                 <p className="text-sm font-bold text-emerald-500">9am to 6pm IST</p>
-              </div>
-            </div>
-
-            {/* Follow Us */}
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 flex items-center justify-between flex-wrap gap-4 group hover:shadow-md transition-shadow">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-purple-50 text-purple-500 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                  <AtSign size={20} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-stone-900 mb-0.5">Follow Us</h3>
-                  <p className="text-stone-500 text-sm font-medium">Stay updated on new food spots<br/>and amazing finds!</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <a href="#" className="w-10 h-10 bg-pink-50 text-pink-500 rounded-full flex items-center justify-center hover:scale-110 transition-transform">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
-                </a>
-                <a href="#" className="w-10 h-10 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center hover:scale-110 transition-transform">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-                </a>
-                <a href="#" className="w-10 h-10 bg-sky-50 text-sky-500 rounded-full flex items-center justify-center hover:scale-110 transition-transform">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/></svg>
-                </a>
-              </div>
-            </div>
-
-
-
-          </div>
+          {/* Right Column - Contact Info (from the admin config) */}
+          <ContactDetails />
         </div>
 
 

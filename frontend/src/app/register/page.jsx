@@ -1,140 +1,177 @@
 "use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
-import { Mail, Lock, User, ArrowRight, Loader2 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Mail, Lock, User, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { errorMessage, isStrongPassword, safeNext } from '../../lib/api';
+import { Alert, AuthLayout, Field, PageSpinner, PasswordField, PasswordRules, SubmitButton } from '../../components/ui/forms';
+import EmailCodeVerifier from '../../components/EmailCodeVerifier';
 
-export default function RegisterPage() {
+function RegisterFlow() {
+  const params = useSearchParams();
+  const next = safeNext(params.get('next'), '/');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { register } = useAuth();
+  const [step, setStep] = useState('form'); // form | verify | done
+  const [codeSent, setCodeSent] = useState(true);
+  const { register, user, loading } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!isStrongPassword(password)) {
+      setError(errorMessage({ code: 'WEAK_PASSWORD' }));
+      return;
+    }
     setIsSubmitting(true);
     setError('');
 
-    const res = await register(name, email, password);
+    const res = await register(name.trim(), email.trim(), password);
+    setIsSubmitting(false);
     if (res.success) {
-      router.push('/');
+      setCodeSent(res.verificationSent);
+      // Older backends don't have email verification: nothing to verify.
+      setStep(res.user && res.user.email_verified === false ? 'verify' : 'done');
     } else {
-      setError(res.error || 'Failed to create account');
-      setIsSubmitting(false);
+      setError(errorMessage(res.error, { default: 'Failed to create account' }));
     }
   };
 
-  return (
-    <div className="min-h-screen bg-stone-50 flex flex-col justify-center py-28 sm:px-6 lg:px-8 relative overflow-hidden">
-      {/* Background decorations */}
-      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-brand-500/10 blur-[120px]" />
-      <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-emerald-500/10 blur-[120px]" />
+  const qs = next !== '/' ? `?next=${encodeURIComponent(next)}` : '';
 
-      <div className="sm:mx-auto sm:w-full sm:max-w-md z-10">
-        <Link href="/" className="flex justify-center mb-6">
-          <h2 className="text-4xl font-extrabold text-stone-900 tracking-tight">
-            Hungry<span className="text-brand-500">Bird</span>
-          </h2>
-        </Link>
-        <h2 className="text-center text-3xl font-extrabold text-stone-900 mb-2">
-          Create an account
-        </h2>
-        <p className="text-center text-sm text-stone-600">
+  if (step === 'verify') {
+    return (
+      <AuthLayout
+        title="Check your email"
+        subtitle="One last step: confirm your email address."
+        below={
+          <button type="button" onClick={() => router.push(next)} className="font-bold text-stone-500 hover:text-stone-800 py-2">
+            Skip for now — I'll verify later
+          </button>
+        }
+      >
+        {!codeSent && (
+          <Alert tone="warning" className="mb-6">
+            Your account is ready, but we couldn't send the verification email just now. Try sending the code again.
+          </Alert>
+        )}
+        <EmailCodeVerifier
+          email={user?.email || email}
+          codeSent={codeSent}
+          initialCooldown={codeSent ? 60 : 0}
+          onVerified={() => setStep('done')}
+        />
+      </AuthLayout>
+    );
+  }
+
+  if (step === 'done') {
+    return (
+      <AuthLayout title="You're all set" subtitle={`Welcome to HungryBird${user?.name ? `, ${user.name.split(' ')[0]}` : ''}!`}>
+        <div className="text-center space-y-6">
+          <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center mx-auto">
+            <CheckCircle2 size={32} className="text-emerald-500" />
+          </div>
+          <p className="text-sm text-stone-600">
+            {user?.email_verified ? 'Your email is verified.' : 'Your account has been created.'} Start exploring the best street food near you.
+          </p>
+          <button type="button" onClick={() => router.push(next)} className="btn-orange w-full">
+            Continue <ArrowRight size={16} />
+          </button>
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  if (!loading && user && !isSubmitting) {
+    return (
+      <AuthLayout title="You're already signed in" subtitle={user.email}>
+        <div className="space-y-3">
+          <Link href={next} className="btn-orange w-full">Continue</Link>
+          <Link href="/account" className="btn-ghost w-full">Go to your account</Link>
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  return (
+    <AuthLayout
+      title="Create an account"
+      subtitle={
+        <>
           Already have an account?{' '}
-          <Link href="/login" className="font-bold text-brand-500 hover:text-brand-600">
+          <Link href={`/login${qs}`} className="font-bold text-brand-500 hover:text-brand-600">
             Sign in
           </Link>
-        </p>
-      </div>
+        </>
+      }
+    >
+      <form className="space-y-6" onSubmit={handleSubmit}>
+        <Alert>{error}</Alert>
 
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mt-8 sm:mx-auto sm:w-full sm:max-w-md z-10"
-      >
-        <div className="bg-white py-8 px-4 shadow-xl shadow-stone-200/50 sm:rounded-3xl sm:px-10 border border-stone-100">
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="bg-red-50 text-red-500 p-3 rounded-xl text-sm font-medium border border-red-100">
-                {error}
-              </div>
-            )}
+        <Field
+          label="Full Name"
+          icon={User}
+          id="name"
+          type="text"
+          autoComplete="name"
+          required
+          maxLength={100}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Your name"
+        />
 
-            <div>
-              <label className="block text-sm font-bold text-stone-700 mb-2">Full Name</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-stone-400" />
-                </div>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 border border-stone-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 focus:outline-none transition-all"
-                  placeholder="John Doe"
-                />
-              </div>
-            </div>
+        <Field
+          label="Email address"
+          icon={Mail}
+          id="email"
+          type="email"
+          autoComplete="email"
+          required
+          maxLength={150}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@example.com"
+        />
 
-            <div>
-              <label className="block text-sm font-bold text-stone-700 mb-2">Email address</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-stone-400" />
-                </div>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 border border-stone-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 focus:outline-none transition-all"
-                  placeholder="you@example.com"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-bold text-stone-700 mb-2">Password</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-stone-400" />
-                </div>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 border border-stone-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 focus:outline-none transition-all"
-                  placeholder="••••••••"
-                />
-              </div>
-            </div>
-
-            <div>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-brand-500 hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              >
-                {isSubmitting ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <>
-                    Create Account <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
+        <div>
+          <PasswordField
+            label="Password"
+            icon={Lock}
+            id="password"
+            autoComplete="new-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+          />
+          <PasswordRules value={password} />
         </div>
-      </motion.div>
-    </div>
+
+        <SubmitButton loading={isSubmitting} disabled={!isStrongPassword(password)}>
+          Create Account <ArrowRight className="h-4 w-4" />
+        </SubmitButton>
+
+        <p className="text-xs text-stone-500 text-center m-0">
+          By creating an account you agree to our{' '}
+          <Link href="/terms" className="font-bold text-stone-700 hover:text-brand-600">Terms</Link> and{' '}
+          <Link href="/privacy" className="font-bold text-stone-700 hover:text-brand-600">Privacy Policy</Link>.
+        </p>
+      </form>
+    </AuthLayout>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<PageSpinner />}>
+      <RegisterFlow />
+    </Suspense>
   );
 }

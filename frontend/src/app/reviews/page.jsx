@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import axios from 'axios';
-import { Star, MessageSquare, MapPin, Search } from 'lucide-react';
+import { Star, MessageSquare, MapPin, Search, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
+import { api, errorMessage } from '../../lib/api';
+import { useAuth } from '../../context/AuthContext';
+import { formatDate } from '../../lib/vendors';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -30,27 +32,27 @@ function ReviewCard({ review, type }) {
         <div>
           <h3 className="font-extrabold text-stone-900 text-sm">{review.author_name}</h3>
           <span className="text-[10px] text-stone-400 font-medium">
-            {new Date(review.created_at).toLocaleDateString()}
+            {formatDate(review.created_at)}
           </span>
         </div>
         <span className="star-badge flex items-center gap-1 shadow-sm px-2 py-1">
           <Star size={11} className="fill-brand-500 text-brand-500" />
-          {review.rating_value.toFixed(1)}
+          {Number(review.rating_value || 0).toFixed(1)}
         </span>
       </div>
 
-      <p className="text-stone-600 text-sm leading-relaxed mb-5 flex-1 relative z-10">
+      <p className="text-stone-600 text-sm leading-relaxed mb-5 flex-1 relative z-10 break-words">
         <span className="text-xl text-stone-200 font-serif leading-none absolute -top-1 -left-2">"</span>
         {review.review_text}
       </p>
 
       {isVendor && (
         <div className="mt-auto pt-4 border-t border-stone-100 flex items-center justify-between relative z-10">
-          <div className="flex items-center gap-1.5 overflow-hidden">
+          <Link href={`/vendor/${review.vendor_id}`} className="flex items-center gap-1.5 overflow-hidden min-w-0 hover:text-brand-600 py-1">
             <MapPin size={13} className="text-brand-500 flex-shrink-0" />
-            <span className="text-xs font-bold text-stone-800 truncate">{review.vendor_name}</span>
-          </div>
-          {review.city_name && (
+            <span className="text-xs font-bold text-stone-800 truncate">{review.vendor_name || 'Premium hidden gem'}</span>
+          </Link>
+          {review.city_name && review.city_slug && (
             <Link 
               href={`/city/${review.city_slug}`} 
               className="text-[10px] font-bold bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full whitespace-nowrap hover:bg-brand-100 transition-colors"
@@ -77,54 +79,60 @@ export default function ReviewsPage() {
   const [formRating, setFormRating] = useState(5);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formMsg, setFormMsg] = useState("");
+  const [formFailed, setFormFailed] = useState(false);
+
+  const { user } = useAuth();
+  const [loadError, setLoadError] = useState(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    const fetchReviews = async () => {
-      setLoading(true);
-      try {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
-        const [vRes, sRes] = await Promise.all([
-          axios.get(`${API_URL}/api/vendor-reviews`),
-          axios.get(`${API_URL}/api/site-reviews`)
-        ]);
-        setVendorReviews(vRes.data.reviews || []);
-        setSiteReviews(sRes.data.site_reviews || []);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchReviews();
-  }, []);
+    let alive = true;
+    setLoading(true);
+    setLoadError(null);
+    Promise.all([api('/api/vendor-reviews', { auth: false }), api('/api/site-reviews', { auth: false })])
+      .then(([v, s]) => {
+        if (!alive) return;
+        setVendorReviews(v.reviews || []);
+        setSiteReviews(s.site_reviews || []);
+      })
+      .catch((e) => alive && setLoadError(e))
+      .finally(() => alive && setLoading(false));
+    return () => { alive = false; };
+  }, [attempt]);
+
+  useEffect(() => {
+    if (user && !formName) setFormName(user.name || '');
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const submitSiteReview = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
     setIsSubmitting(true);
+    setFormMsg("");
+    setFormFailed(false);
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
-      await axios.post(`${API_URL}/api/site-reviews`, {
-        author_name: formName,
-        review_text: formText,
-        rating_value: formRating
+      const data = await api('/api/site-reviews', {
+        method: 'POST',
+        body: {
+          author_name: formName.trim(),
+          review_text: formText.trim(),
+          rating_value: formRating,
+        },
       });
-      setFormMsg("Thank you! Your review has been submitted.");
-      setFormName("");
+      setFormMsg(data.message || "Thank you! Your review will appear here once our team has checked it.");
       setFormText("");
       setFormRating(5);
-      
-      // Refresh site reviews
-      const res = await axios.get(`${API_URL}/api/site-reviews`);
-      setSiteReviews(res.data.site_reviews || []);
-      
+
+      // Refresh site reviews (new reviews are moderated, so it may not be listed yet)
+      api('/api/site-reviews', { auth: false }).then((res) => setSiteReviews(res.site_reviews || [])).catch(() => {});
+
       setTimeout(() => {
         setFormMsg("");
         setShowForm(false);
-      }, 3000);
-    } catch (e) {
-      console.error(e);
-      setFormMsg("Failed to submit review.");
+      }, 5000);
+    } catch (err) {
+      setFormFailed(true);
+      setFormMsg(errorMessage(err, { default: "Failed to submit review." }));
     } finally {
       setIsSubmitting(false);
     }
@@ -197,7 +205,7 @@ export default function ReviewsPage() {
                 <h3 className="text-lg font-extrabold text-stone-900 mb-5">Rate HungryBird</h3>
                 
                 {formMsg && (
-                  <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-xl text-sm font-bold border border-green-200">
+                  <div role="status" className={`mb-4 p-3 rounded-xl text-sm font-bold border ${formFailed ? 'bg-red-50 text-red-600 border-red-100' : 'bg-green-50 text-green-700 border-green-200'}`}>
                     {formMsg}
                   </div>
                 )}
@@ -222,6 +230,8 @@ export default function ReviewsPage() {
                   <input
                     required
                     type="text"
+                    maxLength={100}
+                    aria-label="Your name"
                     placeholder="Your Name"
                     value={formName}
                     onChange={e => setFormName(e.target.value)}
@@ -230,6 +240,8 @@ export default function ReviewsPage() {
                   
                   <textarea
                     required
+                    maxLength={1000}
+                    aria-label="Your review"
                     placeholder="Tell us what you love (or hate) about the platform..."
                     value={formText}
                     onChange={e => setFormText(e.target.value)}
@@ -254,6 +266,11 @@ export default function ReviewsPage() {
         {loading ? (
           <div className="flex justify-center py-20">
             <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-10 h-10 border-2 border-brand-500 border-t-transparent rounded-full" />
+          </div>
+        ) : loadError ? (
+          <div className="panel p-12 text-center bg-white max-w-2xl mx-auto">
+            <p className="text-stone-500 text-sm mb-5">{errorMessage(loadError)}</p>
+            <button type="button" onClick={() => setAttempt((a) => a + 1)} className="btn-primary"><RefreshCw size={15} /> Try again</button>
           </div>
         ) : (
           <AnimatePresence mode="wait">

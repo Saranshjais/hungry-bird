@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Mail, Send, User, AtSign } from 'lucide-react';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
+import { api, errorMessage } from '../../lib/api';
+import { useAuth } from '../../context/AuthContext';
 
 const SUBJECTS = { support: 'Support', feedback: 'Feedback' };
 
@@ -11,6 +11,13 @@ export default function ContactForm() {
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
   const [status, setStatus] = useState('idle'); // idle | sending | sent | error
   const [feedback, setFeedback] = useState('');
+  const { user } = useAuth();
+
+  // Prefill for logged-in users (they can still edit both fields).
+  useEffect(() => {
+    if (!user) return;
+    setForm((f) => ({ ...f, name: f.name || user.name || '', email: f.email || user.email || '' }));
+  }, [user]);
 
   const update = (field) => (e) => setForm({ ...form, [field]: e.target.value });
 
@@ -19,30 +26,25 @@ export default function ContactForm() {
     setStatus('sending');
     setFeedback('');
     try {
-      const res = await fetch(`${API_URL}/api/contact`, {
+      const data = await api('/api/contact', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           name: form.name.trim(),
           email: form.email.trim(),
           subject: SUBJECTS[form.subject] || '',
           message: form.message.trim(),
           source: 'web',
-        }),
+        },
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || data.success === false) {
-        throw new Error(data.error || 'Something went wrong. Please try again.');
-      }
       setStatus('sent');
       setFeedback(data.message || "Thanks! Our team will get back to you soon.");
-      setForm({ name: '', email: '', subject: '', message: '' });
+      setForm({ name: user?.name || '', email: user?.email || '', subject: '', message: '' });
     } catch (err) {
       setStatus('error');
       setFeedback(
-        err instanceof TypeError
+        err.code === 'NETWORK' || err.code === 'TIMEOUT'
           ? 'We could not reach our server. Please try again in a moment or email us directly.'
-          : err.message
+          : errorMessage(err)
       );
     }
   };

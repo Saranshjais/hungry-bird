@@ -1,102 +1,127 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { api, getToken, setToken as storeToken, SESSION_EXPIRED_EVENT } from '../lib/api';
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [token, setTokenState] = useState(null);
   const [loading, setLoading] = useState(true);
+  // 'network' when the token could not be checked because the server was unreachable
+  const [authError, setAuthError] = useState(null);
   const router = useRouter();
-  
-  const backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:5000';
 
-  useEffect(() => {
-    // Check if token exists on initial load
-    const token = localStorage.getItem('hb_token');
-    if (token) {
-      fetchUser(token);
-    } else {
-      setLoading(false);
-    }
+  const setToken = useCallback((t) => {
+    storeToken(t);
+    setTokenState(t || null);
   }, []);
 
-  const fetchUser = async (token) => {
-    try {
-      const res = await fetch(`${backendUrl}/api/auth/me`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setUser(data.user);
-      } else {
-        localStorage.removeItem('hb_token');
-        setUser(null);
-      }
-    } catch (err) {
-      console.warn('Backend offline - auth check failed');
-      localStorage.removeItem('hb_token');
+  const clearSession = useCallback(() => {
+    storeToken(null);
+    setTokenState(null);
+    setUser(null);
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    const t = getToken();
+    if (!t) {
       setUser(null);
+      setTokenState(null);
+      setLoading(false);
+      return null;
+    }
+    setTokenState(t);
+    try {
+      const data = await api('/api/auth/me', { token: t, timeout: 30000 });
+      setUser(data.user || null);
+      setAuthError(null);
+      return data.user || null;
+    } catch (err) {
+      if (err.status === 401 || err.status === 403 || err.status === 404) {
+        // expired, revoked (password reset) or suspended: drop the session
+        clearSession();
+        setAuthError(null);
+      } else {
+        // Server asleep / offline: keep the token so the user stays logged in once it is back.
+        setAuthError('network');
+      }
+      return null;
     } finally {
       setLoading(false);
     }
-  };
+  }, [clearSession]);
+
+  useEffect(() => {
+    refreshUser();
+  }, [refreshUser]);
+
+  // Any API call answered 401 for our token: the session is over (no retry loop — the token is gone).
+  useEffect(() => {
+    const onExpired = () => {
+      if (getToken()) return; // a fresh token was stored after the failing call
+      setTokenState(null);
+      setUser(null);
+      setAuthError(null);
+      setLoading(false);
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
+  }, []);
+
+  // Keep tabs in sync (log out / log in elsewhere).
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === 'hb_token') refreshUser();
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [refreshUser]);
+
+  const startSession = useCallback(
+    (data) => {
+      if (data && data.token) setToken(data.token);
+      if (data && data.user) setUser(data.user);
+      setAuthError(null);
+    },
+    [setToken]
+  );
 
   const login = async (email, password) => {
     try {
-      const res = await fetch(`${backendUrl}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-      
-      const data = await res.json();
-      
-      if (res.ok) {
-        localStorage.setItem('hb_token', data.token);
-        setUser(data.user);
-        return { success: true };
-      } else {
-        return { success: false, error: data.error };
-      }
+      const data = await api('/api/auth/login', { method: 'POST', body: { email, password }, auth: false });
+      startSession(data);
+      return { success: true, user: data.user };
     } catch (err) {
-      return { success: false, error: 'Network error occurred' };
+      return { success: false, error: err };
     }
   };
 
   const register = async (name, email, password) => {
     try {
-      const res = await fetch(`${backendUrl}/api/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password })
-      });
-      
-      const data = await res.json();
-      
-      if (res.ok) {
-        localStorage.setItem('hb_token', data.token);
-        setUser(data.user);
-        return { success: true };
-      } else {
-        return { success: false, error: data.error };
-      }
+      const data = await api('/api/auth/register', { method: 'POST', body: { name, email, password }, auth: false });
+      startSession(data);
+      return { success: true, user: data.user, verificationSent: data.verification_sent !== false };
     } catch (err) {
-      return { success: false, error: 'Network error occurred' };
+      return { success: false, error: err };
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('hb_token');
-    setUser(null);
-    router.push('/');
+  const logout = (redirect = '/') => {
+    clearSession();
+    if (redirect) router.push(redirect);
   };
 
+  const updateUser = useCallback((next) => {
+    if (next) setUser((u) => ({ ...(u || {}), ...next }));
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ user, token, loading, authError, login, register, logout, refreshUser, updateUser, setToken, clearSession }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -105,3 +130,6 @@ export function AuthProvider({ children }) {
 export function useAuth() {
   return useContext(AuthContext);
 }
+
+// Contract §1: these fields may be missing on an older backend — treat "missing" as "not blocking".
+export const isEmailUnverified = (user) => !!user && user.email_verified === false;

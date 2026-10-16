@@ -1,18 +1,10 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, ZoomControl, useMapEvents } from 'react-leaflet';
-import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import '../../lib/leafletIcon';
 
-// Fix for default marker icons in React-Leaflet
-const DefaultIcon = L.icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-});
-L.Marker.prototype.options.icon = DefaultIcon;
 
 function LocationMarker({ position, setPosition }) {
   const map = useMapEvents({
@@ -42,7 +34,7 @@ function LocationMarker({ position, setPosition }) {
   );
 }
 
-export default function MapComponent({ cityLat, cityLng, lat, lng, onLocationChange }) {
+export default function MapComponent({ cityLat, cityLng, lat, lng, zoom, onLocationChange }) {
   const [position, setPosition] = useState(
     lat && lng ? { lat, lng } : (cityLat && cityLng ? { lat: cityLat, lng: cityLng } : { lat: 20.5937, lng: 78.9629 }) // Default to India
   );
@@ -64,7 +56,7 @@ export default function MapComponent({ cityLat, cityLng, lat, lng, onLocationCha
   return (
     <MapContainer 
       center={position} 
-      zoom={cityLat ? 13 : 5} 
+      zoom={zoom ?? (cityLat || lat ? 13 : 5)} 
       scrollWheelZoom={true}
       zoomControl={false}
       style={{ height: "100%", width: "100%", borderRadius: "0.75rem", zIndex: 1 }}
