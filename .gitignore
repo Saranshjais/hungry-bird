@@ -20,6 +20,7 @@ lib64/
 !frontend/src/app/admin/lib/
 # Flutter app source (the Python `lib/` rule above would hide it)
 !hungry_bird_app/lib/
+!flutter/lib/
 
 # Virtual environments
 venv/
