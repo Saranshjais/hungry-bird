@@ -32,7 +32,7 @@ vendor, price, hour, phone, coordinate or rating was invented. Unknown = empty.
 | `hidden_gem_candidates.csv` | 6 | Hidden-gem candidates (PENDING_CURATOR_REVIEW) |
 | `jaipur_food_categories.csv` / `jaipur_areas.csv` | — | Controlled vocabularies |
 | `osm_extraction_stats.json` | — | Raw Overpass extraction stats |
-| `jaipur_gov_street_vendor_register_INTERNAL.csv` | 12,312 | ⚠️ Official 2020 register (names + reg. numbers). **INTERNAL ONLY — personal data, never publish** |
+| `jaipur_gov_street_vendor_register_INTERNAL.csv` | 12,312 | ⚠️ Official 2020 register (names + reg. numbers). **INTERNAL ONLY — personal data, never publish.** Git-ignored and not in the repo; get it from the team |
 
 ## Action packs
 - `field_verification_pack/` — prioritized 21-visit sheet + field guide (P1 anchors,

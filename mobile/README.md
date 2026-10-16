@@ -37,7 +37,7 @@ test/                           # model/formatter unit tests + full-app widget t
 Requires a recent stable Flutter (developed and tested on 3.47 / Dart 3.13).
 
 ```bash
-cd hungry_bird_app
+cd mobile
 flutter pub get
 
 # Against the production API (default)
@@ -60,6 +60,15 @@ Debug builds allow plain-`http` traffic so local servers work; release builds re
 ```bash
 flutter analyze
 flutter test
+```
+
+`flutter test` includes `test/responsive/`, which opens every screen on a matrix of iPhones, Samsung Galaxy phones,
+Z Flip / Z Fold, Galaxy Tab and iPads (portrait, landscape, split view) at text scale 1.0 and 1.3, and fails on any
+overflow, clipped text or content hidden under the notch, home indicator, nav bar or keyboard. Options:
+
+```bash
+flutter test test/responsive --dart-define=RESPONSIVE_QUICK=true                 # representative devices only
+flutter test test/responsive --dart-define=RESPONSIVE_SHOTS_DIR=/tmp/hb-shots    # PNG screenshots per screen/device
 ```
 
 ## Releasing

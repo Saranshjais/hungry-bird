@@ -6,10 +6,12 @@ Street-food discovery for India: hidden-gem stalls, reviews, maps and community 
 | --- | --- | --- |
 | API | [`backend/`](backend) | Flask, SQLAlchemy, Alembic (Postgres on Render, SQLite locally) |
 | Website + admin panel | [`frontend/`](frontend) | Next.js 16 (public site at `/`, admin at `/admin`) |
-| Mobile app | [`hungry_bird_app/`](hungry_bird_app) | Flutter (Android / iOS) — see its [README](hungry_bird_app/README.md) |
-| Research data | [`hungry_bird_data/`](hungry_bird_data) | Jaipur vendor datasets used by `backend/seed_jaipur_data.py` |
+| Mobile app | [`mobile/`](mobile) | Flutter (Android / iOS) — see its [README](mobile/README.md) |
+| Research data | [`data/`](data) | Jaipur vendor datasets used by `backend/seed_jaipur_data.py` and `backend/import_jaipur_streetfood.py` — see its [README](data/README.md) |
+| Product docs | [`docs/`](docs) | Product documentation and UI/UX screen specification (PDF) |
+| Archive | [`archive/`](archive) | Superseded prototypes and tooling, kept for reference only — see its [README](archive/README.md) |
 
-`mobile/` contains the earlier Expo/React Native prototype. It is superseded by the Flutter app and kept only for reference.
+`backend/` and `frontend/` are the folders Render (`render.yaml`) and Vercel build from — keep those paths when moving things around.
 
 ## Running locally
 
@@ -32,7 +34,7 @@ set NEXT_PUBLIC_API_URL=http://127.0.0.1:5000   # PowerShell: $env:NEXT_PUBLIC_A
 npm run dev                                     # http://localhost:3000 and /admin
 ```
 
-**Mobile app** — see [`hungry_bird_app/README.md`](hungry_bird_app/README.md):
+**Mobile app** — see [`mobile/README.md`](mobile/README.md):
 `flutter run --dart-define=API_BASE_URL=http://10.0.2.2:5000`
 
 ## Admin panel

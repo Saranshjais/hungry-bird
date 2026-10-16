@@ -18,7 +18,7 @@ from app import create_app, db
 from app.models import City, Vendor
 
 
-CSV_PATH = os.path.join(os.path.dirname(backend_dir), "jaipur-streetfood.csv")
+CSV_PATH = os.path.join(os.path.dirname(backend_dir), "data", "jaipur-streetfood.csv")
 DEFAULT_IMAGE = "https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=600"
 
 

@@ -11,7 +11,7 @@ if backend_dir not in sys.path:
 from app import create_app, db
 from app.models import City, Vendor, User, Category
 
-DATA_DIR = os.path.join(os.path.dirname(backend_dir), 'hungry_bird_data')
+DATA_DIR = os.path.join(os.path.dirname(backend_dir), 'data')
 
 DEFAULT_CATEGORIES = [
     ('Street Food', 'street-food', '🌮'),

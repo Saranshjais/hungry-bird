@@ -19,8 +19,11 @@ lib64/
 # ...but the admin panel keeps its client helpers in frontend/src/app/admin/lib
 !frontend/src/app/admin/lib/
 # Flutter app source (the Python `lib/` rule above would hide it)
-!hungry_bird_app/lib/
-!flutter/lib/
+!mobile/lib/
+
+# Internal-only research data: personal data, never publish (see data/README.md)
+data/*INTERNAL*
+data/hungry_bird_jaipur_dataset_*.zip
 
 # Virtual environments
 venv/
