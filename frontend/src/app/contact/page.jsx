@@ -34,7 +34,7 @@ export default function ContactPage() {
         </div>
 
         {/* Two Columns */}
-        <div className="grid lg:grid-cols-2 gap-10 lg:gap-14">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14">
           
           {/* Left Column - Form */}
           <div className="bg-white p-6 md:p-8 rounded-3xl shadow-xl shadow-stone-200/50 border border-stone-100 relative h-max">
@@ -57,13 +57,13 @@ export default function ContactPage() {
             
             {/* Email */}
             <div className="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 flex items-center justify-between group hover:shadow-md transition-shadow">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 min-w-0">
                 <div className="w-12 h-12 bg-orange-50 text-brand-500 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                   <Mail size={20} />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h3 className="font-bold text-stone-900 mb-0.5">Email</h3>
-                  <p className="text-stone-500 text-sm font-medium">hungrybird733@gmail.com</p>
+                  <p className="text-stone-500 text-sm font-medium break-all">hungrybird733@gmail.com</p>
                 </div>
               </div>
               <div className="text-right hidden sm:block">

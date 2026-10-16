@@ -156,10 +156,12 @@ export default function SubmitVendorPage() {
   }
 
   return (
-    <div className="h-screen w-full relative overflow-hidden bg-stone-100">
+    // h-dvh: on iOS / Android 100vh includes the strip behind the browser toolbar, which hid the
+    // bottom of the form panel. h-screen stays as the fallback for browsers without dvh.
+    <div className="h-screen h-dvh w-full relative overflow-hidden bg-stone-100">
       
       {/* Map Background Wrapper */}
-      <div className="absolute top-16 left-0 right-0 bottom-[55vh] md:bottom-0 z-0">
+      <div className="absolute top-16 left-0 right-0 bottom-[55vh] supports-[height:100dvh]:bottom-[55dvh] md:bottom-0 z-0">
         <MapComponent 
           lat={lat} 
           lng={lng} 
@@ -178,7 +180,7 @@ export default function SubmitVendorPage() {
       </div>
 
       {/* Unified Floating Panel */}
-      <div className="absolute bottom-0 left-0 right-0 h-[55vh] md:h-auto md:top-[84px] md:bottom-6 md:left-6 md:right-auto md:w-[400px] z-20 flex flex-col pointer-events-none md:max-h-[calc(100vh-108px)]">
+      <div className="absolute bottom-0 left-0 right-0 h-[55vh] supports-[height:100dvh]:h-[55dvh] md:h-auto md:top-[84px] md:bottom-6 md:left-6 md:right-auto md:w-[400px] z-20 flex flex-col pointer-events-none md:max-h-[calc(100vh-108px)]">
         <div className="pointer-events-auto bg-white/95 backdrop-blur-xl rounded-t-3xl md:rounded-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.08)] md:shadow-2xl border-t border-stone-200 md:border overflow-hidden flex flex-col h-full">
           
           {/* Header & Search */}

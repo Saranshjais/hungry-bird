@@ -121,7 +121,8 @@ function VendorDetail({ vendor, onClose, apiKey }) {
         <div className="absolute inset-0 bg-gradient-to-t from-stone-900/70 to-transparent" />
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/60 transition-colors"
+          className="absolute top-4 right-4 w-8 h-8 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/60 transition-colors before:absolute before:-inset-1 before:content-['']"
+          aria-label="Close"
         >
           <X size={15} />
         </button>
@@ -272,16 +273,18 @@ export default function JaipurPage() {
     <div className="min-h-screen bg-stone-50">
 
       {/* ── Hero ── */}
-      <section className="relative h-[48vh] min-h-[320px] overflow-hidden">
+      {/* Height follows the content (never less than the old fixed height) so wrapped text on narrow
+          phones is pushed down instead of sliding up under the fixed navbar. */}
+      <section className="relative min-h-[max(48vh,320px)] flex flex-col justify-end overflow-hidden">
         <img
           src="https://images.unsplash.com/photo-1599661046289-e31897846e41?q=80&w=1600&auto=format&fit=crop"
           alt="Jaipur Pink City"
-          className="w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-stone-950/45 to-stone-950/40" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_100%,rgba(249,115,22,0.1),transparent)]" />
 
-        <div className="absolute inset-0 flex flex-col justify-end max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+        <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-8">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
             <Link href="/" className="inline-flex items-center gap-1.5 text-white/70 hover:text-white font-semibold text-sm mb-4 transition-colors">
               <ChevronLeft size={14} /> All Cities
@@ -488,8 +491,10 @@ export default function JaipurPage() {
           </div>
 
           {/* ── RIGHT: Sticky Map + Detail ── */}
+          {/* Sticky + self-scrolling only beside the feed (xl). Stacked under it on smaller screens a
+              nested scroller would trap touch scrolling. */}
           <div className="xl:col-span-1">
-            <div className="sticky top-24 flex flex-col gap-5 max-h-[calc(100vh-8rem)] overflow-y-auto no-scrollbar pb-4">
+            <div className="xl:sticky xl:top-24 flex flex-col gap-5 xl:max-h-[calc(100vh-8rem)] xl:overflow-y-auto no-scrollbar pb-4">
 
               {/* Full city map */}
               <div className="panel overflow-hidden bg-white" style={{ height: 280 }}>

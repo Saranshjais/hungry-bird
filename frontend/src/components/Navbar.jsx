@@ -131,10 +131,10 @@ export default function Navbar() {
 
   return (
     <header
-      className="fixed top-0 sm:top-4 left-0 right-0 z-50 transition-all duration-300 flex justify-center px-4"
+      className="fixed top-0 sm:top-4 left-0 right-0 z-50 transition-all duration-300 flex flex-col items-center px-4"
     >
       <div className={`w-full max-w-5xl px-4 sm:px-6 lg:px-8 transition-all duration-300 ${
-        scrolled || showSearch
+        scrolled || showSearch || mobileOpen
           ? 'bg-white/95 backdrop-blur-md border border-stone-200/80 shadow-md rounded-[2rem]'
           : 'bg-transparent'
       }`}>
@@ -150,23 +150,27 @@ export default function Navbar() {
             {/* Desktop Navigation Links */}
             <div className="hidden md:flex items-center gap-6 z-10">
               {/* Home Link */}
-              <Link href="/" className={`text-[13px] font-bold transition-colors ${isDarkText ? 'text-stone-600 hover:text-brand-500' : 'text-white/80 hover:text-white'}`}>
+              <Link href="/" className={`py-2.5 text-[13px] font-bold transition-colors ${isDarkText ? 'text-stone-600 hover:text-brand-500' : 'text-white/80 hover:text-white'}`}>
                 Home
               </Link>
 
-              {/* Cities Dropdown */}
+              {/* Cities Dropdown: hover on desktop, tap / click on touch screens and keyboards */}
               <div className="relative group">
-                <button 
-                  className={`flex items-center gap-1 text-[13px] font-bold transition-colors ${isDarkText ? 'text-stone-600 hover:text-brand-500' : 'text-white/80 hover:text-white'}`}
+                <button
+                  type="button"
+                  className={`flex items-center gap-1 py-2.5 text-[13px] font-bold transition-colors ${isDarkText ? 'text-stone-600 hover:text-brand-500' : 'text-white/80 hover:text-white'}`}
                   onMouseEnter={() => setShowCities(true)}
                   onMouseLeave={() => setShowCities(false)}
+                  onClick={() => setShowCities(true)}
+                  aria-haspopup="true"
+                  aria-expanded={showCities}
                 >
                   Cities <ChevronDown size={14} />
                 </button>
                 
                 {showCities && (
                   <div 
-                    className="absolute top-full left-0 pt-4 w-48"
+                    className="absolute top-full left-0 pt-1.5 w-48"
                     onMouseEnter={() => setShowCities(true)}
                     onMouseLeave={() => setShowCities(false)}
                   >
@@ -197,13 +201,13 @@ export default function Navbar() {
                 )}
               </div>
 
-              <Link href="/about" className={`text-[13px] font-bold transition-colors ${isDarkText ? 'text-stone-600 hover:text-brand-500' : 'text-white/80 hover:text-white'}`}>
+              <Link href="/about" className={`py-2.5 text-[13px] font-bold transition-colors ${isDarkText ? 'text-stone-600 hover:text-brand-500' : 'text-white/80 hover:text-white'}`}>
                 About Us
               </Link>
-              <Link href="/contact" className={`text-[13px] font-bold transition-colors ${isDarkText ? 'text-stone-600 hover:text-brand-500' : 'text-white/80 hover:text-white'}`}>
+              <Link href="/contact" className={`py-2.5 text-[13px] font-bold transition-colors ${isDarkText ? 'text-stone-600 hover:text-brand-500' : 'text-white/80 hover:text-white'}`}>
                 Contact
               </Link>
-              <Link href="/download" className={`text-[13px] font-bold transition-colors ${isDarkText ? 'text-brand-500 hover:text-brand-600' : 'text-brand-300 hover:text-brand-200'} flex items-center gap-1`}>
+              <Link href="/download" className={`py-2.5 text-[13px] font-bold transition-colors ${isDarkText ? 'text-brand-500 hover:text-brand-600' : 'text-brand-300 hover:text-brand-200'} flex items-center gap-1`}>
                 <Smartphone size={14} /> Get App
               </Link>
             </div>
@@ -249,7 +253,7 @@ export default function Navbar() {
                   )}
                 </div>
               ) : (
-                <Link href="/login" className={`text-[13px] font-bold transition-colors ${isDarkText ? 'text-stone-600 hover:text-brand-500' : 'text-white/80 hover:text-white'}`}>
+                <Link href="/login" className={`py-2.5 text-[13px] font-bold transition-colors ${isDarkText ? 'text-stone-600 hover:text-brand-500' : 'text-white/80 hover:text-white'}`}>
                   Sign In
                 </Link>
               )}
@@ -266,17 +270,20 @@ export default function Navbar() {
 
           {/* Mobile toggle */}
           <button
+            type="button"
             onClick={() => setMobileOpen(o => !o)}
-            className={`md:hidden p-2 rounded-xl border transition-all ${isDarkText || showSearch ? 'border-stone-200 text-stone-600 hover:text-stone-900 hover:bg-stone-50' : 'border-white/20 text-white hover:bg-white/10'}`}
+            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileOpen}
+            className={`md:hidden w-11 h-11 flex items-center justify-center rounded-xl border transition-all ${isDarkText || showSearch || mobileOpen ? 'border-stone-200 text-stone-600 hover:text-stone-900 hover:bg-stone-50' : 'border-white/20 text-white hover:bg-white/10'}`}
           >
             {mobileOpen ? <X size={19} /> : <Menu size={19} />}
           </button>
         </div>
       </div>
 
-      {/* Mobile drawer */}
+      {/* Mobile drawer: stacked under the bar, scrolls when taller than the visible screen */}
       {mobileOpen && (
-        <div className="md:hidden bg-white/95 backdrop-blur-md border-b border-stone-200 p-4 shadow-lg flex flex-col gap-3 max-h-[80vh] overflow-y-auto">
+        <div className="md:hidden w-full max-w-5xl mt-2 bg-white/95 backdrop-blur-md border border-stone-200 rounded-[1.5rem] p-4 shadow-lg flex flex-col gap-3 max-h-[calc(100vh-6rem)] supports-[height:100dvh]:max-h-[calc(100dvh-6rem)] overflow-y-auto overscroll-contain">
           {/* Mobile Search */}
           <form onSubmit={handleSearch} className="relative mb-2">
             <Search size={18} className="absolute left-3 top-3 text-stone-400" />
@@ -285,7 +292,7 @@ export default function Navbar() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search food, vendors..."
-              className="w-full bg-stone-100 text-stone-900 border-none rounded-xl py-2.5 pl-10 pr-4 focus:ring-2 focus:ring-brand-500 outline-none"
+              className="w-full bg-stone-100 text-stone-900 text-base border-none rounded-xl py-2.5 pl-10 pr-4 focus:ring-2 focus:ring-brand-500 outline-none"
             />
           </form>
 
@@ -303,9 +310,10 @@ export default function Navbar() {
                   My Submissions
                 </Link>
               </div>
-              <button 
+              <button
                 onClick={() => { logout(); setMobileOpen(false); }}
-                className="p-2 bg-red-100 text-red-600 rounded-xl"
+                className="w-10 h-10 flex items-center justify-center bg-red-100 text-red-600 rounded-xl"
+                aria-label="Sign out"
               >
                 <LogOut size={16} />
               </button>
@@ -358,7 +366,7 @@ export default function Navbar() {
               <button 
                 onClick={handleDetectLocation}
                 disabled={detecting}
-                className="text-brand-500 hover:text-brand-600 flex items-center gap-1 normal-case"
+                className="text-brand-500 hover:text-brand-600 flex items-center gap-1 normal-case py-2 -my-2"
               >
                 <MapPin size={12} />
                 {detecting ? 'Detecting...' : 'Detect'}
@@ -369,7 +377,7 @@ export default function Navbar() {
                  <Link
                    key={c.id}
                    href={`/city/${c.slug}`}
-                   className="w-full text-center py-2 rounded-xl bg-stone-50 text-stone-700 text-sm font-medium hover:bg-brand-50 hover:text-brand-600 transition-colors"
+                   className="w-full text-center py-2.5 rounded-xl bg-stone-50 text-stone-700 text-sm font-medium hover:bg-brand-50 hover:text-brand-600 transition-colors"
                    onClick={() => setMobileOpen(false)}
                  >
                    {c.name}

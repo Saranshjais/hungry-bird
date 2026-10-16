@@ -178,7 +178,7 @@ export default function AdminInbox() {
                       </span>
                     )}
                   </div>
-                  <a href={`mailto:${selected.email}`} className="text-xs text-blue-600 hover:underline">
+                  <a href={`mailto:${selected.email}`} className="text-xs text-blue-600 hover:underline break-all">
                     {selected.email}
                   </a>
                 </div>

@@ -278,8 +278,8 @@ export default function AdminSubmissions() {
                       <User size={13} className="text-neutral-400" /> {sub.submitted_by_name || "Anonymous"}
                     </span>
                     {sub.submitted_by_email && (
-                      <a href={`mailto:${sub.submitted_by_email}`} className="flex items-center gap-1.5 text-xs text-blue-600 hover:underline mt-0.5">
-                        <Mail size={12} /> {sub.submitted_by_email}
+                      <a href={`mailto:${sub.submitted_by_email}`} className="flex items-center gap-1.5 text-xs text-blue-600 hover:underline mt-0.5 min-w-0">
+                        <Mail size={12} className="shrink-0" /> <span className="min-w-0 break-all">{sub.submitted_by_email}</span>
                       </a>
                     )}
                   </Detail>

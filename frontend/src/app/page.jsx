@@ -219,7 +219,7 @@ export default function HomePage() {
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1, delay: 0.2 }}
-              className="absolute top-0 right-10 md:right-32 w-64 md:w-72 h-[500px] bg-white rounded-[3rem] p-3 shadow-2xl border-[12px] border-stone-800 z-20 overflow-hidden transform rotate-6"
+              className="absolute top-0 right-4 min-[360px]:right-10 md:right-32 w-56 min-[360px]:w-64 md:w-72 h-[500px] bg-white rounded-[3rem] p-3 shadow-2xl border-[12px] border-stone-800 z-20 overflow-hidden transform rotate-6"
             >
               {/* Phone Screen content - Map image */}
               <div className="w-full h-full rounded-[2rem] overflow-hidden relative">
@@ -236,7 +236,7 @@ export default function HomePage() {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.8, delay: 0.6 }}
-              className="absolute bottom-10 left-0 md:-left-10 w-64 h-64 rounded-full border-[6px] border-[#FDF8EE] overflow-hidden shadow-2xl z-30"
+              className="absolute bottom-10 left-0 lg:-left-10 w-64 h-64 rounded-full border-[6px] border-[#FDF8EE] overflow-hidden shadow-2xl z-30"
             >
               <img src="https://images.unsplash.com/photo-1626777552726-4c2810a41be7?q=80&w=600&auto=format&fit=crop" className="w-full h-full object-cover" alt="Pani Puri" />
             </motion.div>

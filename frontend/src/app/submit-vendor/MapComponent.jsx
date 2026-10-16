@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, ZoomControl, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -65,9 +65,12 @@ export default function MapComponent({ cityLat, cityLng, lat, lng, onLocationCha
     <MapContainer 
       center={position} 
       zoom={cityLat ? 13 : 5} 
-      scrollWheelZoom={true} 
+      scrollWheelZoom={true}
+      zoomControl={false}
       style={{ height: "100%", width: "100%", borderRadius: "0.75rem", zIndex: 1 }}
     >
+      {/* top-left is covered by the navbar and, from md, by the form panel */}
+      <ZoomControl position="bottomright" />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

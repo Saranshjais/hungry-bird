@@ -184,11 +184,13 @@ export default function VendorDetailPage() {
   return (
     <div className="min-h-screen bg-stone-50">
       {/* ── Hero ── */}
-      <section className="relative h-[42vh] min-h-[300px] overflow-hidden">
-        <img src={heroImage} alt={vendor.name} className="w-full h-full object-cover" />
+      {/* Height follows the content (never less than 42vh / 300px) so long stall names on narrow
+          phones push the hero down instead of sliding up under the fixed navbar. */}
+      <section className="relative min-h-[max(42vh,300px)] flex flex-col justify-end overflow-hidden">
+        <img src={heroImage} alt={vendor.name} className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-stone-950/85 via-stone-950/30 to-stone-950/10" />
 
-        <div className="absolute inset-0 flex flex-col justify-end max-w-5xl mx-auto px-4 sm:px-6 pb-7 w-full">
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 pt-24 pb-7 w-full">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
             {vendor.city && (
               <Link

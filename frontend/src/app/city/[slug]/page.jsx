@@ -70,7 +70,7 @@ function InteractiveRating({ vendorId, initialRating, initialTotal }) {
               onMouseLeave={() => setHoverRating(0)}
               onClick={(e) => { e.preventDefault(); handleStarClick(star); }}
               disabled={isSubmitting}
-              className={`p-0.5 outline-none transition-transform hover:scale-125 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`p-0.5 [@media(pointer:coarse)]:p-1.5 [@media(pointer:coarse)]:-my-1 outline-none transition-transform hover:scale-125 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <Star
                 size={13}
@@ -278,7 +278,7 @@ export default function CityPage() {
   );
 
   if (!data) return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-stone-50">
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-stone-50 py-24">
       <div className="text-6xl">🔍</div>
       <h2 className="text-2xl font-extrabold text-stone-900">City not found</h2>
       <Link href="/" className="btn-ghost">← Back to Home</Link>
@@ -305,17 +305,19 @@ export default function CityPage() {
     <div className="min-h-screen bg-stone-50">
 
       {/* ── Hero Banner ── */}
-      <section className="relative h-[48vh] min-h-[320px] overflow-hidden">
+      {/* Height follows the content (never less than the old fixed height) so wrapped text on narrow
+          phones is pushed down instead of sliding up under the fixed navbar. */}
+      <section className="relative min-h-[max(48vh,320px)] flex flex-col justify-end overflow-hidden">
         <img
           src={`/city-${city.slug}.png`}
           alt={city.name}
-          className="w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover"
           onError={e => { e.target.src = 'https://images.unsplash.com/photo-1601050690597-df0568f70950?q=80&w=1200&auto=format&fit=crop'; }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-stone-950/45 to-stone-950/40" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_100%,rgba(249,115,22,0.1),transparent)]" />
 
-        <div className="absolute inset-0 flex flex-col justify-end max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+        <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -508,8 +510,10 @@ export default function CityPage() {
           </div>
 
           {/* ── Map ── */}
+          {/* Capped at 75vh until it sits beside the feed (xl): a full-height map on a landscape phone
+              would turn every one-finger scroll into a map pan. */}
           <div className="xl:col-span-1">
-            <div className="sticky top-24 panel p-5 overflow-hidden bg-white" style={{ height: 560 }}>
+            <div className="sticky top-24 panel p-5 overflow-hidden bg-white h-[min(560px,75vh)] xl:h-[560px]">
               <h3 className="font-extrabold text-stone-900 mb-4 flex items-center gap-2 text-base">
                 <MapPin size={18} className="text-brand-500" /> Map Explorer
               </h3>

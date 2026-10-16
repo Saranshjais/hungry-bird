@@ -80,7 +80,8 @@ export default function AboutPage() {
         <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
           
           <motion.div style={{ y: y1, opacity }} className="max-w-xl">
-            <h1 className="text-6xl md:text-7xl font-black text-stone-900 tracking-tight leading-[1.05] mb-6">
+            {/* clamp() shrinks the heading below ~400px so "HungryBird!" fits on narrow phones */}
+            <h1 className="text-[clamp(2.5rem,15vw,3.75rem)] md:text-7xl font-black text-stone-900 tracking-tight leading-[1.05] mb-6">
               Hello, <br/>
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-amber-500">
                 HungryBird!
@@ -119,7 +120,7 @@ export default function AboutPage() {
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.5 }}
-              className="absolute bottom-10 left-32 w-[26rem] h-60 rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white z-30"
+              className="absolute bottom-10 left-32 lg:left-12 xl:left-32 w-[26rem] h-60 rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white z-30"
             >
               <img src="https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=800&auto=format&fit=crop" className="w-full h-full object-cover" alt="Sweets" />
             </motion.div>
@@ -180,16 +181,19 @@ export default function AboutPage() {
                 We wanted an app great for discovering quick bites, or long food walks with friends, or intense weekend cravings. With three different vibes to choose from, navigating the <span 
                   className={`highlight-pic-card ${activePic === 'markets' ? 'active' : ''}`}
                   onMouseEnter={() => setActivePic('markets')}
+                  onClick={() => setActivePic('markets')}
                 >
                   bustling markets
                 </span>, finding the best <span 
                   className={`highlight-pic-card ${activePic === 'carts' ? 'active' : ''}`}
                   onMouseEnter={() => setActivePic('carts')}
+                  onClick={() => setActivePic('carts')}
                 >
                   late-night carts
                 </span>, or uncovering <span 
                   className={`highlight-pic-card ${activePic === 'alleys' ? 'active' : ''}`}
                   onMouseEnter={() => setActivePic('alleys')}
+                  onClick={() => setActivePic('alleys')}
                 >
                   hidden alleys
                 </span>, you’re very likely to have everything you need.

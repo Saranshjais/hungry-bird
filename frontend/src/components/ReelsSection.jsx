@@ -186,7 +186,7 @@ export default function ReelsSection() {
                   </div>
                   <button 
                     onClick={(e) => handleShare(e, reel.id)}
-                    className="p-2 rounded-full bg-black/40 backdrop-blur-sm border border-white/10 text-white/90 hover:bg-white/30 transition-colors z-20"
+                    className="relative p-2 rounded-full bg-black/40 backdrop-blur-sm border border-white/10 text-white/90 hover:bg-white/30 transition-colors z-20 before:absolute before:-inset-1.5 before:content-['']"
                     title="Share Video"
                   >
                     {copiedId === reel.id ? <Check size={14} className="text-green-400" /> : <Share2 size={14} />}
@@ -234,7 +234,7 @@ export default function ReelsSection() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl p-6 sm:p-8 w-full max-w-md shadow-2xl relative"
+              className="bg-white rounded-3xl p-6 sm:p-8 w-full max-w-md max-h-full overflow-y-auto shadow-2xl relative"
             >
               <button 
                 onClick={() => setShowUploadModal(false)}
