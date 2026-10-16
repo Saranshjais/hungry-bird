@@ -57,7 +57,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         ],
                       )
                     : ListView.separated(
-                        padding: const EdgeInsets.all(16),
+                        padding: readableInsets(context, EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.paddingOf(context).bottom)),
                         itemCount: items.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 10),
                         itemBuilder: (_, i) => _NotificationTile(item: items[i], fresh: _unreadAtOpen.contains(items[i].id)),

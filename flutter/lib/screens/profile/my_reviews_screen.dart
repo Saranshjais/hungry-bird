@@ -58,7 +58,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                         ),
                       ])
                     : ListView.separated(
-                        padding: const EdgeInsets.all(16),
+                        padding: readableInsets(context, EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.paddingOf(context).bottom)),
                         itemCount: items.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 10),
                         itemBuilder: (_, i) {
@@ -79,8 +79,12 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                                       Row(children: [
                                         StarRow(rating: r.rating, size: 14),
                                         const SizedBox(width: 6),
-                                        Text(Fmt.timeAgo(r.createdAt),
-                                            style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                                        Flexible(
+                                          child: Text(Fmt.timeAgo(r.createdAt),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                                        ),
                                       ]),
                                       if (r.text != null) ...[
                                         const SizedBox(height: 6),

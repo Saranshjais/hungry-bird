@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -116,27 +117,31 @@ class _HomeHeaderState extends State<HomeHeader> {
               const SizedBox(height: 16),
               Padding(
                 padding: const EdgeInsets.only(right: 8),
-                child: TextField(
-                  controller: _search,
-                  textInputAction: TextInputAction.search,
-                  onSubmitted: _submit,
-                  style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w600),
-                  decoration: InputDecoration(
-                    hintText: 'Search kachori, chai, lassi…',
-                    hintStyle: const TextStyle(color: AppColors.muted, fontWeight: FontWeight.w500),
-                    fillColor: Colors.white,
-                    prefixIcon: const Icon(Icons.search_rounded, color: AppColors.muted),
-                    suffixIcon: Padding(
-                      padding: const EdgeInsets.all(6),
-                      child: IconButton.filled(
-                        tooltip: 'Search',
-                        style: IconButton.styleFrom(backgroundColor: AppColors.ink, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                        onPressed: () => _submit(_search.text),
-                        icon: const Icon(Icons.tune_rounded, color: Colors.white, size: 20),
+                // Search keeps a phone-like width on tablets instead of spanning the whole header.
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: kContentMaxWidth),
+                  child: TextField(
+                    controller: _search,
+                    textInputAction: TextInputAction.search,
+                    onSubmitted: _submit,
+                    style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w600),
+                    decoration: InputDecoration(
+                      hintText: 'Search kachori, chai, lassi…',
+                      hintStyle: const TextStyle(color: AppColors.muted, fontWeight: FontWeight.w500),
+                      fillColor: Colors.white,
+                      prefixIcon: const Icon(Icons.search_rounded, color: AppColors.muted),
+                      suffixIcon: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: IconButton.filled(
+                          tooltip: 'Search',
+                          style: IconButton.styleFrom(backgroundColor: AppColors.ink, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                          onPressed: () => _submit(_search.text),
+                          icon: const Icon(Icons.tune_rounded, color: Colors.white, size: 20),
+                        ),
                       ),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                     ),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                   ),
                 ),
               ),
@@ -188,7 +193,7 @@ class BannerCarousel extends StatefulWidget {
 }
 
 class _BannerCarouselState extends State<BannerCarousel> {
-  final _controller = PageController(viewportFraction: 0.9);
+  PageController _controller = PageController(viewportFraction: 0.9);
   Timer? _timer;
   int _index = 0;
 
@@ -209,16 +214,33 @@ class _BannerCarouselState extends State<BannerCarousel> {
     super.dispose();
   }
 
+  /// Phones show 90%-wide banners; wider screens keep them banner-sized (~420pt) with
+  /// neighbours peeking in, instead of one stretched strip.
+  PageController _controllerFor(double width) {
+    final fraction = width > 600 ? (420 / width).clamp(0.3, 0.9) : 0.9;
+    if (_controller.viewportFraction != fraction) {
+      final old = _controller;
+      _controller = PageController(viewportFraction: fraction, initialPage: _index);
+      WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
+    }
+    return _controller;
+  }
+
   @override
   Widget build(BuildContext context) {
     final banners = widget.banners;
+    final width = MediaQuery.sizeOf(context).width;
+    // On wide screens the row of banners starts at the content edge instead of centring the first.
+    final wide = width > 600;
     return Column(
       children: [
         const SizedBox(height: 18),
-        SizedBox(
+        Container(
           height: 168,
+          padding: EdgeInsets.symmetric(horizontal: wide ? 10 : 0),
           child: PageView.builder(
-            controller: _controller,
+            controller: _controllerFor(width),
+            padEnds: !wide,
             itemCount: banners.length,
             onPageChanged: (i) => setState(() => _index = i),
             itemBuilder: (context, i) {
@@ -267,7 +289,12 @@ class _BannerCarouselState extends State<BannerCarousel> {
                                     const SizedBox(height: 4),
                                     SizedBox(
                                       width: 220,
-                                      child: Text(banner.subtitle!, maxLines: 2, style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
+                                      child: Text(
+                                        banner.subtitle!,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w600),
+                                      ),
                                     ),
                                   ],
                                 ],
@@ -316,8 +343,10 @@ class CategoryStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // Room for the 64pt icon and two label lines at the user's text size.
+    final labelLines = MediaQuery.textScalerOf(context).scale(theme.textTheme.labelSmall?.fontSize ?? 11) * 1.2 * 2;
     return SizedBox(
-      height: 104,
+      height: math.max(104, 64 + 8 + labelLines + 6),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -374,10 +403,12 @@ class TrailCard extends StatelessWidget {
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (sheetContext) {
         final theme = Theme.of(sheetContext);
+        // Long trails scroll instead of overflowing short screens.
         return SafeArea(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -389,8 +420,16 @@ class TrailCard extends StatelessWidget {
                   Text(trail.description!, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                 const SizedBox(height: 12),
                 Wrap(spacing: 8, children: [
-                  if (trail.duration != null) Chip(avatar: const Icon(Icons.schedule_rounded, size: 16), label: Text(trail.duration!)),
-                  if (trail.budget != null) Chip(avatar: const Icon(Icons.payments_outlined, size: 16), label: Text(trail.budget!)),
+                  if (trail.duration != null)
+                    Chip(
+                      avatar: const Icon(Icons.schedule_rounded, size: 16),
+                      label: Text(trail.duration!, overflow: TextOverflow.ellipsis),
+                    ),
+                  if (trail.budget != null)
+                    Chip(
+                      avatar: const Icon(Icons.payments_outlined, size: 16),
+                      label: Text(trail.budget!, overflow: TextOverflow.ellipsis),
+                    ),
                 ]),
                 const SizedBox(height: 8),
                 Text('Stops', style: theme.textTheme.titleSmall),
@@ -451,7 +490,12 @@ class TrailCard extends StatelessWidget {
                         child: Text('${trail.stops.length} stops', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
                       ),
                       const SizedBox(height: 8),
-                      Text(trail.title, maxLines: 2, style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800, height: 1.2)),
+                      Text(
+                        trail.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800, height: 1.2),
+                      ),
                       const SizedBox(height: 4),
                       Text(
                         [trail.duration, trail.budget].whereType<String>().join(' • '),
@@ -502,12 +546,17 @@ class CommunityReviewCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Expanded(
-              child: Text(
-                '“${review.text ?? ''}”',
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodyMedium?.copyWith(height: 1.4),
-              ),
+              // Up to three lines; fewer when large text leaves less room in the fixed-height strip.
+              child: LayoutBuilder(builder: (context, constraints) {
+                final style = theme.textTheme.bodyMedium?.copyWith(height: 1.4);
+                final lineHeight = MediaQuery.textScalerOf(context).scale(style?.fontSize ?? 14) * 1.4;
+                return Text(
+                  '“${review.text ?? ''}”',
+                  maxLines: (constraints.maxHeight / lineHeight).floor().clamp(1, 3),
+                  overflow: TextOverflow.ellipsis,
+                  style: style,
+                );
+              }),
             ),
             Row(
               children: [

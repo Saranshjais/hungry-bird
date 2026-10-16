@@ -69,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
       appBar: AppBar(),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          padding: readableInsets(context, const EdgeInsets.fromLTRB(24, 0, 24, 24), maxWidth: 480),
           child: Form(
             key: _form,
             child: AutofillGroup(

@@ -66,9 +66,8 @@ class SavedScreen extends StatelessWidget {
               if (favorites.loading && items.isEmpty)
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  sliver: SliverList.separated(
+                  sliver: SliverVendorTiles(
                     itemCount: 4,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (_, __) => const VendorTileSkeleton(),
                   ),
                 )
@@ -88,13 +87,12 @@ class SavedScreen extends StatelessWidget {
               else
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  sliver: SliverList.separated(
+                  sliver: SliverVendorTiles(
                     itemCount: items.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (_, i) => VendorTile(vendor: items[i]),
                   ),
                 ),
-              const SliverToBoxAdapter(child: SizedBox(height: kNavBarSpace)),
+              SliverToBoxAdapter(child: SizedBox(height: navBarSpace(context))),
             ],
           ),
         ),

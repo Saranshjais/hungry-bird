@@ -65,7 +65,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         child: Form(
           key: _form,
           child: ListView(
-            padding: const EdgeInsets.all(20),
+            padding: readableInsets(context, const EdgeInsets.all(20)),
             children: [
               Center(child: Avatar(name: _name.text.isEmpty ? '?' : _name.text, size: 84)),
               const SizedBox(height: 24),

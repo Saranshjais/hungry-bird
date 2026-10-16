@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
@@ -146,7 +148,7 @@ class _SubmitStallScreenState extends State<SubmitStallScreen> {
       body: Form(
         key: _form,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
+          padding: readableInsets(context, EdgeInsets.fromLTRB(20, 4, 20, 32 + MediaQuery.paddingOf(context).bottom)),
           children: [
             Container(
               padding: const EdgeInsets.all(14),
@@ -173,44 +175,51 @@ class _SubmitStallScreenState extends State<SubmitStallScreen> {
               validator: (v) => (v == null || v.trim().length < 2) ? 'Enter the stall\'s name' : null,
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _label('City *'),
-                      DropdownButtonFormField<int>(
-                        initialValue: _city?.id,
-                        isExpanded: true,
-                        items: [for (final c in cities) DropdownMenuItem(value: c.id, child: Text(c.name))],
-                        onChanged: (id) => setState(() => _city = cities.firstWhere((c) => c.id == id)),
-                        validator: (v) => v == null ? 'Choose a city' : null,
-                      ),
+            LayoutBuilder(builder: (context, constraints) {
+              final city = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _label('City *'),
+                  DropdownButtonFormField<int>(
+                    initialValue: _city?.id,
+                    isExpanded: true,
+                    items: [
+                      for (final c in cities)
+                        DropdownMenuItem(value: c.id, child: Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis)),
                     ],
+                    onChanged: (id) => setState(() => _city = cities.firstWhere((c) => c.id == id)),
+                    validator: (v) => v == null ? 'Choose a city' : null,
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _label('Category'),
-                      DropdownButtonFormField<String>(
-                        initialValue: _category,
-                        isExpanded: true,
-                        hint: const Text('Choose'),
-                        items: [
-                          for (final c in categories) DropdownMenuItem(value: c.slug, child: Text('${c.icon ?? ''} ${c.name}'.trim(), overflow: TextOverflow.ellipsis)),
-                          const DropdownMenuItem(value: 'Other', child: Text('Other')),
-                        ],
-                        onChanged: (v) => setState(() => _category = v),
-                      ),
+                ],
+              );
+              final category = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _label('Category'),
+                  DropdownButtonFormField<String>(
+                    initialValue: _category,
+                    isExpanded: true,
+                    hint: const Text('Choose', maxLines: 1, overflow: TextOverflow.ellipsis),
+                    items: [
+                      for (final c in categories)
+                        DropdownMenuItem(value: c.slug, child: Text('${c.icon ?? ''} ${c.name}'.trim(), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                      const DropdownMenuItem(value: 'Other', child: Text('Other')),
                     ],
+                    onChanged: (v) => setState(() => _category = v),
                   ),
-                ),
-              ],
-            ),
+                ],
+              );
+              // Side by side unless half the width can't show "Choose" next to the arrow
+              // (cover screens, large text); then stacked.
+              final half = (constraints.maxWidth - 12) / 2;
+              final hintWidth = textWidth(context, 'Choose', theme.textTheme.bodyLarge ?? const TextStyle());
+              if (half - 16 * 2 - 24 >= hintWidth) {
+                return Row(
+                  children: [Expanded(child: city), const SizedBox(width: 12), Expanded(child: category)],
+                );
+              }
+              return Column(children: [city, const SizedBox(height: 16), category]);
+            }),
             const SizedBox(height: 16),
             _label('What makes it special?'),
             TextFormField(
@@ -328,29 +337,32 @@ class _SubmitStallScreenState extends State<SubmitStallScreen> {
             ],
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(minimumSize: const Size(0, 44), backgroundColor: theme.colorScheme.surface),
-                  onPressed: _locating ? null : _useCurrentLocation,
-                  icon: _locating
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.my_location_rounded, size: 18),
-                  label: const Text('I\'m here'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(minimumSize: const Size(0, 44), backgroundColor: theme.colorScheme.surface),
-                  onPressed: _pickOnMap,
-                  icon: const Icon(Icons.map_outlined, size: 18),
-                  label: Text(hasPoint ? 'Adjust' : 'Pick on map'),
-                ),
-              ),
-            ],
-          ),
+          LayoutBuilder(builder: (context, constraints) {
+            final style = OutlinedButton.styleFrom(minimumSize: const Size(0, 44), backgroundColor: theme.colorScheme.surface);
+            final here = OutlinedButton.icon(
+              style: style,
+              onPressed: _locating ? null : _useCurrentLocation,
+              icon: _locating
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.my_location_rounded, size: 18),
+              label: const Text('I\'m here'),
+            );
+            final pick = OutlinedButton.icon(
+              style: style,
+              onPressed: _pickOnMap,
+              icon: const Icon(Icons.map_outlined, size: 18),
+              label: Text(hasPoint ? 'Adjust' : 'Pick on map'),
+            );
+            // Two columns while "Pick on map" fits on one line, else one button per row.
+            const buttonText = TextStyle(fontFamily: AppTheme.fontFamily, fontWeight: FontWeight.w700, fontSize: 15);
+            if ((constraints.maxWidth - 10) / 2 >= textWidth(context, 'Pick on map', buttonText) + 70) {
+              return Row(children: [Expanded(child: here), const SizedBox(width: 10), Expanded(child: pick)]);
+            }
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [here, const SizedBox(height: 8), pick],
+            );
+          }),
         ],
       ),
     );
@@ -369,38 +381,49 @@ class _SuccessView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(automaticallyImplyLeading: false),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 110,
-                  height: 110,
-                  decoration: const BoxDecoration(color: AppColors.successSoft, shape: BoxShape.circle),
-                  child: const Icon(Icons.check_rounded, size: 60, color: AppColors.success),
+        // Centred when it fits; scrolls on short screens / large text; phone-width on tablets.
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            padding: const EdgeInsets.all(28),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: math.max(0, constraints.maxHeight - 56)),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 480),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 110,
+                          height: 110,
+                          decoration: const BoxDecoration(color: AppColors.successSoft, shape: BoxShape.circle),
+                          child: const Icon(Icons.check_rounded, size: 60, color: AppColors.success),
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                      Text('Thank you!', textAlign: TextAlign.center, style: theme.textTheme.headlineMedium),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Your suggestion is with our team. Once verified, it will appear on the map for everyone.',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant, height: 1.5),
+                      ),
+                      const SizedBox(height: 32),
+                      if (loggedIn)
+                        FilledButton(
+                          onPressed: () => context.pushReplacement('/profile/submissions'),
+                          child: const Text('Track my suggestions'),
+                        ),
+                      const SizedBox(height: 10),
+                      OutlinedButton(onPressed: onAnother, child: const Text('Suggest another stall')),
+                      TextButton(onPressed: () => context.go('/home'), child: const Text('Back to home')),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 28),
-              Text('Thank you!', textAlign: TextAlign.center, style: theme.textTheme.headlineMedium),
-              const SizedBox(height: 10),
-              Text(
-                'Your suggestion is with our team. Once verified, it will appear on the map for everyone.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant, height: 1.5),
-              ),
-              const SizedBox(height: 32),
-              if (loggedIn)
-                FilledButton(
-                  onPressed: () => context.pushReplacement('/profile/submissions'),
-                  child: const Text('Track my suggestions'),
-                ),
-              const SizedBox(height: 10),
-              OutlinedButton(onPressed: onAnother, child: const Text('Suggest another stall')),
-              TextButton(onPressed: () => context.go('/home'), child: const Text('Back to home')),
-            ],
+            ),
           ),
         ),
       ),

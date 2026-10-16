@@ -65,7 +65,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
             ),
             children: [
               TileLayer(urlTemplate: AppConfig.mapTileUrl, userAgentPackageName: AppConfig.mapUserAgentPackage),
-              const SimpleAttributionWidget(source: Text('OpenStreetMap contributors')),
+              const _Attribution(),
             ],
           ),
           IgnorePointer(
@@ -113,23 +113,48 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       ),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '${_center.latitude.toStringAsFixed(5)}, ${_center.longitude.toStringAsFixed(5)}',
-              style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: () => context.pop(_center),
-                icon: const Icon(Icons.check_rounded),
-                label: const Text('Confirm this spot'),
+        child: ReadableWidth(
+          maxWidth: 560,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '${_center.latitude.toStringAsFixed(5)}, ${_center.longitude.toStringAsFixed(5)}',
+                style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
-            ),
-          ],
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () => context.pop(_center),
+                  icon: const Icon(Icons.check_rounded),
+                  label: const Text('Confirm this spot'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Same strip as flutter_map's SimpleAttributionWidget, but it wraps instead of overflowing
+/// narrow screens at large text sizes.
+class _Attribution extends StatelessWidget {
+  const _Attribution();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Align(
+        alignment: Alignment.bottomRight,
+        child: ColoredBox(
+          color: Theme.of(context).colorScheme.surface,
+          child: const Padding(
+            padding: EdgeInsets.all(3),
+            child: Text('flutter_map | © OpenStreetMap contributors', textAlign: TextAlign.end),
+          ),
         ),
       ),
     );

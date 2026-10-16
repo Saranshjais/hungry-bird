@@ -310,7 +310,7 @@ class _VendorBrowserState extends State<VendorBrowser> {
           ),
         ),
         ..._results(),
-        const SliverToBoxAdapter(child: SizedBox(height: kNavBarSpace)),
+        SliverToBoxAdapter(child: SizedBox(height: navBarSpace(context))),
       ],
     );
   }
@@ -360,9 +360,8 @@ class _VendorBrowserState extends State<VendorBrowser> {
       return [
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          sliver: SliverList.separated(
+          sliver: SliverVendorTiles(
             itemCount: 6,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
             itemBuilder: (_, __) => const VendorTileSkeleton(),
           ),
         ),
@@ -389,9 +388,8 @@ class _VendorBrowserState extends State<VendorBrowser> {
     return [
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-        sliver: SliverList.separated(
+        sliver: SliverVendorTiles(
           itemCount: _items.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 10),
           itemBuilder: (_, i) => VendorTile(vendor: _items[i]),
         ),
       ),
@@ -437,7 +435,7 @@ class _Suggestions extends StatelessWidget {
               children: [
                 for (final s in recent)
                   InputChip(
-                    label: Text(s),
+                    label: Text(s, maxLines: 1, overflow: TextOverflow.ellipsis),
                     avatar: const Icon(Icons.history_rounded, size: 16),
                     onPressed: () => onPick(s),
                     onDeleted: () => prefs.removeRecentSearch(s),

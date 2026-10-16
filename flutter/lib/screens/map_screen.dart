@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
@@ -132,7 +134,7 @@ class _MapScreenState extends State<MapScreen> {
               ),
               // Lifted above the floating nav bar so the (required) attribution stays visible.
               Padding(
-                padding: const EdgeInsets.only(bottom: kNavBarSpace - 24),
+                padding: EdgeInsets.only(bottom: navBarSpace(context) - 24),
                 child: RichAttributionWidget(
                   alignment: AttributionAlignment.bottomLeft,
                   attributions: [
@@ -145,123 +147,140 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ],
           ),
-          // Top bar
+          // Top bar (+ error banner right under it, however tall the bar gets with large text)
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: Material(
-                      color: theme.colorScheme.surface,
-                      elevation: 4,
-                      shadowColor: Colors.black26,
-                      borderRadius: BorderRadius.circular(18),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.map_rounded, color: AppColors.brand),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(_city?.name ?? 'Map', style: theme.textTheme.titleSmall),
-                                  Text(
-                                    _loading ? 'Loading stalls…' : '${visible.length} stalls on the map',
-                                    style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Material(
+                          color: theme.colorScheme.surface,
+                          elevation: 4,
+                          shadowColor: Colors.black26,
+                          borderRadius: BorderRadius.circular(18),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.map_rounded, color: AppColors.brand),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(_city?.name ?? 'Map', style: theme.textTheme.titleSmall),
+                                      Text(
+                                        _loading ? 'Loading stalls…' : '${visible.length} stalls on the map',
+                                        style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
+                                ),
+                                if (_loading) const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+                              ],
                             ),
-                            if (_loading) const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 10),
+                      Material(
+                        color: _gemsOnly ? AppColors.gem : theme.colorScheme.surface,
+                        elevation: 4,
+                        shadowColor: Colors.black26,
+                        borderRadius: BorderRadius.circular(18),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(18),
+                          onTap: () => setState(() {
+                            _gemsOnly = !_gemsOnly;
+                            _selected = null;
+                          }),
+                          child: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Icon(Icons.diamond_rounded, color: _gemsOnly ? Colors.white : AppColors.gem, semanticLabel: 'Hidden gems only'),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  Material(
-                    color: _gemsOnly ? AppColors.gem : theme.colorScheme.surface,
-                    elevation: 4,
-                    shadowColor: Colors.black26,
-                    borderRadius: BorderRadius.circular(18),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(18),
-                      onTap: () => setState(() {
-                        _gemsOnly = !_gemsOnly;
-                        _selected = null;
-                      }),
-                      child: Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Icon(Icons.diamond_rounded, color: _gemsOnly ? Colors.white : AppColors.gem, semanticLabel: 'Hidden gems only'),
+                  if (_error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Material(
+                        color: AppColors.dangerSoft,
+                        borderRadius: BorderRadius.circular(14),
+                        child: LayoutBuilder(builder: (context, constraints) {
+                          const style = TextStyle(color: AppColors.ink, fontSize: 13);
+                          final retry = TextButton(onPressed: _load, child: const Text('Retry'));
+                          // Tile padding, icon and gaps take ~88pt, the button its label + 24pt.
+                          final room = constraints.maxWidth - 88 - textWidth(context, 'Retry', theme.textTheme.labelLarge ?? style) - 24;
+                          final inline = wordsFit(context, _error!, DefaultTextStyle.of(context).style.merge(style), room);
+                          return ListTile(
+                            leading: const Icon(Icons.cloud_off_rounded, color: AppColors.danger),
+                            title: Text(_error!, style: style),
+                            subtitle: inline ? null : Align(alignment: AlignmentDirectional.centerStart, child: retry),
+                            trailing: inline ? retry : null,
+                          );
+                        }),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),
           ),
-          if (_error != null)
-            Positioned(
-              top: 100,
-              left: 16,
-              right: 16,
-              child: SafeArea(
-                child: Material(
-                  color: AppColors.dangerSoft,
-                  borderRadius: BorderRadius.circular(14),
-                  child: ListTile(
-                    leading: const Icon(Icons.cloud_off_rounded, color: AppColors.danger),
-                    title: Text(_error!, style: const TextStyle(color: AppColors.ink, fontSize: 13)),
-                    trailing: TextButton(onPressed: _load, child: const Text('Retry')),
-                  ),
-                ),
-              ),
-            ),
-          // Controls + preview card
+          // Controls + preview card, kept clear of the floating nav bar (taller with 3-button
+          // navigation or a home indicator) and phone-sized on tablets.
           Positioned(
             left: 16,
             right: 16,
-            bottom: kNavBarSpace - 12,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                FloatingActionButton.small(
-                  heroTag: 'map-city',
-                  tooltip: 'Back to city centre',
-                  backgroundColor: theme.colorScheme.surface,
-                  foregroundColor: theme.colorScheme.onSurface,
-                  onPressed: () => _map.move(_cityCenter(_city), 13),
-                  child: const Icon(Icons.location_city_rounded),
+            bottom: math.max(kNavBarSpace - 12, MediaQuery.paddingOf(context).bottom + 12),
+            child: Align(
+              alignment: Alignment.bottomRight,
+              heightFactor: 1,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    FloatingActionButton.small(
+                      heroTag: 'map-city',
+                      tooltip: 'Back to city centre',
+                      backgroundColor: theme.colorScheme.surface,
+                      foregroundColor: theme.colorScheme.onSurface,
+                      onPressed: () => _map.move(_cityCenter(_city), 13),
+                      child: const Icon(Icons.location_city_rounded),
+                    ),
+                    const SizedBox(height: 8),
+                    FloatingActionButton(
+                      heroTag: 'map-me',
+                      tooltip: 'My location',
+                      backgroundColor: AppColors.brand,
+                      foregroundColor: Colors.white,
+                      onPressed: _locateMe,
+                      child: const Icon(Icons.my_location_rounded),
+                    ),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      transitionBuilder: (child, anim) => SlideTransition(
+                        position: Tween(begin: const Offset(0, 0.3), end: Offset.zero).animate(anim),
+                        child: FadeTransition(opacity: anim, child: child),
+                      ),
+                      child: _selected == null
+                          ? const SizedBox(width: double.infinity, key: ValueKey('none'))
+                          : Padding(
+                              key: ValueKey(_selected!.id),
+                              padding: const EdgeInsets.only(top: 12),
+                              child: _PreviewCard(vendor: _selected!, userLat: position?.latitude, userLng: position?.longitude),
+                            ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                FloatingActionButton(
-                  heroTag: 'map-me',
-                  tooltip: 'My location',
-                  backgroundColor: AppColors.brand,
-                  foregroundColor: Colors.white,
-                  onPressed: _locateMe,
-                  child: const Icon(Icons.my_location_rounded),
-                ),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  transitionBuilder: (child, anim) => SlideTransition(
-                    position: Tween(begin: const Offset(0, 0.3), end: Offset.zero).animate(anim),
-                    child: FadeTransition(opacity: anim, child: child),
-                  ),
-                  child: _selected == null
-                      ? const SizedBox(width: double.infinity, key: ValueKey('none'))
-                      : Padding(
-                          key: ValueKey(_selected!.id),
-                          padding: const EdgeInsets.only(top: 12),
-                          child: _PreviewCard(vendor: _selected!, userLat: position?.latitude, userLng: position?.longitude),
-                        ),
-                ),
-              ],
+              ),
             ),
           ),
         ],
@@ -366,10 +385,12 @@ class _PreviewCard extends StatelessWidget {
                           style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                         ),
                         const SizedBox(height: 6),
-                        Row(
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
                           children: [
                             RatingPill(rating: vendor.rating, count: vendor.totalRatings, compact: true),
-                            if (vendor.isHiddenGem) ...[const SizedBox(width: 6), const VendorBadge(BadgeKind.hiddenGem, small: true)],
+                            if (vendor.isHiddenGem) const VendorBadge(BadgeKind.hiddenGem, small: true),
                           ],
                         ),
                       ],
@@ -379,25 +400,13 @@ class _PreviewCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(minimumSize: const Size(0, 44)),
-                      onPressed: () => Links.directions(context, vendor),
-                      icon: const Icon(Icons.directions_rounded, size: 20),
-                      label: const Text('Directions'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: FilledButton(
-                      style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
-                      onPressed: () => context.push('/vendor/${vendor.id}'),
-                      child: const Text('View stall'),
-                    ),
-                  ),
-                ],
+              ActionButtonRow(
+                secondaryIcon: Icons.directions_rounded,
+                secondaryLabel: 'Directions',
+                onSecondary: () => Links.directions(context, vendor),
+                primaryLabel: 'View stall',
+                onPrimary: () => context.push('/vendor/${vendor.id}'),
+                minHeight: 44,
               ),
             ],
           ),

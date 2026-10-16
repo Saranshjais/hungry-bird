@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
@@ -7,6 +9,38 @@ import '../core/theme.dart';
 
 /// Space reserved under scrollables for the floating bottom navigation bar.
 const double kNavBarSpace = 110;
+
+/// [kNavBarSpace], grown when a tall system navigation bar (Android 3-button nav) lifts the
+/// floating bar. Inside the tab shell the bottom padding is the floating bar's full height.
+double navBarSpace(BuildContext context) => math.max(kNavBarSpace, MediaQuery.paddingOf(context).bottom + 8);
+
+/// Widest a column of text, forms or details gets on tablets and unfolded foldables.
+const double kContentMaxWidth = 680;
+
+/// [padding] widened symmetrically so the content between stays at most [maxWidth] wide.
+/// Phones get [padding] unchanged; tablets get a centred, readable column.
+EdgeInsets readableInsets(BuildContext context, EdgeInsets padding, {double maxWidth = kContentMaxWidth}) {
+  final extra = (MediaQuery.sizeOf(context).width - padding.horizontal - maxWidth) / 2;
+  if (extra <= 0) return padding;
+  return padding.copyWith(left: padding.left + extra, right: padding.right + extra);
+}
+
+/// Caps [child] at [maxWidth] and centres it horizontally (no-op on phones).
+class ReadableWidth extends StatelessWidget {
+  const ReadableWidth({super.key, required this.child, this.maxWidth = kContentMaxWidth});
+
+  final Widget child;
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.topCenter,
+      heightFactor: 1,
+      child: ConstrainedBox(constraints: BoxConstraints(maxWidth: maxWidth), child: child),
+    );
+  }
+}
 
 void showSnack(BuildContext context, String message, {bool error = false}) {
   final messenger = ScaffoldMessenger.maybeOf(context);
@@ -100,9 +134,13 @@ class RatingPill extends StatelessWidget {
           Icon(hasRating ? Icons.star_rounded : Icons.auto_awesome_rounded,
               size: compact ? 13 : 15, color: hasRating ? AppColors.star : AppColors.brand),
           const SizedBox(width: 3),
-          Text(
-            hasRating ? (compact ? Fmt.rating(rating) : '${Fmt.rating(rating)} (${Fmt.count(count)})') : 'New',
-            style: TextStyle(fontSize: compact ? 11.5 : 12.5, fontWeight: FontWeight.w800, color: fg),
+          Flexible(
+            child: Text(
+              hasRating ? (compact ? Fmt.rating(rating) : '${Fmt.rating(rating)} (${Fmt.count(count)})') : 'New',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: compact ? 11.5 : 12.5, fontWeight: FontWeight.w800, color: fg),
+            ),
           ),
         ],
       ),
@@ -133,7 +171,15 @@ class VendorBadge extends StatelessWidget {
         children: [
           Icon(icon, size: small ? 12 : 14, color: fg),
           const SizedBox(width: 4),
-          Text(label, style: TextStyle(fontSize: small ? 10.5 : 12, fontWeight: FontWeight.w800, color: fg)),
+          // Ellipsizes rather than overflows when squeezed (narrow cards, large text).
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: small ? 10.5 : 12, fontWeight: FontWeight.w800, color: fg),
+            ),
+          ),
         ],
       ),
     );
@@ -264,30 +310,35 @@ class StarRatingInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(5, (i) {
-        final filled = i < value;
-        return Semantics(
-          button: true,
-          label: '${i + 1} star${i == 0 ? '' : 's'}',
-          selected: filled,
-          child: IconButton(
-            visualDensity: VisualDensity.compact,
-            iconSize: size,
-            onPressed: () => onChanged(i + 1),
-            icon: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 160),
-              transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
-              child: Icon(
-                filled ? Icons.star_rounded : Icons.star_outline_rounded,
-                key: ValueKey(filled),
-                color: filled ? AppColors.star : Theme.of(context).colorScheme.outline,
+    // Five 40pt stars need ~280pt: scale them down on very narrow screens (Galaxy Fold cover,
+    // iPad Slide Over) instead of overflowing.
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(5, (i) {
+          final filled = i < value;
+          return Semantics(
+            button: true,
+            label: '${i + 1} star${i == 0 ? '' : 's'}',
+            selected: filled,
+            child: IconButton(
+              visualDensity: VisualDensity.compact,
+              iconSize: size,
+              onPressed: () => onChanged(i + 1),
+              icon: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 160),
+                transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+                child: Icon(
+                  filled ? Icons.star_rounded : Icons.star_outline_rounded,
+                  key: ValueKey(filled),
+                  color: filled ? AppColors.star : Theme.of(context).colorScheme.outline,
+                ),
               ),
             ),
-          ),
-        );
-      }),
+          );
+        }),
+      ),
     );
   }
 }
@@ -334,6 +385,117 @@ class Avatar extends StatelessWidget {
         style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: size * 0.38),
       ),
     );
+  }
+}
+
+/// Width of [text] laid out on one line in [style] at the user's text size.
+double textWidth(BuildContext context, String text, TextStyle style) {
+  final painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: Directionality.of(context),
+    textScaler: MediaQuery.textScalerOf(context),
+    maxLines: 1,
+  )..layout();
+  final width = painter.width;
+  painter.dispose();
+  return width;
+}
+
+/// Whether every word of [text] fits on a line [width] wide, so wrapping never splits a word.
+bool wordsFit(BuildContext context, String text, TextStyle style, double width) =>
+    text.split(' ').every((word) => textWidth(context, word, style) <= width);
+
+/// An outlined secondary action beside a filled primary one (e.g. "Review" + "Get directions").
+///
+/// Keeps the [primaryFlex] split when both labels fit. On narrow screens or with large text the
+/// secondary button shrinks to its label, then to an icon (with tooltip), and the primary falls
+/// back to [primaryShortLabel] — so no label ever breaks mid-word.
+class ActionButtonRow extends StatelessWidget {
+  const ActionButtonRow({
+    super.key,
+    required this.secondaryIcon,
+    required this.secondaryLabel,
+    required this.onSecondary,
+    required this.primaryLabel,
+    this.primaryShortLabel,
+    this.primaryIcon,
+    required this.onPrimary,
+    this.primaryFlex = 1,
+    this.gap = 10,
+    this.minHeight = 52,
+  });
+
+  final IconData secondaryIcon;
+  final String secondaryLabel;
+  final VoidCallback onSecondary;
+  final String primaryLabel;
+  final String? primaryShortLabel;
+  final IconData? primaryIcon;
+  final VoidCallback onPrimary;
+  final int primaryFlex;
+  final double gap;
+  final double minHeight;
+
+  // Mirrors the theme's button text; icon buttons add padding (16 + 24), a 20pt icon and an 8pt gap.
+  static const _labelStyle = TextStyle(fontFamily: AppTheme.fontFamily, fontWeight: FontWeight.w700, fontSize: 15);
+  static const _iconChrome = 70.0;
+  static const _plainChrome = 50.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (context, constraints) {
+      final available = constraints.maxWidth - gap;
+      final primaryChrome = primaryIcon == null ? _plainChrome : _iconChrome;
+      final secondaryNeed = textWidth(context, secondaryLabel, _labelStyle) + _iconChrome;
+      double primaryNeed(String label) => textWidth(context, label, _labelStyle) + primaryChrome;
+
+      final secondaryShare = available / (1 + primaryFlex);
+      if (secondaryNeed <= secondaryShare && primaryNeed(primaryLabel) <= available - secondaryShare) {
+        return _row(secondary: Expanded(child: _secondary(withLabel: true)), primary: _primary(primaryLabel), flex: primaryFlex);
+      }
+      final shortLabel = primaryShortLabel ?? primaryLabel;
+      for (final label in {primaryLabel, shortLabel}) {
+        if (secondaryNeed + primaryNeed(label) <= available) {
+          return _row(secondary: _secondary(withLabel: true), primary: _primary(label));
+        }
+      }
+      final iconOnlyRoom = available - minHeight;
+      return _row(
+        secondary: SizedBox(width: minHeight, child: _secondary(withLabel: false)),
+        primary: _primary(primaryNeed(primaryLabel) <= iconOnlyRoom ? primaryLabel : shortLabel),
+      );
+    });
+  }
+
+  Widget _row({required Widget secondary, required Widget primary, int flex = 1}) {
+    return Row(children: [secondary, SizedBox(width: gap), Expanded(flex: flex, child: primary)]);
+  }
+
+  Widget _secondary({required bool withLabel}) {
+    final style = OutlinedButton.styleFrom(minimumSize: Size(0, minHeight));
+    if (!withLabel) {
+      return Tooltip(
+        message: secondaryLabel,
+        child: OutlinedButton(
+          style: style.copyWith(padding: const WidgetStatePropertyAll(EdgeInsets.zero)),
+          onPressed: onSecondary,
+          child: Icon(secondaryIcon, size: 20, semanticLabel: secondaryLabel),
+        ),
+      );
+    }
+    return OutlinedButton.icon(
+      style: style,
+      onPressed: onSecondary,
+      icon: Icon(secondaryIcon, size: 20),
+      label: Text(secondaryLabel, maxLines: 1, overflow: TextOverflow.ellipsis),
+    );
+  }
+
+  Widget _primary(String label) {
+    final style = FilledButton.styleFrom(minimumSize: Size(0, minHeight));
+    final text = Text(label, maxLines: 1, overflow: TextOverflow.ellipsis);
+    if (primaryIcon == null) return FilledButton(style: style, onPressed: onPrimary, child: text);
+    return FilledButton.icon(style: style, onPressed: onPrimary, icon: Icon(primaryIcon, size: 20), label: text);
   }
 }
 

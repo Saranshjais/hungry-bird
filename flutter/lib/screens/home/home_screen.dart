@@ -191,7 +191,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
             const SliverToBoxAdapter(child: SuggestStallCard()),
-            const SliverToBoxAdapter(child: SizedBox(height: kNavBarSpace)),
+            SliverToBoxAdapter(child: SizedBox(height: navBarSpace(context))),
           ],
         ),
       ),
@@ -261,6 +261,19 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
+    final action = location.busy
+        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.gem))
+        : TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.gem),
+            onPressed: () async {
+              if (location.status == LocationStatus.deniedForever || location.status == LocationStatus.serviceDisabled) {
+                await location.openSettings();
+              } else {
+                await location.locate();
+              }
+            },
+            child: Text(location.status == LocationStatus.deniedForever ? 'Settings' : 'Enable'),
+          );
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
       child: Container(
@@ -269,44 +282,37 @@ class _HomeScreenState extends State<HomeScreen> {
           color: AppColors.gemSoft,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-              child: const Icon(Icons.near_me_rounded, color: AppColors.gem),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('What\'s cooking near you?', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.ink)),
-                  const SizedBox(height: 2),
-                  Text(
-                    location.message.isNotEmpty ? location.message : 'Turn on location to see the closest stalls.',
-                    style: const TextStyle(color: AppColors.inkSoft, fontSize: 12.5, height: 1.35),
-                  ),
-                ],
+        child: LayoutBuilder(builder: (context, constraints) {
+          // On cover screens / with large text the button moves under the copy so the title
+          // keeps enough width not to break mid-word.
+          final stacked = constraints.maxWidth < 260 * MediaQuery.textScalerOf(context).scale(15) / 15;
+          return Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                child: const Icon(Icons.near_me_rounded, color: AppColors.gem),
               ),
-            ),
-            const SizedBox(width: 8),
-            location.busy
-                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.gem))
-                : TextButton(
-                    style: TextButton.styleFrom(foregroundColor: AppColors.gem),
-                    onPressed: () async {
-                      if (location.status == LocationStatus.deniedForever || location.status == LocationStatus.serviceDisabled) {
-                        await location.openSettings();
-                      } else {
-                        await location.locate();
-                      }
-                    },
-                    child: Text(location.status == LocationStatus.deniedForever ? 'Settings' : 'Enable'),
-                  ),
-          ],
-        ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('What\'s cooking near you?', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.ink)),
+                    const SizedBox(height: 2),
+                    Text(
+                      location.message.isNotEmpty ? location.message : 'Turn on location to see the closest stalls.',
+                      style: const TextStyle(color: AppColors.inkSoft, fontSize: 12.5, height: 1.35),
+                    ),
+                    if (stacked) action,
+                  ],
+                ),
+              ),
+              if (!stacked) ...[const SizedBox(width: 8), action],
+            ],
+          );
+        }),
       ),
     );
   }
@@ -328,10 +334,10 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      sliver: SliverList.separated(
-        itemCount: items?.length ?? 3,
-        separatorBuilder: (_, __) => const SizedBox(height: 10),
-        itemBuilder: (_, i) => items == null ? const VendorTileSkeleton() : VendorTile(vendor: items[i]),
+      sliver: SliverToBoxAdapter(
+        child: VendorTileColumn(children: [
+          for (var i = 0; i < (items?.length ?? 3); i++) items == null ? const VendorTileSkeleton() : VendorTile(vendor: items[i]),
+        ]),
       ),
     );
   }

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -20,30 +22,41 @@ class _StatusLayout extends StatelessWidget {
     final theme = Theme.of(context);
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset('assets/images/logo.png', width: 170),
-              const SizedBox(height: 40),
-              Container(
-                width: 96,
-                height: 96,
-                decoration: const BoxDecoration(color: AppColors.brandSoft, shape: BoxShape.circle),
-                child: Icon(icon, size: 44, color: AppColors.brand),
+        // Centred when it fits; scrolls on short screens / large text; phone-width on tablets.
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            padding: const EdgeInsets.all(32),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: math.max(0, constraints.maxHeight - 64)),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 480),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Image.asset('assets/images/logo.png', width: 170),
+                      const SizedBox(height: 40),
+                      Container(
+                        width: 96,
+                        height: 96,
+                        decoration: const BoxDecoration(color: AppColors.brandSoft, shape: BoxShape.circle),
+                        child: Icon(icon, size: 44, color: AppColors.brand),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(title, textAlign: TextAlign.center, style: theme.textTheme.headlineSmall),
+                      const SizedBox(height: 10),
+                      Text(
+                        message,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant, height: 1.5),
+                      ),
+                      const SizedBox(height: 32),
+                      SizedBox(width: double.infinity, child: action),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(height: 24),
-              Text(title, textAlign: TextAlign.center, style: theme.textTheme.headlineSmall),
-              const SizedBox(height: 10),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant, height: 1.5),
-              ),
-              const SizedBox(height: 32),
-              SizedBox(width: double.infinity, child: action),
-            ],
+            ),
           ),
         ),
       ),

@@ -191,6 +191,83 @@ class VendorTile extends StatelessWidget {
   }
 }
 
+/// Columns of [VendorTile]s for a list [width]: one on phones, more on tablets/foldables.
+int vendorTileColumns(double width) => width >= 1100 ? 3 : (width >= 700 ? 2 : 1);
+
+/// A vertical list of vendor tiles that becomes a 2–3 column grid on wide screens, so tiles
+/// don't stretch across a tablet. Phones get exactly the plain separated list.
+class SliverVendorTiles extends StatelessWidget {
+  const SliverVendorTiles({super.key, required this.itemCount, required this.itemBuilder});
+
+  final int itemCount;
+  final IndexedWidgetBuilder itemBuilder;
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverLayoutBuilder(builder: (context, constraints) {
+      final columns = vendorTileColumns(constraints.crossAxisExtent);
+      if (columns == 1) {
+        return SliverList.separated(
+          itemCount: itemCount,
+          separatorBuilder: (_, __) => const SizedBox(height: 10),
+          itemBuilder: itemBuilder,
+        );
+      }
+      return SliverList.separated(
+        itemCount: (itemCount / columns).ceil(),
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        itemBuilder: (context, row) => Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var c = 0; c < columns; c++) ...[
+              if (c > 0) const SizedBox(width: 10),
+              Expanded(
+                child: row * columns + c < itemCount ? itemBuilder(context, row * columns + c) : const SizedBox.shrink(),
+              ),
+            ],
+          ],
+        ),
+      );
+    });
+  }
+}
+
+/// [SliverVendorTiles] for short lists (home's "Most loved"), built eagerly. Eager layout also
+/// keeps the scroll offset stable when the text size changes while scrolled past the list (a
+/// lazy SliverList there could fail to settle its scroll offset).
+class VendorTileColumn extends StatelessWidget {
+  const VendorTileColumn({super.key, required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (context, constraints) {
+      final columns = vendorTileColumns(constraints.maxWidth);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var row = 0; row * columns < children.length; row++) ...[
+            if (row > 0) const SizedBox(height: 10),
+            if (columns == 1)
+              children[row]
+            else
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var c = 0; c < columns; c++) ...[
+                    if (c > 0) const SizedBox(width: 10),
+                    Expanded(child: row * columns + c < children.length ? children[row * columns + c] : const SizedBox.shrink()),
+                  ],
+                ],
+              ),
+          ],
+        ],
+      );
+    });
+  }
+}
+
 class _MetaChip extends StatelessWidget {
   const _MetaChip({required this.icon, required this.label});
 

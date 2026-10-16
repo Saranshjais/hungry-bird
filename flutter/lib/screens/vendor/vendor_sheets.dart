@@ -23,6 +23,8 @@ Future<RateResult?> showReviewSheet(BuildContext context, {required Vendor vendo
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
+    // A tall sheet (keyboard up, short screen) stops below the status bar / notch.
+    useSafeArea: true,
     builder: (_) => _ReviewSheet(vendor: vendor, existing: existing),
   );
 }
@@ -105,8 +107,10 @@ class _ReviewSheetState extends State<_ReviewSheet> {
               ),
               const SizedBox(height: 12),
               Center(child: StarRatingInput(value: _rating, onChanged: (v) => setState(() => _rating = v))),
-              SizedBox(
-                height: 22,
+              // At least 22pt tall so the sheet doesn't jump when a rating is picked, but free to grow
+              // with large text instead of clipping the label.
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 22),
                 child: Text(_labels[_rating],
                     textAlign: TextAlign.center, style: const TextStyle(color: AppColors.brand, fontWeight: FontWeight.w800)),
               ),
@@ -162,6 +166,7 @@ Future<void> showReportSheet(BuildContext context, {required String targetType, 
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
+    useSafeArea: true,
     builder: (_) => _ReportSheet(targetType: targetType, targetId: targetId, title: title),
   );
 }

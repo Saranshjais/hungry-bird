@@ -4,6 +4,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../core/config.dart';
 import '../core/links.dart';
 import '../core/theme.dart';
+import '../widgets/common.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -14,7 +15,7 @@ class AboutScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('About')),
       body: ListView(
-        padding: const EdgeInsets.all(24),
+        padding: readableInsets(context, EdgeInsets.fromLTRB(24, 24, 24, 24 + MediaQuery.paddingOf(context).bottom)),
         children: [
           Image.asset('assets/images/logo.png', height: 80),
           const SizedBox(height: 8),

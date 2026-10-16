@@ -63,7 +63,7 @@ class _MySubmissionsScreenState extends State<MySubmissionsScreen> {
                         ),
                       ])
                     : ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                        padding: readableInsets(context, EdgeInsets.fromLTRB(16, 16, 16, 100 + MediaQuery.paddingOf(context).bottom)),
                         itemCount: items.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 10),
                         itemBuilder: (_, i) => _SubmissionCard(item: items[i]),
@@ -90,23 +90,30 @@ class _SubmissionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(child: Text(item.stallName, style: theme.textTheme.titleMedium)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(icon, size: 14, color: fg),
-                    const SizedBox(width: 4),
-                    Text(label, style: TextStyle(color: fg, fontWeight: FontWeight.w800, fontSize: 12)),
-                  ],
-                ),
+          LayoutBuilder(builder: (context, constraints) {
+            final labelStyle = TextStyle(color: fg, fontWeight: FontWeight.w800, fontSize: 12);
+            final pill = Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 14, color: fg),
+                  const SizedBox(width: 4),
+                  Text(label, style: labelStyle),
+                ],
               ),
-            ],
-          ),
+            );
+            // Pill (padding + icon + gap ~38pt) under the name when the name would have to break words.
+            final nameRoom = constraints.maxWidth - textWidth(context, label, DefaultTextStyle.of(context).style.merge(labelStyle)) - 38;
+            if (!wordsFit(context, item.stallName, theme.textTheme.titleMedium ?? const TextStyle(), nameRoom)) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [Text(item.stallName, style: theme.textTheme.titleMedium), const SizedBox(height: 6), pill],
+              );
+            }
+            return Row(children: [Expanded(child: Text(item.stallName, style: theme.textTheme.titleMedium)), pill]);
+          }),
           const SizedBox(height: 4),
           Text(
             [item.cuisineType, item.cityName, item.address].whereType<String>().join(' • '),

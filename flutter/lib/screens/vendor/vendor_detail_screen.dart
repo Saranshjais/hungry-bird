@@ -176,62 +176,61 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                 ),
               ),
             ),
-            SliverToBoxAdapter(child: _header(vendor)),
-            SliverToBoxAdapter(child: _quickActions(vendor)),
-            SliverToBoxAdapter(child: _infoCard(vendor)),
-            if (vendor.description != null) SliverToBoxAdapter(child: _about(vendor)),
-            if (vendor.hasLocation) SliverToBoxAdapter(child: _miniMap(vendor)),
-            SliverToBoxAdapter(child: _reviewsSection(vendor)),
-            if (_nearby.isNotEmpty) ...[
-              const SliverToBoxAdapter(child: SectionHeader(title: 'More stalls nearby')),
-              SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 252,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _nearby.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 12),
-                    itemBuilder: (_, i) => VendorCard(vendor: _nearby[i]),
+            // The photo stays full-bleed; the details keep a readable width on tablets.
+            SliverPadding(
+              padding: readableInsets(context, EdgeInsets.zero),
+              sliver: SliverMainAxisGroup(slivers: [
+                SliverToBoxAdapter(child: _header(vendor)),
+                SliverToBoxAdapter(child: _quickActions(vendor)),
+                SliverToBoxAdapter(child: _infoCard(vendor)),
+                if (vendor.description != null) SliverToBoxAdapter(child: _about(vendor)),
+                if (vendor.hasLocation) SliverToBoxAdapter(child: _miniMap(vendor)),
+                SliverToBoxAdapter(child: _reviewsSection(vendor)),
+                if (_nearby.isNotEmpty) ...[
+                  const SliverToBoxAdapter(child: SectionHeader(title: 'More stalls nearby')),
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: 252,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: _nearby.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 12),
+                        itemBuilder: (_, i) => VendorCard(vendor: _nearby[i]),
+                      ),
+                    ),
+                  ),
+                ],
+                SliverToBoxAdapter(
+                  child: Center(
+                    child: TextButton.icon(
+                      onPressed: () => showReportSheet(context, targetType: 'vendor', targetId: vendor.id, title: 'Report this listing'),
+                      icon: const Icon(Icons.flag_outlined, size: 18),
+                      label: const Text('Something wrong? Report this listing'),
+                      style: TextButton.styleFrom(foregroundColor: theme.colorScheme.onSurfaceVariant),
+                    ),
                   ),
                 ),
-              ),
-            ],
-            SliverToBoxAdapter(
-              child: Center(
-                child: TextButton.icon(
-                  onPressed: () => showReportSheet(context, targetType: 'vendor', targetId: vendor.id, title: 'Report this listing'),
-                  icon: const Icon(Icons.flag_outlined, size: 18),
-                  label: const Text('Something wrong? Report this listing'),
-                  style: TextButton.styleFrom(foregroundColor: theme.colorScheme.onSurfaceVariant),
-                ),
-              ),
+                const SliverToBoxAdapter(child: SizedBox(height: 24)),
+              ]),
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
       ),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-        child: Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _writeReview,
-                icon: const Icon(Icons.rate_review_outlined, size: 20),
-                label: Text(_myReview == null ? 'Review' : 'Edit review'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              flex: 2,
-              child: FilledButton.icon(
-                onPressed: () => Links.directions(context, vendor),
-                icon: const Icon(Icons.directions_walk_rounded, size: 20),
-                label: const Text('Get directions'),
-              ),
-            ),
-          ],
+        child: ReadableWidth(
+          child: ActionButtonRow(
+            secondaryIcon: Icons.rate_review_outlined,
+            secondaryLabel: _myReview == null ? 'Review' : 'Edit review',
+            onSecondary: _writeReview,
+            primaryIcon: Icons.directions_walk_rounded,
+            primaryLabel: 'Get directions',
+            primaryShortLabel: 'Directions',
+            onPrimary: () => Links.directions(context, vendor),
+            primaryFlex: 2,
+            gap: 12,
+          ),
         ),
       ),
     );
@@ -333,7 +332,11 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                         child: Icon(icon, color: AppColors.brand),
                       ),
                       const SizedBox(height: 6),
-                      Text(label, style: Theme.of(context).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700)),
+                      // Four columns get tight on cover screens; shrink "Directions" rather than break it.
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(label, style: Theme.of(context).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700)),
+                      ),
                     ],
                   ),
                 ),
@@ -491,13 +494,14 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          // The action wraps under the title on narrow screens instead of squeezing it.
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 4),
-                  child: Text('Reviews', style: theme.textTheme.titleLarge?.copyWith(fontSize: 19)),
-                ),
+              Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Text('Reviews', style: theme.textTheme.titleLarge?.copyWith(fontSize: 19)),
               ),
               TextButton.icon(
                 onPressed: _writeReview,
@@ -627,7 +631,14 @@ class _ReviewTile extends StatelessWidget {
                         children: [
                           StarRow(rating: review.rating, size: 14),
                           const SizedBox(width: 6),
-                          Text(Fmt.timeAgo(review.createdAt), style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                          Flexible(
+                            child: Text(
+                              Fmt.timeAgo(review.createdAt),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                            ),
+                          ),
                         ],
                       ),
                     ],

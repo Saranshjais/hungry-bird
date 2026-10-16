@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -34,7 +36,7 @@ class ProfileScreen extends StatelessWidget {
       body: SafeArea(
         bottom: false,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, kNavBarSpace),
+          padding: readableInsets(context, EdgeInsets.fromLTRB(16, 16, 16, navBarSpace(context))),
           children: [
             Padding(
               padding: const EdgeInsets.only(left: 4, bottom: 16),
@@ -237,11 +239,15 @@ class _Stat extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: onTap,
-        child: Column(
-          children: [
-            Text(value, style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w800)),
-            Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
-          ],
+        // Scale down rather than break "Suggestions" on narrow screens with large text.
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Column(
+            children: [
+              Text(value, style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w800)),
+              Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+            ],
+          ),
         ),
       ),
     );
@@ -260,21 +266,31 @@ class _GuestCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                padding: const EdgeInsets.all(10),
-                decoration: const BoxDecoration(color: AppColors.brand, shape: BoxShape.circle),
-                child: Image.asset('assets/images/logo_mark_white.png'),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text('Join the HungryBird flock', style: theme.textTheme.titleLarge?.copyWith(color: Colors.white)),
-              ),
-            ],
-          ),
+          LayoutBuilder(builder: (context, constraints) {
+            const title = 'Join the HungryBird flock';
+            final style = theme.textTheme.titleLarge?.copyWith(color: Colors.white);
+            final logo = Container(
+              width: 52,
+              height: 52,
+              padding: const EdgeInsets.all(10),
+              decoration: const BoxDecoration(color: AppColors.brand, shape: BoxShape.circle),
+              child: Image.asset('assets/images/logo_mark_white.png'),
+            );
+            // Logo above the title when "HungryBird" can't fit beside it (cover screens, large text).
+            if (!wordsFit(context, title, style ?? const TextStyle(), constraints.maxWidth - 66)) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [logo, const SizedBox(height: 12), Text(title, style: style)],
+              );
+            }
+            return Row(
+              children: [
+                logo,
+                const SizedBox(width: 14),
+                Expanded(child: Text(title, style: style)),
+              ],
+            );
+          }),
           const SizedBox(height: 10),
           const Text(
             'Sync your saved stalls, post reviews under your name and follow the gems you suggest.',
@@ -350,16 +366,30 @@ class _Tile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final valueStyle = theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w600);
+    // The value (e.g. a long city name) moves under the title when both don't fit on one line
+    // (list + tile padding, leading icon and chevron take ~144pt of the list's width).
+    final listWidth = math.min(MediaQuery.sizeOf(context).width, kContentMaxWidth + 32);
+    final room = listWidth - 144;
+    final valueBelow = trailingText != null &&
+        textWidth(context, title, theme.listTileTheme.titleTextStyle ?? const TextStyle()) +
+                textWidth(context, trailingText!, valueStyle ?? const TextStyle()) >
+            room;
+    final subtitleText = subtitle ?? (valueBelow ? trailingText : null);
     return ListTile(
       onTap: onTap,
       leading: Icon(icon, color: AppColors.brand),
       title: Text(title),
-      subtitle: subtitle == null ? null : Text(subtitle!),
+      subtitle: subtitleText == null ? null : Text(subtitleText),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (trailingText != null)
-            Text(trailingText!, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w600)),
+          if (trailingText != null && !valueBelow)
+            // A long city name must not take the whole tile (ListTile asserts and the page fails to lay out).
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: listWidth * 0.38),
+              child: Text(trailingText!, maxLines: 1, overflow: TextOverflow.ellipsis, style: valueStyle),
+            ),
           const Icon(Icons.chevron_right_rounded),
         ],
       ),

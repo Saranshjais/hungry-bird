@@ -101,7 +101,7 @@ class _HelpScreenState extends State<HelpScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Help & support')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        padding: readableInsets(context, EdgeInsets.fromLTRB(16, 8, 16, 32 + MediaQuery.paddingOf(context).bottom)),
         children: [
           Text('Frequently asked', style: theme.textTheme.titleLarge),
           const SizedBox(height: 10),
@@ -148,8 +148,9 @@ class _HelpScreenState extends State<HelpScreen> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   initialValue: _topic,
+                  isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Topic'),
-                  items: [for (final t in _topics) DropdownMenuItem(value: t, child: Text(t))],
+                  items: [for (final t in _topics) DropdownMenuItem(value: t, child: Text(t, overflow: TextOverflow.ellipsis))],
                   onChanged: (v) => setState(() => _topic = v ?? _topic),
                 ),
                 const SizedBox(height: 12),

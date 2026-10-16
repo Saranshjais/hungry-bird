@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -27,25 +29,34 @@ class SettingsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
-        padding: const EdgeInsets.only(bottom: 32),
+        padding: readableInsets(context, EdgeInsets.only(bottom: 32 + MediaQuery.paddingOf(context).bottom)),
         children: [
           heading('Appearance'),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SegmentedButton<ThemeMode>(
-              segments: const [
-                ButtonSegment(value: ThemeMode.system, icon: Icon(Icons.brightness_auto_rounded), label: Text('System')),
-                ButtonSegment(value: ThemeMode.light, icon: Icon(Icons.light_mode_rounded), label: Text('Light')),
-                ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode_rounded), label: Text('Dark')),
-              ],
-              selected: {prefs.themeMode},
-              showSelectedIcon: false,
-              style: SegmentedButton.styleFrom(
-                selectedBackgroundColor: AppColors.brand,
-                selectedForegroundColor: Colors.white,
-              ),
-              onSelectionChanged: (s) => prefs.setThemeMode(s.first),
-            ),
+            child: LayoutBuilder(builder: (context, constraints) {
+              // Drop the segment icons when a third of the width can't hold icon + label, and
+              // stack the segments when it can't even hold the label (cover screens, large text).
+              final labelStyle = theme.textTheme.labelLarge ?? const TextStyle();
+              final widest = ['System', 'Light', 'Dark'].map((l) => textWidth(context, l, labelStyle)).reduce(math.max);
+              final vertical = widest + 34 > constraints.maxWidth / 3;
+              final icons = vertical || widest + 18 + 8 + 34 <= constraints.maxWidth / 3;
+              return SegmentedButton<ThemeMode>(
+                direction: vertical ? Axis.vertical : Axis.horizontal,
+                segments: [
+                  ButtonSegment(value: ThemeMode.system, icon: icons ? const Icon(Icons.brightness_auto_rounded) : null, label: const Text('System')),
+                  ButtonSegment(value: ThemeMode.light, icon: icons ? const Icon(Icons.light_mode_rounded) : null, label: const Text('Light')),
+                  ButtonSegment(value: ThemeMode.dark, icon: icons ? const Icon(Icons.dark_mode_rounded) : null, label: const Text('Dark')),
+                ],
+                selected: {prefs.themeMode},
+                showSelectedIcon: false,
+                style: SegmentedButton.styleFrom(
+                  selectedBackgroundColor: AppColors.brand,
+                  selectedForegroundColor: Colors.white,
+                ),
+                onSelectionChanged: (s) => prefs.setThemeMode(s.first),
+              );
+            }),
           ),
           if (user != null) ...[
             heading('Notifications'),
@@ -105,6 +116,8 @@ class SettingsScreen extends StatelessWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
+          // Scrolls when the keyboard leaves little room (short phones, large text).
+          scrollable: true,
           title: const Text('Delete your account?'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
