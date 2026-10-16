@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BarChart3, CircleCheck, CircleX, ExternalLink, MessageSquareText, Quote, Star, Trash2, X } from "lucide-react";
-import { adminFetch, formatDate, formatDateTime, qs } from "../lib/api";
-import { useCan, useDebounce, usePageFor } from "../lib/hooks";
+import { BarChart3, Calculator, CircleCheck, CircleX, ExternalLink, Info, MessageSquareText, Quote, Star, Trash2, X } from "lucide-react";
+import { adminFetch, canSeePersonalData, formatDate, formatDateTime, qs } from "../lib/api";
+import { useAdmin, useCan, useDebounce, usePageFor } from "../lib/hooks";
 import { useToast } from "../components/Toast";
 import { useConfirm } from "../components/Modal";
 import { EmptyState, ErrorBanner, Loading, PageHeader, Pagination, ReadOnlyNote, SearchInput, Stars, StatusBadge, Tabs } from "../components/ui";
@@ -42,6 +42,7 @@ export default function AdminReviews() {
 function VendorReviews({ vendorFilter, clearVendor }) {
   const toast = useToast();
   const confirm = useConfirm();
+  const { admin } = useAdmin();
   const canWrite = useCan("reviews");
   const [search, setSearch] = useState("");
   const q = useDebounce(search, 300);
@@ -59,7 +60,7 @@ function VendorReviews({ vendorFilter, clearVendor }) {
       const res = await adminFetch(`/reviews${qs({ q, max_rating: lowOnly ? 2 : "", vendor_id: vendorId, page, per_page: PER_PAGE })}`);
       setData(res);
     } catch (err) {
-      setError(err.message);
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -94,6 +95,7 @@ function VendorReviews({ vendorFilter, clearVendor }) {
         <label className="admin-check px-2">
           <input type="checkbox" checked={lowOnly} onChange={(e) => setLowOnly(e.target.checked)} />≤ 2★ only
         </label>
+        {!canSeePersonalData(admin) && <span className="text-xs text-neutral-500 px-2">Reviewer emails and IPs are only shown to roles that can see user data.</span>}
         {vendorFilter && (
           <span className="admin-badge brand !text-sm !py-1">
             Vendor: {vendorFilter.name}
@@ -169,10 +171,35 @@ function VendorReviews({ vendorFilter, clearVendor }) {
 }
 
 function RatingSummary({ onShowReviews }) {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const canFixRatings = useCan("vendors");
   const [ratings, setRatings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [busyId, setBusyId] = useState(null);
+
+  /** POST /vendors/<id>/recalculate-rating - replaces imported/seeded numbers with the real average. */
+  const recalculate = async (r) => {
+    const ok = await confirm({
+      title: `Recalculate ${r.name}'s rating?`,
+      message: "The rating is recomputed from reviews written on HungryBird. Imported or seeded numbers are discarded; with no reviews the vendor shows no rating.",
+      confirmLabel: "Recalculate",
+    });
+    if (!ok) return;
+    setBusyId(r.id);
+    try {
+      const res = await adminFetch(`/vendors/${r.id}/recalculate-rating`, { method: "POST" });
+      const v = res.vendor || res;
+      setRatings((list) => list.map((x) => (x.id === r.id ? { ...x, avg_rating: v.avg_rating ?? null, total_ratings: v.total_ratings ?? 0 } : x)));
+      toast.success(res.message || "Rating recalculated from real reviews");
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -181,7 +208,7 @@ function RatingSummary({ onShowReviews }) {
       const res = await adminFetch("/ratings");
       setRatings(res.ratings || []);
     } catch (err) {
-      setError(err.message);
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -202,6 +229,10 @@ function RatingSummary({ onShowReviews }) {
       <div className="admin-toolbar">
         <SearchInput value={search} onChange={setSearch} placeholder="Filter by vendor, city or cuisine..." />
         <span className="text-xs text-neutral-500 px-2">{ratings.length} vendors with ratings</span>
+      </div>
+      <div className="admin-note info">
+        <Info size={16} className="shrink-0 mt-0.5" />
+        <span>Some imported or seeded vendors carry ratings that didn&apos;t come from HungryBird reviews. {canFixRatings ? "Use Recalculate to reset a vendor to its real community rating." : "Someone who manages vendors can recalculate them from real reviews."}</span>
       </div>
       <ErrorBanner message={error} onRetry={load} />
       {loading ? (
@@ -234,9 +265,16 @@ function RatingSummary({ onShowReviews }) {
                   </td>
                   <td className="num">{r.total_ratings}</td>
                   <td className="actions">
-                    <button type="button" className="admin-btn admin-btn-sm" onClick={() => onShowReviews({ id: r.id, name: r.name })}>
-                      View reviews
-                    </button>
+                    <div className="admin-actions">
+                      {canFixRatings && (
+                        <button type="button" className="admin-btn admin-btn-ghost admin-btn-sm" disabled={busyId === r.id} onClick={() => recalculate(r)} title="Recalculate from real reviews">
+                          <Calculator size={14} /> Recalculate
+                        </button>
+                      )}
+                      <button type="button" className="admin-btn admin-btn-sm" onClick={() => onShowReviews({ id: r.id, name: r.name })}>
+                        View reviews
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -252,7 +290,8 @@ function SiteReviews() {
   const toast = useToast();
   const confirm = useConfirm();
   const canWrite = useCan("reviews");
-  const [status, setStatus] = useState("all");
+  // New testimonials arrive as "pending" and need approval, so that's the useful default view.
+  const [status, setStatus] = useState("pending");
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -264,7 +303,7 @@ function SiteReviews() {
       const res = await adminFetch(`/site-reviews?status=${status}`);
       setItems(res.site_reviews || []);
     } catch (err) {
-      setError(err.message);
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -300,13 +339,13 @@ function SiteReviews() {
     <>
       <div className="admin-toolbar">
         <div className="admin-segmented">
-          {["all", "pending", "approved", "rejected"].map((s) => (
+          {["pending", "approved", "rejected", "all"].map((s) => (
             <button key={s} type="button" className={status === s ? "active" : ""} onClick={() => setStatus(s)}>
               {s[0].toUpperCase() + s.slice(1)}
             </button>
           ))}
         </div>
-        <span className="text-xs text-neutral-500 px-2">Approved testimonials are shown on the website&apos;s reviews section.</span>
+        <span className="text-xs text-neutral-500 px-2">New testimonials wait here until someone approves them. Only approved ones can appear on the website.</span>
       </div>
       <ErrorBanner message={error} onRetry={load} />
       {loading ? (

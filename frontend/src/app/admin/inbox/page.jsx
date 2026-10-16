@@ -40,7 +40,7 @@ export default function AdminInbox() {
       setMessages(data.messages || []);
       setCounts(data.counts || {});
     } catch (err) {
-      setError(err.message);
+      setError(err);
     } finally {
       setLoading(false);
     }

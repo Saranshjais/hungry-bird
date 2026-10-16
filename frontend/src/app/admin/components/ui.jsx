@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, ImageOff, Inbox, Lock, RefreshCw, Search, TriangleAlert } from "lucide-react";
+import Link from "next/link";
+import { ChevronLeft, ChevronRight, ImageOff, Inbox, Lock, RefreshCw, Search, ShieldX, TriangleAlert } from "lucide-react";
 import { ROLE_LABELS } from "../lib/api";
 import { useAdmin, useCan } from "../lib/hooks";
 
@@ -41,17 +42,54 @@ export function EmptyState({ icon: Icon = Inbox, title = "Nothing here yet", mes
   );
 }
 
+/** `message` may be a string or an Error from adminFetch; a 403 renders a friendly no-access note. */
 export function ErrorBanner({ message, onRetry }) {
   if (!message) return null;
+  const text = typeof message === "string" ? message : message.message || "Something went wrong.";
+  if (typeof message === "object" && message.status === 403) {
+    return (
+      <div className="admin-note" role="alert">
+        <Lock size={16} className="shrink-0 mt-0.5" />
+        <span>You don&apos;t have access to this information with your current role. {text !== "You don't have access to this." && <span className="text-amber-800/80">({text})</span>}</span>
+      </div>
+    );
+  }
   return (
     <div className="admin-error" role="alert">
       <TriangleAlert size={18} className="shrink-0" />
-      <span className="flex-1 min-w-0">{message}</span>
+      <span className="flex-1 min-w-0">{text}</span>
       {onRetry && (
         <button type="button" className="admin-btn admin-btn-sm" onClick={onRetry}>
           <RefreshCw size={14} /> Retry
         </button>
       )}
+    </div>
+  );
+}
+
+/** Full-page state for a page the current role can't open. */
+export function NoAccess({ title = "You don't have access to this page", message, children }) {
+  const { admin } = useAdmin();
+  return (
+    <div className="admin-card admin-no-access">
+      <div className="admin-empty">
+        <ShieldX size={40} />
+        <h3>{title}</h3>
+        <p>
+          {message || (
+            <>
+              You are signed in as <strong>{ROLE_LABELS[admin?.role] || admin?.role || "staff"}</strong>. Ask a Super Admin if you need access to this area.
+            </>
+          )}
+        </p>
+        <div className="mt-4 flex justify-center gap-2 flex-wrap">
+          {children || (
+            <Link href="/admin" className="admin-btn">
+              Back to dashboard
+            </Link>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

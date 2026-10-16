@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { CircleCheck, CircleSlash, Clapperboard, ExternalLink, Flag, MessageSquareText, RotateCcw, ShieldAlert, Store, Trash2, User } from "lucide-react";
-import { adminFetch, formatDate, formatDateTime } from "../lib/api";
+import { adminFetch, can, formatDate, formatDateTime } from "../lib/api";
 import { useAdmin, useCan } from "../lib/hooks";
 import { useToast } from "../components/Toast";
 import Modal, { useConfirm } from "../components/Modal";
@@ -16,15 +16,20 @@ const TARGETS = {
 
 const TAKE_DOWN_TEXT = {
   review: "The review will be permanently deleted and the vendor's rating recalculated.",
-  reel: "The reel will be hidden (rejected) so it no longer shows in the app.",
-  vendor: "The vendor will be hidden from the app and the website (status set to rejected). You can unhide it later from Vendors.",
+  reel: "The reel will be hidden (rejected) so it no longer shows on the website.",
+  vendor: "The vendor will be hidden from the app and the website (status set to Hidden). You can unhide it later from Vendors.",
 };
+
+// Taking content down also needs write access to the area that owns it (AUDIT-security M1).
+const TARGET_AREA = { review: "reviews", vendor: "vendors", reel: "reels" };
 
 export default function AdminReports() {
   const toast = useToast();
   const confirm = useConfirm();
-  const { refreshCounts } = useAdmin();
+  const { admin, refreshCounts } = useAdmin();
   const canWrite = useCan("reports");
+  // The backend says per report (`can_take_down`); otherwise check the target's area ourselves.
+  const canTakeDown = (r) => canWrite && (typeof r.can_take_down === "boolean" ? r.can_take_down : can(TARGET_AREA[r.target_type] || "vendors", admin));
 
   const [status, setStatus] = useState("pending");
   const [reports, setReports] = useState([]);
@@ -42,7 +47,7 @@ export default function AdminReports() {
       setReports(data.reports || []);
       setCounts(data.counts || {});
     } catch (err) {
-      setError(err.message);
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -121,7 +126,7 @@ export default function AdminReports() {
 
   return (
     <div>
-      <PageHeader title="Reports" subtitle="Content flagged by users on the website and app: wrong vendor details, abusive reviews, inappropriate reels." />
+      <PageHeader title="Reports" subtitle="Content flagged by users: wrong vendor details, abusive reviews or inappropriate reels." />
       <ReadOnlyNote area="reports" />
       <Tabs tabs={tabs} value={status} onChange={setStatus} />
       <ErrorBanner message={error} onRetry={() => load(status)} />
@@ -201,9 +206,15 @@ export default function AdminReports() {
                   <div className="flex flex-wrap gap-2 pt-3 mt-4 border-t border-neutral-100">
                     {r.status === "pending" ? (
                       <>
-                        <button type="button" className="admin-btn admin-btn-danger admin-btn-sm" disabled={r.target && !r.target.exists} onClick={() => takeDown(r)}>
-                          <ShieldAlert size={14} /> Take down
-                        </button>
+                        {canTakeDown(r) ? (
+                          <button type="button" className="admin-btn admin-btn-danger admin-btn-sm" disabled={r.target && !r.target.exists} onClick={() => takeDown(r)}>
+                            <ShieldAlert size={14} /> Take down
+                          </button>
+                        ) : (
+                          <span className="text-xs text-neutral-500 self-center" title="Ask a teammate who manages this kind of content to take it down">
+                            Your role can&apos;t take down {TARGETS[r.target_type]?.label.toLowerCase() || "this item"}s - resolve or dismiss instead.
+                          </span>
+                        )}
                         <button type="button" className="admin-btn admin-btn-success admin-btn-sm" onClick={() => setNoteFor({ report: r, status: "resolved", notes: r.admin_notes || "" })}>
                           <CircleCheck size={14} /> Resolve
                         </button>

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
-import { adminFetch, setSession } from "../lib/api";
+import { adminFetch, setSession, takeLoginNotice } from "../lib/api";
 import { Lock, ArrowRight, ShieldCheck, User } from "lucide-react";
 
 
@@ -11,13 +11,20 @@ export default function AdminLogin() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  // Shown once after a 401 sent the user here (expired session, revoked access, new token format).
+  useEffect(() => {
+    setNotice(takeLoginNotice());
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setNotice("");
 
     try {
       const data = await adminFetch("/login", {
@@ -76,6 +83,12 @@ export default function AdminLogin() {
             <h2 className="text-3xl font-extrabold text-white tracking-tight">Admin Portal</h2>
             <p className="text-stone-400 font-medium mt-2 text-sm">Restricted access area.</p>
           </div>
+
+          {notice && !error && (
+            <p role="status" className="admin-login-notice text-amber-200 text-sm font-medium text-center bg-amber-500/10 py-2 px-3 rounded-lg border border-amber-400/20 -mt-3 mb-5">
+              {notice}
+            </p>
+          )}
 
           <form onSubmit={handleLogin} className="flex flex-col gap-5">
             <div className="relative group">

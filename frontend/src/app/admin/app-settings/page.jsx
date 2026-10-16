@@ -1,12 +1,47 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Bell, Construction, Image as ImageIcon, Megaphone, Pencil, Plus, RotateCcw, Save, Send, Settings, Smartphone, Trash2 } from "lucide-react";
-import { adminFetch, formatDateTime, timeAgo } from "../lib/api";
-import { useCan } from "../lib/hooks";
+import Link from "next/link";
+import { Bell, BellOff, Construction, Crown, Image as ImageIcon, Link2, Megaphone, Pencil, Plus, RotateCcw, Save, Send, Server, Settings, Smartphone, Trash2 } from "lucide-react";
+import { adminFetch, formatDateTime, isValidUrl, timeAgo } from "../lib/api";
+import { useCan, useCanRead } from "../lib/hooks";
 import { useToast } from "../components/Toast";
 import Modal, { useConfirm } from "../components/Modal";
 import { EmptyState, ErrorBanner, Field, ImagePreview, Loading, PageHeader, ReadOnlyNote, Spinner, Switch, Tabs, Thumb } from "../components/ui";
+import { PREMIUM_SETTING_KEYS, readServices, SERVICE_KEYS, ServiceStatus } from "../components/Premium";
+
+// Settings this page edits and saves (premium_* keys belong to the Premium section; service flags are read-only).
+const CONFIG_KEYS = [
+  "maintenance_mode", "maintenance_message", "min_app_version", "latest_app_version", "force_update_message",
+  "play_store_url", "app_store_url", "announcement", "default_city", "support_email", "support_phone", "website_url",
+  "instagram_url", "facebook_url", "x_url", "youtube_url", "allow_guest_reviews",
+];
+const URL_KEYS = ["play_store_url", "app_store_url", "website_url", "instagram_url", "facebook_url", "x_url", "youtube_url"];
+const SOCIAL_FIELDS = [
+  { key: "instagram_url", label: "Instagram", placeholder: "https://instagram.com/hungrybird" },
+  { key: "facebook_url", label: "Facebook", placeholder: "https://facebook.com/hungrybird" },
+  { key: "x_url", label: "X (Twitter)", placeholder: "https://x.com/hungrybird" },
+  { key: "youtube_url", label: "YouTube", placeholder: "https://youtube.com/@hungrybird" },
+];
+
+function pickConfig(settings) {
+  const out = {};
+  CONFIG_KEYS.forEach((k) => {
+    if (settings && settings[k] !== undefined) out[k] = settings[k];
+  });
+  return out;
+}
+
+/** Field-level validation messages for the configuration form. */
+function validateConfig(s) {
+  const errors = {};
+  URL_KEYS.forEach((k) => {
+    if (s[k] && !isValidUrl(s[k])) errors[k] = "Enter a full link starting with https://";
+  });
+  if (s.support_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.support_email)) errors.support_email = "Enter a valid email address";
+  if (s.support_phone && !/^\+?[0-9][0-9\s\-()]{5,19}$/.test(String(s.support_phone).trim())) errors.support_phone = "Use digits, spaces or dashes, e.g. +91 98290 12345";
+  return errors;
+}
 
 const LINK_TYPES = [
   { value: "none", label: "No link" },
@@ -78,30 +113,48 @@ function LinkFields({ type, value, onChange, cities, categories, disabled }) {
 
 export default function AppSettings() {
   const [tab, setTab] = useState("banners");
+  const canReadCities = useCanRead("cities");
+  const canReadCategories = useCanRead("categories");
   const [cities, setCities] = useState([]);
   const [categories, setCategories] = useState([]);
   const [banners, setBanners] = useState([]);
   const [bannersLoading, setBannersLoading] = useState(true);
-  const [bannersError, setBannersError] = useState("");
+  const [bannersError, setBannersError] = useState(null);
+  // GET /app-settings: settings + read-only service flags, shared by the Notifications and Configuration tabs.
+  const [config, setConfig] = useState({ loading: true, error: null, settings: null, services: {} });
 
   const loadBanners = useCallback(async ({ quiet = false } = {}) => {
     if (!quiet) setBannersLoading(true);
-    setBannersError("");
+    setBannersError(null);
     try {
       const data = await adminFetch("/banners");
       setBanners(data.banners || []);
     } catch (err) {
-      setBannersError(err.message);
+      setBannersError(err);
     } finally {
       setBannersLoading(false);
     }
   }, []);
 
+  const loadConfig = useCallback(async () => {
+    setConfig((c) => ({ ...c, loading: true, error: null }));
+    try {
+      const data = await adminFetch("/app-settings");
+      setConfig({ loading: false, error: null, settings: data.settings || {}, services: readServices(data) });
+    } catch (err) {
+      setConfig((c) => ({ ...c, loading: false, error: err }));
+    }
+  }, []);
+
   useEffect(() => {
     loadBanners();
-    adminFetch("/cities").then((d) => setCities(d.cities || [])).catch(() => {});
-    adminFetch("/categories").then((d) => setCategories(d.categories || [])).catch(() => {});
-  }, [loadBanners]);
+    loadConfig();
+  }, [loadBanners, loadConfig]);
+
+  useEffect(() => {
+    if (canReadCities) adminFetch("/cities").then((d) => setCities(d.cities || [])).catch(() => {});
+    if (canReadCategories) adminFetch("/categories").then((d) => setCategories(d.categories || [])).catch(() => {});
+  }, [canReadCities, canReadCategories]);
 
   return (
     <div>
@@ -119,8 +172,16 @@ export default function AppSettings() {
       {tab === "banners" && (
         <BannersTab banners={banners} loading={bannersLoading} error={bannersError} reload={loadBanners} setBanners={setBanners} cities={cities} categories={categories} />
       )}
-      {tab === "notifications" && <NotificationsTab cities={cities} categories={categories} />}
-      {tab === "config" && <ConfigTab cities={cities} banners={banners} />}
+      {tab === "notifications" && <NotificationsTab cities={cities} categories={categories} services={config.services} servicesLoading={config.loading} />}
+      {tab === "config" && (
+        <ConfigTab
+          cities={cities}
+          banners={banners}
+          config={config}
+          reload={loadConfig}
+          onSaved={(settings) => setConfig((c) => ({ ...c, settings: { ...(c.settings || {}), ...settings } }))}
+        />
+      )}
     </div>
   );
 }
@@ -283,26 +344,29 @@ function BannersTab({ banners, loading, error, reload, setBanners, cities, categ
 
 // ==================== NOTIFICATIONS ====================
 
-const EMPTY_NOTE = { title: "", body: "", target: "all", link_type: "none", link_value: "", send_push: true };
+const EMPTY_NOTE = { title: "", body: "", target: "all", link_type: "none", link_value: "", send_push: false };
 
-function NotificationsTab({ cities, categories }) {
+function NotificationsTab({ cities, categories, services, servicesLoading }) {
   const toast = useToast();
   const confirm = useConfirm();
   const canWrite = useCan("app");
+  // push_available: true = the server can deliver device pushes; false = it can't; null = not reported.
+  const pushAvailable = services?.push_available;
+  const pushBlocked = pushAvailable === false;
   const [form, setForm] = useState(EMPTY_NOTE);
   const [sending, setSending] = useState(false);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    setError("");
+    setError(null);
     try {
       const data = await adminFetch("/notifications");
       setHistory(data.notifications || []);
     } catch (err) {
-      setError(err.message);
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -311,6 +375,14 @@ function NotificationsTab({ cities, categories }) {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Default the push checkbox to what the server can actually do.
+  useEffect(() => {
+    if (!servicesLoading) setForm((f) => ({ ...f, send_push: pushAvailable === true }));
+  }, [pushAvailable, servicesLoading]);
+
+  const sendPush = form.send_push && !pushBlocked;
+  const cityTarget = form.target !== "all";
 
   const targetLabel = (target) => {
     if (!target || target === "all") return "All users";
@@ -323,8 +395,10 @@ function NotificationsTab({ cities, categories }) {
     if (!form.title.trim() || !form.body.trim()) return toast.error("Title and message are required.");
     const ok = await confirm({
       title: "Publish notification?",
-      message: `"${form.title.trim()}" will appear in the app's notification inbox for ${targetLabel(form.target).toLowerCase()}.${form.send_push ? "\n\nA push notification will also be sent to devices that allow notifications." : ""}`,
-      confirmLabel: form.send_push ? "Publish & push" : "Publish",
+      message: `"${form.title.trim()}" will appear in the app's notification inbox for ${targetLabel(form.target).toLowerCase()}.${
+        sendPush ? (cityTarget ? "\n\nCity announcements stay in the inbox only - device pushes go to \"All users\" broadcasts." : "\n\nA push notification will also be sent to devices that registered for notifications.") : ""
+      }`,
+      confirmLabel: sendPush && !cityTarget ? "Publish & push" : "Publish",
     });
     if (!ok) return;
     setSending(true);
@@ -337,12 +411,12 @@ function NotificationsTab({ cities, categories }) {
           target: form.target,
           link_type: form.link_type,
           link_value: form.link_type === "none" ? "" : String(form.link_value || ""),
-          send_push: form.send_push,
+          send_push: sendPush,
         },
       });
       const pushed = res.notification?.push_sent_count;
-      toast.success(`${res.message || "Notification published"}${form.send_push ? ` · push sent to ${pushed ?? 0} device${pushed === 1 ? "" : "s"}` : ""}`);
-      setForm(EMPTY_NOTE);
+      toast.success(`${res.message || "Notification published"}${sendPush && !cityTarget ? ` · push sent to ${pushed ?? 0} device${pushed === 1 ? "" : "s"}` : ""}`);
+      setForm({ ...EMPTY_NOTE, send_push: pushAvailable === true });
       load();
     } catch (err) {
       toast.error(err.message);
@@ -390,10 +464,24 @@ function NotificationsTab({ cities, categories }) {
             <div className="admin-form-grid">
               <LinkFields type={form.link_type} value={form.link_value} disabled={!canWrite} cities={cities} categories={categories} onChange={(patch) => setForm({ ...form, ...patch })} />
             </div>
-            <label className="admin-check">
-              <input type="checkbox" disabled={!canWrite} checked={form.send_push} onChange={(e) => setForm({ ...form, send_push: e.target.checked })} />
-              Also send a device push notification
-            </label>
+            <div>
+              <label className={`admin-check ${pushBlocked ? "!cursor-not-allowed opacity-60" : ""}`}>
+                <input type="checkbox" disabled={!canWrite || pushBlocked} checked={sendPush} onChange={(e) => setForm({ ...form, send_push: e.target.checked })} />
+                Also send as a device push notification
+              </label>
+              <div className="admin-hint flex items-start gap-1.5">
+                {pushBlocked ? (
+                  <>
+                    <BellOff size={13} className="shrink-0 mt-0.5" />
+                    <span>Push notifications aren&apos;t set up yet (no devices are registered for push), so this is switched off. The notification still appears in the app&apos;s notification inbox.</span>
+                  </>
+                ) : pushAvailable === null || pushAvailable === undefined ? (
+                  <span>The server didn&apos;t report whether push is set up. Either way, the notification appears in the app&apos;s notification inbox.</span>
+                ) : (
+                  <span>{cityTarget ? "City announcements are inbox-only; pushes go out for \"All users\" broadcasts." : "Sent to devices that registered for notifications. It also appears in the app's inbox."}</span>
+                )}
+              </div>
+            </div>
             {canWrite && (
               <button type="submit" className="admin-btn admin-btn-brand self-start" disabled={sending}>
                 {sending ? <Spinner small /> : <Send size={15} />} {sending ? "Publishing..." : "Publish notification"}
@@ -525,43 +613,64 @@ function PhonePreview({ settings, banners }) {
   );
 }
 
-function ConfigTab({ cities, banners }) {
+const SERVICE_ROWS = [
+  {
+    key: "payments_available",
+    label: "Payments (Razorpay)",
+    ok: "Configured",
+    bad: "Not configured",
+    help: "Needed to sell Premium. Set RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET and RAZORPAY_WEBHOOK_SECRET on the backend server.",
+  },
+  {
+    key: "email_available",
+    label: "Email (SMTP)",
+    ok: "Configured",
+    bad: "Not configured",
+    help: "Sends sign-up verification and password-reset codes. Set SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM (and SMTP_SECURITY) on the backend server.",
+  },
+  {
+    key: "push_available",
+    label: "Push notifications",
+    ok: "Available",
+    bad: "Not available",
+    help: "Device pushes need the app to register for push. Until then broadcasts only appear in the app's notification inbox.",
+  },
+];
+
+function ConfigTab({ cities, banners, config, reload, onSaved }) {
   const toast = useToast();
   const confirm = useConfirm();
   const canWrite = useCan("app");
+  const canSeePremium = useCanRead("premium");
   const [saved, setSaved] = useState(null);
   const [settings, setSettings] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await adminFetch("/app-settings");
-      setSaved(data.settings || {});
-      setSettings(data.settings || {});
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
+  // Only the keys this page owns are edited and saved (premium_* lives in the Premium section).
   useEffect(() => {
-    load();
-  }, [load]);
+    if (config.settings) {
+      const own = pickConfig(config.settings);
+      setSaved(own);
+      setSettings(own);
+    }
+  }, [config.settings]);
 
   const dirty = useMemo(() => settings && saved && JSON.stringify(settings) !== JSON.stringify(saved), [settings, saved]);
+  const errors = useMemo(() => (settings ? validateConfig(settings) : {}), [settings]);
   const set = (patch) => setSettings((s) => ({ ...s, ...patch }));
+  const fieldError = (key) => (showErrors || (settings?.[key] && saved?.[key] !== settings[key]) ? errors[key] : undefined);
 
   const save = async (e) => {
     e.preventDefault();
+    if (Object.keys(errors).length) {
+      setShowErrors(true);
+      return toast.error("Fix the highlighted fields before saving.");
+    }
     if (settings.maintenance_mode && !saved.maintenance_mode) {
       const ok = await confirm({
         title: "Turn on maintenance mode?",
-        message: "Everyone using the app will see the maintenance screen instead of the app until you switch it off.",
+        message: "Everyone opening the app will see the maintenance screen instead of the app until you switch it off.",
         confirmLabel: "Enable maintenance",
         danger: true,
       });
@@ -569,9 +678,18 @@ function ConfigTab({ cities, banners }) {
     }
     setSaving(true);
     try {
-      const res = await adminFetch("/app-settings", { method: "PUT", body: { settings } });
-      setSaved(res.settings || settings);
-      setSettings(res.settings || settings);
+      // Send only changed keys this page owns - never premium_* or the read-only service flags.
+      const changed = {};
+      Object.keys(settings).forEach((k) => {
+        if (JSON.stringify(settings[k]) !== JSON.stringify(saved[k])) changed[k] = typeof settings[k] === "string" ? settings[k].trim() : settings[k];
+      });
+      [...SERVICE_KEYS, ...PREMIUM_SETTING_KEYS].forEach((k) => delete changed[k]);
+      const res = await adminFetch("/app-settings", { method: "PUT", body: { settings: changed } });
+      const next = res.settings ? pickConfig(res.settings) : { ...saved, ...changed };
+      setSaved(next);
+      setSettings(next);
+      setShowErrors(false);
+      onSaved?.(res.settings || changed);
       toast.success(res.message || "App configuration saved");
     } catch (err) {
       toast.error(err.message);
@@ -580,15 +698,58 @@ function ConfigTab({ cities, banners }) {
     }
   };
 
-  if (loading) return <Loading label="Loading configuration..." />;
-  if (!settings) return <ErrorBanner message={error || "Could not load settings"} onRetry={load} />;
+  if (config.loading && !settings) return <Loading label="Loading configuration..." />;
+  if (!settings) return <ErrorBanner message={config.error || "Could not load settings"} onRetry={reload} />;
 
   const ro = !canWrite;
   const cityOptions = cities.some((c) => c.slug === settings.default_city) || !settings.default_city ? cities : [{ id: "current", slug: settings.default_city, name: settings.default_city }, ...cities];
+  const services = config.services || {};
+  const urlInput = (key, placeholder, extra = {}) => (
+    <input
+      className={`admin-input ${fieldError(key) ? "!border-rose-400" : ""}`}
+      type="url"
+      inputMode="url"
+      disabled={ro}
+      maxLength={300}
+      value={settings[key] || ""}
+      onChange={(e) => set({ [key]: e.target.value })}
+      placeholder={placeholder}
+      aria-invalid={!!fieldError(key)}
+      {...extra}
+    />
+  );
+  const errorHint = (key, hint) => (fieldError(key) ? <span className="text-rose-600 font-medium">{fieldError(key)}</span> : hint);
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-      <form className="xl:col-span-2 flex flex-col gap-5" onSubmit={save}>
+      <form className="xl:col-span-2 flex flex-col gap-5 min-w-0" onSubmit={save} noValidate>
+        <div className="admin-card !mb-0">
+          <h3 className="admin-card-title">
+            <Server size={17} className="text-neutral-500" /> Server services
+          </h3>
+          <p className="text-xs text-neutral-500 mt-0 mb-3">Read-only. These are switched on with environment variables on the backend server, not from this panel.</p>
+          <div className="flex flex-col divide-y divide-neutral-100">
+            {SERVICE_ROWS.map((row) => (
+              <div key={row.key} className="py-2.5 first:pt-0 last:pb-0 flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+                <div className="min-w-0 flex-1" style={{ minWidth: 180 }}>
+                  <div className="font-semibold text-sm text-neutral-900">{row.label}</div>
+                  {services[row.key] !== true && <div className="text-xs text-neutral-500 leading-relaxed">{row.help}</div>}
+                </div>
+                <ServiceStatus value={services[row.key]} okText={row.ok} badText={row.bad} />
+              </div>
+            ))}
+          </div>
+          {canSeePremium && (
+            <div className="text-xs text-neutral-500 mt-3 flex items-center gap-1.5">
+              <Crown size={13} className="text-amber-600" /> Premium on/off, benefits and payment methods are managed in{" "}
+              <Link href="/admin/premium" className="text-blue-600 hover:underline">
+                Premium
+              </Link>
+              .
+            </div>
+          )}
+        </div>
+
         <div className={`admin-card !mb-0 ${settings.maintenance_mode ? "!border-amber-300" : ""}`}>
           <h3 className="admin-card-title">
             <Construction size={17} className="text-amber-500" /> Maintenance
@@ -596,7 +757,7 @@ function ConfigTab({ cities, banners }) {
           <div className="flex items-start justify-between gap-4 mb-4">
             <div>
               <div className="font-semibold text-sm text-neutral-900">Maintenance mode</div>
-              <div className="text-xs text-neutral-500">When on, the app shows the message below instead of its normal screens.</div>
+              <div className="text-xs text-neutral-500">When on, the app shows the message below instead of its normal screens (checked when the app starts).</div>
             </div>
             <Switch checked={!!settings.maintenance_mode} disabled={ro} onChange={(v) => set({ maintenance_mode: v })} label="Maintenance mode" />
           </div>
@@ -610,20 +771,20 @@ function ConfigTab({ cities, banners }) {
             <Smartphone size={17} className="text-blue-500" /> App versions
           </h3>
           <div className="admin-form-grid">
-            <Field label="Minimum supported version" hint="Older app versions are asked to update before continuing.">
+            <Field label="Minimum supported version" hint="Older app versions are asked to update before continuing (checked when the app starts).">
               <input className="admin-input" disabled={ro} value={settings.min_app_version || ""} onChange={(e) => set({ min_app_version: e.target.value })} placeholder="1.0.0" />
             </Field>
-            <Field label="Latest version" hint="Users below this see an optional update prompt.">
+            <Field label="Latest version" hint="Used for the optional update prompt.">
               <input className="admin-input" disabled={ro} value={settings.latest_app_version || ""} onChange={(e) => set({ latest_app_version: e.target.value })} placeholder="1.0.0" />
             </Field>
             <Field label="Force-update message" className="span-all">
               <input className="admin-input" disabled={ro} value={settings.force_update_message || ""} onChange={(e) => set({ force_update_message: e.target.value })} />
             </Field>
-            <Field label="Play Store URL">
-              <input className="admin-input" type="url" disabled={ro} value={settings.play_store_url || ""} onChange={(e) => set({ play_store_url: e.target.value })} placeholder="https://play.google.com/store/apps/details?id=..." />
+            <Field label="Play Store URL" hint={errorHint("play_store_url")}>
+              {urlInput("play_store_url", "https://play.google.com/store/apps/details?id=...")}
             </Field>
-            <Field label="App Store URL">
-              <input className="admin-input" type="url" disabled={ro} value={settings.app_store_url || ""} onChange={(e) => set({ app_store_url: e.target.value })} placeholder="https://apps.apple.com/..." />
+            <Field label="App Store URL" hint={errorHint("app_store_url")}>
+              {urlInput("app_store_url", "https://apps.apple.com/...")}
             </Field>
           </div>
         </div>
@@ -646,11 +807,8 @@ function ConfigTab({ cities, banners }) {
                 ))}
               </select>
             </Field>
-            <Field label="Support email">
-              <input className="admin-input" type="email" disabled={ro} value={settings.support_email || ""} onChange={(e) => set({ support_email: e.target.value })} />
-            </Field>
-            <Field label="Website URL" className="span-all">
-              <input className="admin-input" type="url" disabled={ro} value={settings.website_url || ""} onChange={(e) => set({ website_url: e.target.value })} />
+            <Field label="Website URL" hint={errorHint("website_url")}>
+              {urlInput("website_url", "https://hungrybird.in")}
             </Field>
             <div className="span-all flex items-start justify-between gap-4 pt-1">
               <div>
@@ -662,22 +820,70 @@ function ConfigTab({ cities, banners }) {
           </div>
         </div>
 
+        <div className="admin-card !mb-0">
+          <h3 className="admin-card-title">
+            <Link2 size={17} className="text-violet-500" /> Contact & social links
+          </h3>
+          <p className="text-xs text-neutral-500 mt-0 mb-3">Shown wherever the app and website list ways to reach HungryBird. Leave a field empty to hide that link or number.</p>
+          <div className="admin-form-grid">
+            <Field label="Support email" hint={errorHint("support_email")}>
+              <input
+                className={`admin-input ${fieldError("support_email") ? "!border-rose-400" : ""}`}
+                type="email"
+                inputMode="email"
+                disabled={ro}
+                maxLength={150}
+                value={settings.support_email || ""}
+                onChange={(e) => set({ support_email: e.target.value })}
+                placeholder="support@hungrybird.in"
+              />
+            </Field>
+            <Field label="Support phone" hint={errorHint("support_phone", "Include the country code, e.g. +91 98290 12345")}>
+              <input
+                className={`admin-input ${fieldError("support_phone") ? "!border-rose-400" : ""}`}
+                type="tel"
+                inputMode="tel"
+                disabled={ro}
+                maxLength={20}
+                value={settings.support_phone || ""}
+                onChange={(e) => set({ support_phone: e.target.value })}
+                placeholder="+91 98290 12345"
+              />
+            </Field>
+            {SOCIAL_FIELDS.map((f) => (
+              <Field key={f.key} label={f.label} hint={errorHint(f.key)}>
+                {urlInput(f.key, f.placeholder)}
+              </Field>
+            ))}
+          </div>
+        </div>
+
         {canWrite && (
-          <div className="flex flex-wrap items-center gap-3 sticky bottom-0 bg-[#fafafa]/90 backdrop-blur py-3 border-t border-neutral-200">
+          <div className="flex flex-wrap items-center gap-3 sticky bottom-0 bg-[#fafafa]/90 backdrop-blur py-3 border-t border-neutral-200 z-10">
             <button type="submit" className="admin-btn admin-btn-brand" disabled={saving || !dirty}>
               {saving ? <Spinner small /> : <Save size={15} />} {saving ? "Saving..." : "Save configuration"}
             </button>
             {dirty && (
-              <button type="button" className="admin-btn" onClick={() => setSettings(saved)} disabled={saving}>
+              <button
+                type="button"
+                className="admin-btn"
+                onClick={() => {
+                  setSettings(saved);
+                  setShowErrors(false);
+                }}
+                disabled={saving}
+              >
                 <RotateCcw size={15} /> Discard changes
               </button>
             )}
-            <span className="text-xs text-neutral-500">{dirty ? "You have unsaved changes." : "All changes saved."}</span>
+            <span className="text-xs text-neutral-500">
+              {dirty ? (Object.keys(errors).length ? `${Object.keys(errors).length} field${Object.keys(errors).length === 1 ? " needs" : "s need"} fixing.` : "You have unsaved changes.") : "All changes saved."}
+            </span>
           </div>
         )}
       </form>
 
-      <div className="xl:sticky xl:top-6 self-start w-full">
+      <div className="xl:sticky xl:top-6 self-start w-full min-w-0">
         <div className="admin-card">
           <PhonePreview settings={settings} banners={banners} />
           <div className="mt-4 text-xs text-neutral-500 flex flex-col gap-1">

@@ -11,15 +11,25 @@ export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
   const idRef = useRef(0);
 
+  // Messages currently on screen, so the same error (e.g. a 403 toasted globally and by the page) shows once.
+  const visibleRef = useRef(new Map()); // key -> toast id
+
   const dismiss = useCallback((id) => {
+    visibleRef.current.forEach((tid, key) => {
+      if (tid === id) visibleRef.current.delete(key);
+    });
     setToasts((list) => list.filter((t) => t.id !== id));
   }, []);
 
   const push = useCallback(
     (type, message, duration) => {
       if (!message) return;
+      const text = String(message);
+      const key = `${type}|${text}`;
+      if (visibleRef.current.has(key)) return;
       const id = ++idRef.current;
-      setToasts((list) => [...list.slice(-4), { id, type, message: String(message) }]);
+      visibleRef.current.set(key, id);
+      setToasts((list) => [...list.slice(-4), { id, type, message: text }]);
       setTimeout(() => dismiss(id), duration ?? (type === "error" ? 6000 : 3500));
     },
     [dismiss]

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { can } from "./api";
+import { can, canRead } from "./api";
 
 /** Shared admin session state, provided by AdminAuthProvider. */
 export const AdminContext = createContext({
@@ -19,6 +19,12 @@ export function useAdmin() {
 export function useCan(area) {
   const { admin } = useAdmin();
   return can(area, admin);
+}
+
+/** true when the logged-in staff role may open/see `area` (from GET /me `permissions`). */
+export function useCanRead(area) {
+  const { admin } = useAdmin();
+  return canRead(area, admin);
 }
 
 /**

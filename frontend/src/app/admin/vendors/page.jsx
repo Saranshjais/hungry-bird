@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  CloudUpload, Crown, Download, ExternalLink, Eye, EyeOff, FileSpreadsheet, Gem, Pencil, Plus, Save, Store, Trash2, X,
+  BadgeCheck, Calculator, CloudUpload, Crown, Download, ExternalLink, Eye, EyeOff, FileSpreadsheet, Gem, Info, Lock, Pencil, Plus, Save, Store, Trash2, X,
 } from "lucide-react";
 import { adminFetch, downloadFile, formatDate, qs, saveBlob } from "../lib/api";
-import { useCan, useDebounce, usePageFor } from "../lib/hooks";
+import { useCan, useCanRead, useDebounce, usePageFor } from "../lib/hooks";
 import { useToast } from "../components/Toast";
 import Modal, { useConfirm } from "../components/Modal";
 import {
@@ -19,14 +19,21 @@ const TEMPLATE_HEADERS = [
   "price_level", "address", "area", "lat", "lng", "phone", "image_url", "is_hidden_gem",
 ];
 
-const STATUS_LABEL = { verified: "Live", pending: "Pending", rejected: "Hidden" };
+// verified_status is about visibility, not the public "Verified" badge (that is team_verified).
+const STATUS_LABEL = { verified: "Live", pending: "Pending · not public", rejected: "Hidden" };
+const STATUS_HELP = {
+  verified: "Live: listed on the website and in the app.",
+  pending: "Pending: waiting for checks - not shown publicly.",
+  rejected: "Hidden: removed from the website and app (kept here).",
+};
+
 
 const EMPTY_VENDOR = {
   name: "", city_id: "", cuisine_type: "", food_category: "", specialty_dish: "", description: "",
   opening_hours: "", closed_days: "", price_level: "", price_min: "", price_max: "",
   address_text: "", area: "", landmark: "", lat: "", lng: "",
   phone: "", website: "", instagram: "", image_url: "",
-  is_hidden_gem: false, is_famous: false, verified_status: "verified",
+  is_hidden_gem: false, is_famous: false, is_premium: false, team_verified: false, verified_status: "verified",
 };
 
 const STRING_FIELDS = [
@@ -42,6 +49,9 @@ function toForm(v) {
   });
   f.city_id = v.city_id ? String(v.city_id) : "";
   f.verified_status = v.verified_status || "verified";
+  // Display-only (never sent back): current rating, for the recalculate button.
+  f.avg_rating = v.avg_rating ?? null;
+  f.total_ratings = v.total_ratings ?? 0;
   return f;
 }
 
@@ -52,14 +62,22 @@ function toPayload(f) {
   body.city_id = f.city_id ? Number(f.city_id) : null;
   body.is_hidden_gem = !!f.is_hidden_gem;
   body.is_famous = !!f.is_famous;
+  body.is_premium = !!f.is_premium;
+  body.team_verified = !!f.team_verified;
   body.verified_status = f.verified_status;
   return body;
 }
+
+/** The public "Verified" badge comes only from team_verified - never from verified_status. */
+const isTeamVerified = (v) => !!v.team_verified;
 
 export default function AdminVendors() {
   const toast = useToast();
   const confirm = useConfirm();
   const canWrite = useCan("vendors");
+  const canCreateCities = useCan("cities");
+  const canReadCities = useCanRead("cities");
+  const canReadCategories = useCanRead("categories");
 
   const [search, setSearch] = useState("");
   const q = useDebounce(search, 300);
@@ -91,7 +109,7 @@ export default function AdminVendors() {
       const res = await adminFetch(`/vendors${qs({ q, city_id: cityId, status, flag, sort, page, per_page: PER_PAGE })}`);
       setData(res);
     } catch (err) {
-      setError(err.message);
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -102,9 +120,9 @@ export default function AdminVendors() {
   }, [load]);
 
   useEffect(() => {
-    adminFetch("/cities").then((d) => setCities(d.cities || [])).catch(() => {});
-    adminFetch("/categories").then((d) => setCategories(d.categories || [])).catch(() => {});
-  }, []);
+    if (canReadCities) adminFetch("/cities").then((d) => setCities(d.cities || [])).catch(() => {});
+    if (canReadCategories) adminFetch("/categories").then((d) => setCategories(d.categories || [])).catch(() => {});
+  }, [canReadCities, canReadCategories]);
 
   // Dashboard "Add a vendor" quick action links here with ?new=1.
   useEffect(() => {
@@ -159,6 +177,36 @@ export default function AdminVendors() {
       toast.success(successMsg);
     } catch (err) {
       toast.error(err.message);
+    } finally {
+      setRowBusy(null);
+    }
+  };
+
+  /** POST /vendors/<id>/recalculate-rating: replace imported/seeded numbers with the real community average. */
+  const recalculate = async (vendor) => {
+    const ok = await confirm({
+      title: "Recalculate rating from real reviews?",
+      message: `"${vendor.name}" currently shows ${vendor.avg_rating != null ? `★ ${Number(vendor.avg_rating).toFixed(1)} from ${vendor.total_ratings || 0} ratings` : "no rating"}.\n\nThe rating is recomputed from the reviews people actually wrote on HungryBird. Imported or seeded numbers are discarded - with no reviews, the vendor shows no rating at all.`,
+      confirmLabel: "Recalculate",
+    });
+    if (!ok) return null;
+    setRowBusy(vendor.id);
+    try {
+      const res = await adminFetch(`/vendors/${vendor.id}/recalculate-rating`, { method: "POST" });
+      const patch = res.vendor || {
+        avg_rating: res.avg_rating !== undefined ? res.avg_rating : vendor.avg_rating,
+        total_ratings: res.total_ratings !== undefined ? res.total_ratings : vendor.total_ratings,
+      };
+      setData((d) => ({ ...d, vendors: d.vendors.map((v) => (v.id === vendor.id ? { ...v, ...patch } : v)) }));
+      const total = patch.total_ratings ?? 0;
+      toast.success(
+        res.message ||
+          (total ? `Rating recalculated: ★ ${Number(patch.avg_rating).toFixed(1)} from ${total} review${total === 1 ? "" : "s"}` : "Rating cleared - this vendor has no reviews yet")
+      );
+      return patch;
+    } catch (err) {
+      toast.error(err.message);
+      return null;
     } finally {
       setRowBusy(null);
     }
@@ -229,7 +277,7 @@ export default function AdminVendors() {
         subtitle={
           filtersActive
             ? `${data.total.toLocaleString("en-IN")} vendor${data.total === 1 ? "" : "s"} match your filters.`
-            : `${data.total.toLocaleString("en-IN")} vendors across ${cities.length} cit${cities.length === 1 ? "y" : "ies"}.`
+            : `${data.total.toLocaleString("en-IN")} vendors${cities.length ? ` across ${cities.length} cit${cities.length === 1 ? "y" : "ies"}` : ""}. "Live" = public; the Verified badge only comes from "Verified by our team".`
         }
       >
         <button type="button" className="admin-btn" onClick={exportCsv} disabled={exporting}>
@@ -262,14 +310,16 @@ export default function AdminVendors() {
         </select>
         <select className="admin-select" value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status">
           <option value="">Any status</option>
-          <option value="verified">Live (verified)</option>
-          <option value="pending">Pending</option>
-          <option value="rejected">Hidden (rejected)</option>
+          <option value="verified">Live</option>
+          <option value="pending">Pending (not public)</option>
+          <option value="rejected">Hidden</option>
         </select>
         <select className="admin-select" value={flag} onChange={(e) => setFlag(e.target.value)} aria-label="Flag">
           <option value="">All vendors</option>
           <option value="hidden_gem">Hidden gems</option>
           <option value="famous">Famous</option>
+          <option value="premium">Premium (locked for free users)</option>
+          <option value="team_verified">Verified by our team</option>
           <option value="missing_location">Missing location</option>
           <option value="missing_details">Missing description</option>
         </select>
@@ -285,6 +335,13 @@ export default function AdminVendors() {
           </button>
         )}
       </div>
+
+      {status === "pending" && (
+        <div className="admin-note">
+          <Info size={16} className="shrink-0 mt-0.5" />
+          <span>Pending vendors are not public: they stay off the website and the app until you set them to Live.</span>
+        </div>
+      )}
 
       <ErrorBanner message={error} onRetry={load} />
 
@@ -339,8 +396,18 @@ export default function AdminVendors() {
                         <Stars value={v.avg_rating} />
                         <div className="text-xs text-neutral-400">{v.total_ratings || 0} reviews</div>
                       </td>
-                      <td>
+                      <td style={{ minWidth: 130 }}>
                         <div className="flex flex-wrap gap-1">
+                          {isTeamVerified(v) && (
+                            <span className="admin-badge team-verified normal-case" title="Verified by our team - shows the public Verified badge">
+                              <BadgeCheck size={11} /> Verified
+                            </span>
+                          )}
+                          {v.is_premium && (
+                            <span className="admin-badge premium normal-case" title="Premium - locked for free users while Premium is on">
+                              <Lock size={11} /> Premium
+                            </span>
+                          )}
                           {v.is_hidden_gem && (
                             <span className="admin-badge gem">
                               <Gem size={11} /> Hidden Gem
@@ -351,11 +418,14 @@ export default function AdminVendors() {
                               <Crown size={11} /> Famous
                             </span>
                           )}
-                          {!v.is_hidden_gem && !v.is_famous && <span className="text-neutral-300">—</span>}
+                          {!v.is_hidden_gem && !v.is_famous && !v.is_premium && !isTeamVerified(v) && <span className="text-neutral-300">—</span>}
                         </div>
                       </td>
                       <td>
-                        <span className={`admin-badge ${v.verified_status || "verified"}`} title={`verified_status: ${v.verified_status || "verified"} · added ${formatDate(v.created_at)}`}>
+                        <span
+                          className={`admin-badge normal-case ${v.verified_status === "pending" ? "pending" : v.verified_status === "rejected" ? "rejected" : "active"}`}
+                          title={`${STATUS_HELP[v.verified_status || "verified"] || ""} Added ${formatDate(v.created_at)}.`}
+                        >
                           {STATUS_LABEL[v.verified_status] || "Live"}
                         </span>
                       </td>
@@ -384,6 +454,9 @@ export default function AdminVendors() {
                               >
                                 {hidden ? <Eye size={15} /> : <EyeOff size={15} />}
                               </button>
+                              <button type="button" className="admin-btn admin-btn-ghost admin-icon-btn" title="Recalculate rating from real reviews" disabled={busy} onClick={() => recalculate(v)}>
+                                <Calculator size={15} />
+                              </button>
                               <button type="button" className="admin-btn admin-btn-ghost admin-icon-btn" title="Edit" disabled={busy} onClick={() => setForm({ id: v.id, ...toForm(v) })}>
                                 <Pencil size={15} />
                               </button>
@@ -410,7 +483,8 @@ export default function AdminVendors() {
           <div className="flex-1 min-w-[220px]">
             <div className="font-semibold text-sm text-neutral-900">Bulk upload vendors</div>
             <div className="text-xs text-neutral-500 mt-0.5">
-              Upload a .csv or .xlsx file. Required columns: <code>name</code> and <code>city</code>. New cities are created automatically and duplicates (same name in the same city) are skipped.
+              Upload a .csv or .xlsx file. Required columns: <code>name</code> and <code>city</code>. Duplicates (same name in the same city) are skipped.{" "}
+              {canCreateCities ? "Cities that don't exist yet are created automatically." : "Use cities that already exist - your role can't create new cities, so rows for unknown cities may be rejected."}
             </div>
           </div>
           <button type="button" className="admin-btn" onClick={downloadTemplate}>
@@ -539,15 +613,22 @@ export default function AdminVendors() {
               <ImagePreview src={form.image_url} height={150} />
             </div>
             <div className="flex flex-col gap-3">
-              <Field label="Status">
+              <Field label="Status" hint={STATUS_HELP[form.verified_status]}>
                 <select className="admin-select full" value={form.verified_status} onChange={(e) => setF({ verified_status: e.target.value })}>
-                  <option value="verified">Live (verified)</option>
-                  <option value="pending">Pending</option>
-                  <option value="rejected">Hidden (rejected)</option>
+                  <option value="verified">Live</option>
+                  <option value="pending">Pending (not public)</option>
+                  <option value="rejected">Hidden</option>
                 </select>
               </Field>
               <label className="admin-check">
-                <input type="checkbox" checked={!!form.is_hidden_gem} onChange={(e) => setF({ is_hidden_gem: e.target.checked })} />
+                <input
+                  type="checkbox"
+                  checked={!!form.is_hidden_gem}
+                  onChange={(e) =>
+                    // New hidden gems are Premium by default (like the backend), until Premium is set by hand.
+                    setF(!form.id && !form.premiumTouched ? { is_hidden_gem: e.target.checked, is_premium: e.target.checked } : { is_hidden_gem: e.target.checked })
+                  }
+                />
                 <Gem size={14} className="text-brand-500" /> Hidden Gem
               </label>
               <label className="admin-check">
@@ -555,6 +636,44 @@ export default function AdminVendors() {
                 <Crown size={14} className="text-amber-600" /> Famous
               </label>
             </div>
+
+            <div className="admin-form-section">Premium & trust</div>
+            <label className="admin-check !items-start span-2">
+              <input type="checkbox" className="mt-0.5" checked={!!form.is_premium} onChange={(e) => setF({ is_premium: e.target.checked, premiumTouched: true })} />
+              <span>
+                <span className="inline-flex items-center gap-1 font-semibold">
+                  <Lock size={14} className="text-amber-600" /> Premium — locked for free users
+                </span>
+                <span className="block text-xs text-neutral-500 font-normal">While Premium is switched on, free users only see a locked preview (area, category, rating) - no name, address or directions.</span>
+              </span>
+            </label>
+            <label className="admin-check !items-start">
+              <input type="checkbox" className="mt-0.5" checked={!!form.team_verified} onChange={(e) => setF({ team_verified: e.target.checked })} />
+              <span>
+                <span className="inline-flex items-center gap-1 font-semibold">
+                  <BadgeCheck size={14} className="text-sky-700" /> Verified by our team
+                </span>
+                <span className="block text-xs text-neutral-500 font-normal">Shows the public &ldquo;Verified&rdquo; badge. Only tick it after someone from HungryBird has checked the place.</span>
+              </span>
+            </label>
+            {form.id && (
+              <div className="span-all flex flex-wrap items-center gap-3 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2">
+                <span className="text-sm text-neutral-700">
+                  Rating: <Stars value={form.avg_rating} /> <span className="text-xs text-neutral-500">({form.total_ratings || 0} ratings)</span>
+                </span>
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-sm ml-auto"
+                  disabled={saving}
+                  onClick={async () => {
+                    const patch = await recalculate({ id: form.id, name: form.name, avg_rating: form.avg_rating, total_ratings: form.total_ratings });
+                    if (patch) setF({ avg_rating: patch.avg_rating ?? null, total_ratings: patch.total_ratings ?? 0 });
+                  }}
+                >
+                  <Calculator size={14} /> Recalculate from real reviews
+                </button>
+              </div>
+            )}
 
             <datalist id="vendor-price-levels">
               <option value="₹" />

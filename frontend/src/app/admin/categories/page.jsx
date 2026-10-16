@@ -8,7 +8,12 @@ import { useToast } from "../components/Toast";
 import Modal, { useConfirm } from "../components/Modal";
 import { EmptyState, ErrorBanner, Field, ImagePreview, Loading, PageHeader, ReadOnlyNote, Switch } from "../components/ui";
 
-const EMPTY = { name: "", slug: "", icon: "", image_url: "", sort_order: "", is_active: true };
+const EMPTY = { name: "", slug: "", icon: "", image_url: "", keywords: "", sort_order: "", is_active: true };
+
+/** keywords come back as a list (or a comma string from older APIs); the form edits them as "tea, chai". */
+const keywordText = (k) => (Array.isArray(k) ? k.join(", ") : String(k || ""));
+const keywordList = (text) =>
+  [...new Set(String(text || "").split(",").map((w) => w.trim()).filter(Boolean))];
 const ICON_SUGGESTIONS = ["🌮", "🥟", "☕", "🥛", "🍬", "🍦", "🍔", "🍛", "🍕", "🍜", "🥘", "🍢", "🌯", "🍩", "🥤", "🧁"];
 
 export default function AdminCategories() {
@@ -31,7 +36,7 @@ export default function AdminCategories() {
       const data = await adminFetch("/categories");
       setCategories(data.categories || []);
     } catch (err) {
-      setError(err.message);
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -48,7 +53,7 @@ export default function AdminCategories() {
 
   const openEdit = (c) => {
     setSlugTouched(true);
-    setForm({ id: c.id, name: c.name || "", slug: c.slug || "", icon: c.icon || "", image_url: c.image_url || "", sort_order: c.sort_order ?? 0, is_active: !!c.is_active });
+    setForm({ id: c.id, name: c.name || "", slug: c.slug || "", icon: c.icon || "", image_url: c.image_url || "", keywords: keywordText(c.keywords), sort_order: c.sort_order ?? 0, is_active: !!c.is_active });
   };
 
   const save = async (e) => {
@@ -60,6 +65,7 @@ export default function AdminCategories() {
         slug: slugify(form.slug) || slugify(form.name),
         icon: form.icon,
         image_url: form.image_url,
+        keywords: keywordList(form.keywords),
         sort_order: form.sort_order === "" ? 0 : Number(form.sort_order),
         is_active: form.is_active,
       };
@@ -134,7 +140,11 @@ export default function AdminCategories() {
 
       <div className="admin-note info">
         <Info size={16} className="shrink-0 mt-0.5" />
-        <span>Categories appear as filter chips in the mobile app, in the order shown below. Inactive categories are hidden from the app.</span>
+        <span>
+          Categories appear as filter chips in the mobile app, in the order shown below. Inactive categories are hidden from the app. A vendor shows under a chip when the
+          category&apos;s name, slug or one of its <strong>keywords</strong> appears in the vendor&apos;s food category or cuisine - vendors that match no keyword don&apos;t show
+          under any chip, so add the words your vendor data actually uses (e.g. &ldquo;tea, chai, tea store&rdquo;).
+        </span>
       </div>
 
       <ReadOnlyNote area="categories" />
@@ -193,7 +203,16 @@ export default function AdminCategories() {
                   <td>
                     <div className="flex items-center gap-3">
                       <span className="w-9 h-9 rounded-lg bg-neutral-100 flex items-center justify-center text-lg shrink-0">{c.icon || "🍽️"}</span>
-                      <span className="font-semibold">{c.name}</span>
+                      <div className="min-w-0">
+                        <div className="font-semibold">{c.name}</div>
+                        {keywordText(c.keywords) ? (
+                          <div className="text-xs text-neutral-500 max-w-[280px] line-clamp-2" title="Keywords matched against vendor category / cuisine">
+                            {keywordText(c.keywords)}
+                          </div>
+                        ) : (
+                          <div className="text-[11px] text-amber-700">No keywords</div>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td>
@@ -266,6 +285,13 @@ export default function AdminCategories() {
                   ))}
                 </div>
               </div>
+            </Field>
+            <Field
+              label="Keywords (matched against vendor category/cuisine)"
+              className="span-all"
+              hint="Comma-separated, e.g. tea, chai, tea store. A vendor shows under this chip when one of these words appears in its food category or cuisine (the name and slug always count)."
+            >
+              <input className="admin-input" maxLength={500} value={form.keywords} onChange={(e) => setForm({ ...form, keywords: e.target.value })} placeholder="e.g. chaat, pani puri, golgappa, street food" />
             </Field>
             <Field label="Image URL (optional)" className="span-all">
               <input className="admin-input" type="url" maxLength={500} value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="https://..." />

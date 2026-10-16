@@ -3,13 +3,16 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  Activity, ArrowUpRight, Clapperboard, ClipboardList, Flag, Inbox, Mail, MapPin, Plus, RefreshCw,
-  Smartphone, Star, Store, TrendingUp, Users,
+  Activity, ArrowUpRight, BadgeIndianRupee, Clapperboard, ClipboardList, Crown, Flag, Inbox, Mail, MapPin, Plus, Receipt, RefreshCw,
+  Route, Smartphone, Star, Store, TrendingUp, Users,
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { adminFetch, formatDateTime, timeAgo } from "./lib/api";
+import { adminFetch, can, canRead, formatDateTime, formatPaise, timeAgo } from "./lib/api";
 import { useAdmin } from "./lib/hooks";
 import { EmptyState, ErrorBanner, Loading, PageHeader, Spinner } from "./components/ui";
+
+// Activity rows link to these pages; hide the ones the role can't open.
+const ACTIVITY_AREA = { user: "users", submission: "submissions", review: "reviews", report: "reports", message: "inbox" };
 
 const SERIES = [
   { key: "users", label: "New users", color: "#3b82f6" },
@@ -25,7 +28,7 @@ const ACTIVITY_STYLE = {
   message: { icon: Mail, cls: "text-violet-600 bg-violet-50" },
 };
 
-function MetricCard({ tone, icon: Icon, value, label, badge, href, linkLabel }) {
+function MetricCard({ tone, icon: Icon, value, display, label, badge, href, linkLabel }) {
   return (
     <div className={`admin-metric-card ${tone}`}>
       <div className="admin-metric-header">
@@ -34,7 +37,7 @@ function MetricCard({ tone, icon: Icon, value, label, badge, href, linkLabel }) 
         </div>
         {badge && <span className="admin-metric-badge">{badge}</span>}
       </div>
-      <h3 className="admin-metric-value">{(value ?? 0).toLocaleString("en-IN")}</h3>
+      <h3 className="admin-metric-value">{display ?? (value ?? 0).toLocaleString("en-IN")}</h3>
       <p className="admin-metric-label">{label}</p>
       <Link href={href} className="admin-metric-link">
         {linkLabel} <ArrowUpRight size={14} />
@@ -59,7 +62,7 @@ export default function AdminDashboard() {
       setData(res);
       setUpdatedAt(new Date());
     } catch (err) {
-      setError(err.message);
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -71,7 +74,9 @@ export default function AdminDashboard() {
 
   const totals = data?.totals || {};
   const series = data?.series || [];
-  const activity = data?.recent_activity || [];
+  const r = (area) => canRead(area, admin);
+  const activity = (data?.recent_activity || []).filter((a) => !ACTIVITY_AREA[a.type] || r(ACTIVITY_AREA[a.type]));
+  const premium = r("premium") ? data?.premium || null : null;
   const byCity = data?.vendors_by_city || [];
   const topVendors = data?.top_vendors || [];
   const maxCity = Math.max(1, ...byCity.map((c) => c.vendors));
@@ -102,15 +107,51 @@ export default function AdminDashboard() {
       ) : !data ? null : (
         <>
           <div className="admin-dashboard-grid">
-            <MetricCard tone="amber" icon={ClipboardList} value={totals.pending_submissions} label="Pending submissions" badge={totals.pending_submissions ? "Needs review" : null} href="/admin/submissions" linkLabel="Review submissions" />
-            <MetricCard tone="brand" icon={Store} value={totals.vendors} label="Vendors" badge={`${(totals.hidden_gems || 0).toLocaleString("en-IN")} hidden gems`} href="/admin/vendors" linkLabel="Manage vendors" />
-            <MetricCard tone="blue" icon={Users} value={totals.users} label="App users" badge={totals.suspended_users ? `${totals.suspended_users} suspended` : null} href="/admin/users" linkLabel="View users" />
-            <MetricCard tone="rose" icon={Flag} value={totals.pending_reports} label="Pending reports" badge={totals.pending_reports ? "Open" : null} href="/admin/reports" linkLabel="Review reports" />
-            <MetricCard tone="blue" icon={Inbox} value={totals.unread_messages} label="Unread messages" badge={totals.unread_messages ? "Unread" : null} href="/admin/inbox" linkLabel="Open inbox" />
-            <MetricCard tone="amber" icon={Star} value={totals.reviews} label="Vendor reviews" href="/admin/ratings" linkLabel="Moderate reviews" />
-            <MetricCard tone="brand" icon={MapPin} value={totals.cities} label="Cities" badge={`${totals.categories || 0} categories`} href="/admin/cities" linkLabel="Manage cities" />
-            <MetricCard tone="rose" icon={Clapperboard} value={totals.pending_reels} label="Pending reels" badge={totals.pending_reels ? "Needs review" : null} href="/admin/reels" linkLabel="Review reels" />
+            {r("submissions") && <MetricCard tone="amber" icon={ClipboardList} value={totals.pending_submissions} label="Pending submissions" badge={totals.pending_submissions ? "Needs review" : null} href="/admin/submissions" linkLabel="Review submissions" />}
+            {r("vendors") && <MetricCard tone="brand" icon={Store} value={totals.vendors} label="Vendors" badge={`${(totals.hidden_gems || 0).toLocaleString("en-IN")} hidden gems`} href="/admin/vendors" linkLabel="Manage vendors" />}
+            {r("users") && <MetricCard tone="blue" icon={Users} value={totals.users} label="App users" badge={totals.suspended_users ? `${totals.suspended_users} suspended` : null} href="/admin/users" linkLabel="View users" />}
+            {r("reports") && <MetricCard tone="rose" icon={Flag} value={totals.pending_reports} label="Pending reports" badge={totals.pending_reports ? "Open" : null} href="/admin/reports" linkLabel="Review reports" />}
+            {r("inbox") && <MetricCard tone="blue" icon={Inbox} value={totals.unread_messages} label="Unread messages" badge={totals.unread_messages ? "Unread" : null} href="/admin/inbox" linkLabel="Open inbox" />}
+            {r("reviews") && <MetricCard tone="amber" icon={Star} value={totals.reviews} label="Vendor reviews" href="/admin/ratings" linkLabel="Moderate reviews" />}
+            {r("cities") && <MetricCard tone="brand" icon={MapPin} value={totals.cities} label="Cities" badge={`${totals.categories || 0} categories`} href="/admin/cities" linkLabel="Manage cities" />}
+            {r("reels") && <MetricCard tone="rose" icon={Clapperboard} value={totals.pending_reels} label="Pending reels" badge={totals.pending_reels ? "Needs review" : null} href="/admin/reels" linkLabel="Review reels" />}
           </div>
+
+          {premium && (
+            <div className="admin-card">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <h3 className="admin-card-title !mb-0">
+                  <Crown size={18} className="text-amber-500" /> Premium
+                </h3>
+                <Link href="/admin/premium" className="admin-metric-link !mt-0">
+                  Open Premium <ArrowUpRight size={14} />
+                </Link>
+              </div>
+              <div className="admin-stat-row">
+                <Link href="/admin/premium/subscribers" className="admin-stat no-underline hover:border-amber-300 transition-colors">
+                  <div className="flex items-center gap-2 text-amber-600 mb-2">
+                    <BadgeIndianRupee size={18} />
+                  </div>
+                  <div className="admin-stat-value">{(premium.active_subscribers ?? 0).toLocaleString("en-IN")}</div>
+                  <div className="admin-stat-label">Active subscribers</div>
+                </Link>
+                <Link href="/admin/premium/payments" className="admin-stat no-underline hover:border-amber-300 transition-colors">
+                  <div className="flex items-center gap-2 text-emerald-600 mb-2">
+                    <TrendingUp size={18} />
+                  </div>
+                  <div className="admin-stat-value">{formatPaise(premium.revenue_30d_paise ?? 0)}</div>
+                  <div className="admin-stat-label">Revenue · last 30 days</div>
+                </Link>
+                <Link href="/admin/premium/payments" className="admin-stat no-underline hover:border-amber-300 transition-colors">
+                  <div className="flex items-center gap-2 text-blue-600 mb-2">
+                    <Receipt size={18} />
+                  </div>
+                  <div className="admin-stat-value">{(premium.payments_30d ?? 0).toLocaleString("en-IN")}</div>
+                  <div className="admin-stat-label">Payments · last 30 days</div>
+                </Link>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div className="xl:col-span-2 flex flex-col gap-6 min-w-0">
@@ -202,12 +243,14 @@ export default function AdminDashboard() {
                 <h3 className="admin-card-title !text-sm uppercase !tracking-wider">Quick actions</h3>
                 <div className="flex flex-col">
                   {[
-                    { href: "/admin/submissions", icon: ClipboardList, label: "Review pending submissions", count: totals.pending_submissions },
-                    { href: "/admin/vendors?new=1", icon: Plus, label: "Add a vendor" },
-                    { href: "/admin/reports", icon: Flag, label: "Review flagged content", count: totals.pending_reports },
-                    { href: "/admin/inbox", icon: Inbox, label: "Answer support messages", count: totals.unread_messages },
-                    { href: "/admin/app-settings", icon: Smartphone, label: "Mobile app settings" },
-                  ].map((q) => (
+                    { href: "/admin/submissions", icon: ClipboardList, label: "Review pending submissions", count: totals.pending_submissions, show: r("submissions") },
+                    { href: "/admin/vendors?new=1", icon: Plus, label: "Add a vendor", show: can("vendors", admin) },
+                    { href: "/admin/trails", icon: Route, label: "Manage food trails", show: r("content") },
+                    { href: "/admin/reports", icon: Flag, label: "Review flagged content", count: totals.pending_reports, show: r("reports") },
+                    { href: "/admin/inbox", icon: Inbox, label: "Answer support messages", count: totals.unread_messages, show: r("inbox") },
+                    { href: "/admin/premium/subscribers", icon: Crown, label: "Premium subscribers", show: r("premium") },
+                    { href: "/admin/app-settings", icon: Smartphone, label: "Mobile app settings", show: r("app") },
+                  ].filter((q) => q.show).map((q) => (
                     <Link key={q.href} href={q.href} className="dashboard-list-item hover:bg-neutral-50 transition-colors rounded-md -mx-2 !px-2">
                       <div className="w-8 h-8 rounded-md bg-neutral-100 flex items-center justify-center text-neutral-600 shrink-0">
                         <q.icon size={15} />

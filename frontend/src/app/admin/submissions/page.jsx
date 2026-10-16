@@ -67,7 +67,7 @@ export default function AdminSubmissions() {
       setSubmissions(data.submissions || []);
       setCounts(data.counts || {});
     } catch (err) {
-      setError(err.message);
+      setError(err);
     } finally {
       setLoading(false);
     }

@@ -12,35 +12,35 @@ import { EmptyState, ErrorBanner, Field, Loading, PageHeader, ReadOnlyNote, Sear
 const ROLES = [
   {
     value: "super_admin",
-    desc: "Full unrestricted access, including staff.",
+    desc: "Full access, including staff and Premium (subscribers & payments).",
     on: "border-indigo-500 bg-indigo-50", off: "border-slate-200 bg-white hover:border-indigo-200",
     dot: "border-indigo-500 bg-indigo-500", title: "text-indigo-900", text: "text-indigo-700/70",
     pill: "bg-indigo-50 text-indigo-700 border-indigo-200", avatar: "bg-indigo-100 text-indigo-700",
   },
   {
     value: "moderator",
-    desc: "Vendors, submissions, reviews, reports, reels, users & inbox.",
+    desc: "Vendors, submissions, reviews, reports, reels, users (suspend) & inbox.",
     on: "border-brand-500 bg-brand-50", off: "border-slate-200 bg-white hover:border-brand-200",
     dot: "border-brand-500 bg-brand-500", title: "text-brand-700", text: "text-brand-700/70",
     pill: "bg-brand-50 text-brand-700 border-brand-200", avatar: "bg-brand-100 text-brand-700",
   },
   {
     value: "support",
-    desc: "Inbox & reports. Read-only elsewhere.",
+    desc: "Inbox & reports.",
     on: "border-emerald-500 bg-emerald-50", off: "border-slate-200 bg-white hover:border-emerald-200",
     dot: "border-emerald-500 bg-emerald-500", title: "text-emerald-900", text: "text-emerald-700/70",
     pill: "bg-emerald-50 text-emerald-700 border-emerald-200", avatar: "bg-emerald-100 text-emerald-700",
   },
   {
     value: "city_manager",
-    desc: "Cities, vendors & submissions.",
+    desc: "Cities, vendors, submissions & food trails.",
     on: "border-blue-500 bg-blue-50", off: "border-slate-200 bg-white hover:border-blue-200",
     dot: "border-blue-500 bg-blue-500", title: "text-blue-900", text: "text-blue-700/70",
     pill: "bg-blue-50 text-blue-700 border-blue-200", avatar: "bg-blue-100 text-blue-700",
   },
   {
     value: "app_manager",
-    desc: "Banners, notifications, app settings & categories.",
+    desc: "Banners, notifications, app settings, categories & food trails.",
     on: "border-purple-500 bg-purple-50", off: "border-slate-200 bg-white hover:border-purple-200",
     dot: "border-purple-500 bg-purple-500", title: "text-purple-900", text: "text-purple-700/70",
     pill: "bg-purple-50 text-purple-700 border-purple-200", avatar: "bg-purple-100 text-purple-700",
@@ -136,7 +136,7 @@ export default function AdminStaff() {
       const data = await adminFetch("/staff");
       setStaff(data.staff || []);
     } catch (err) {
-      setError(err.message);
+      setError(err);
     } finally {
       setLoading(false);
     }

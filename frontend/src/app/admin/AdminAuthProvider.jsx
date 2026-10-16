@@ -4,37 +4,77 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft, Clapperboard, ClipboardList, Flag, Inbox, KeyRound, LayoutDashboard, LogOut, MapPin,
-  Menu, ShieldCheck, Smartphone, Star, Store, Tags, Users, X,
+  ArrowLeft, BadgeIndianRupee, Clapperboard, ClipboardList, Crown, Flag, Inbox, KeyRound, LayoutDashboard, LogOut, MapPin,
+  Menu, Receipt, Route, ShieldCheck, Smartphone, Star, Store, Tags, Ticket, Users, X,
 } from "lucide-react";
-import { adminFetch, clearSession, getAdmin, getToken, setSession, ROLE_LABELS } from "./lib/api";
+import {
+  adminFetch, canRead, clearSession, FORBIDDEN_EVENT, getAdmin, getToken, normalizePermissions, setSession, ROLE_LABELS,
+} from "./lib/api";
 import { AdminContext } from "./lib/hooks";
 import { ToastProvider, useToast } from "./components/Toast";
 import Modal, { ConfirmProvider } from "./components/Modal";
-import { Field } from "./components/ui";
+import { Field, NoAccess } from "./components/ui";
 
+// `area` = the permission area a role must be able to READ to see the item / open the page.
 const NAV = [
   { section: "Overview" },
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/inbox", label: "Inbox", icon: Inbox, badge: "unread_messages" },
+  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/admin/inbox", label: "Inbox", icon: Inbox, badge: "unread_messages", area: "inbox" },
   { section: "Content" },
-  { href: "/admin/submissions", label: "Submissions", icon: ClipboardList, badge: "pending_submissions" },
-  { href: "/admin/vendors", label: "Vendors", icon: Store },
-  { href: "/admin/categories", label: "Categories", icon: Tags },
-  { href: "/admin/cities", label: "Cities", icon: MapPin },
-  { href: "/admin/ratings", label: "Reviews", icon: Star },
-  { href: "/admin/reels", label: "Reels", icon: Clapperboard, badge: "pending_reels" },
+  { href: "/admin/submissions", label: "Submissions", icon: ClipboardList, badge: "pending_submissions", area: "submissions" },
+  { href: "/admin/vendors", label: "Vendors", icon: Store, area: "vendors" },
+  { href: "/admin/categories", label: "Categories", icon: Tags, area: "categories" },
+  { href: "/admin/cities", label: "Cities", icon: MapPin, area: "cities" },
+  { href: "/admin/trails", label: "Food Trails", icon: Route, area: "content" },
+  { href: "/admin/ratings", label: "Reviews", icon: Star, area: "reviews" },
+  { href: "/admin/reels", label: "Reels", icon: Clapperboard, badge: "pending_reels", area: "reels" },
   { section: "Community" },
-  { href: "/admin/users", label: "Users", icon: Users },
-  { href: "/admin/reports", label: "Reports", icon: Flag, badge: "pending_reports" },
+  { href: "/admin/users", label: "Users", icon: Users, area: "users" },
+  { href: "/admin/reports", label: "Reports", icon: Flag, badge: "pending_reports", area: "reports" },
+  { section: "Premium" },
+  { href: "/admin/premium", label: "Premium overview", icon: Crown, area: "premium", exact: true },
+  { href: "/admin/premium/plans", label: "Plans", icon: Ticket, area: "premium" },
+  { href: "/admin/premium/subscribers", label: "Subscribers", icon: BadgeIndianRupee, area: "premium" },
+  { href: "/admin/premium/payments", label: "Payments", icon: Receipt, area: "premium" },
   { section: "System" },
-  { href: "/admin/staff", label: "Staff Admins", icon: ShieldCheck },
-  { href: "/admin/app-settings", label: "App Settings", icon: Smartphone },
+  { href: "/admin/staff", label: "Staff Admins", icon: ShieldCheck, area: "staff" },
+  { href: "/admin/app-settings", label: "App Settings", icon: Smartphone, area: "app" },
 ];
 
-function isActive(pathname, href) {
-  if (href === "/admin") return pathname === "/admin";
-  return pathname === href || pathname.startsWith(`${href}/`);
+function isActive(pathname, item) {
+  if (item.exact) return pathname === item.href;
+  return pathname === item.href || pathname.startsWith(`${item.href}/`);
+}
+
+/** Read area needed for a panel URL (longest matching nav prefix), or null when open to every role. */
+function areaForPath(pathname) {
+  let best = null;
+  NAV.forEach((item) => {
+    if (!item.href || !item.area) return;
+    if (pathname === item.href || pathname.startsWith(`${item.href}/`)) {
+      if (!best || item.href.length > best.href.length) best = item;
+    }
+  });
+  return best?.area || null;
+}
+
+/** Nav items (and their section headings) the role can open; empty sections are dropped. */
+function visibleNav(admin) {
+  const out = [];
+  let pendingSection = null;
+  NAV.forEach((item) => {
+    if (item.section) {
+      pendingSection = item;
+      return;
+    }
+    if (!canRead(item.area, admin)) return;
+    if (pendingSection) {
+      out.push(pendingSection);
+      pendingSection = null;
+    }
+    out.push(item);
+  });
+  return out;
 }
 
 export default function AdminAuthProvider({ children }) {
@@ -77,8 +117,11 @@ function AdminShell({ children }) {
     return adminFetch("/me")
       .then((data) => {
         if (data?.admin) {
-          setSession(null, data.admin);
-          setAdmin(data.admin);
+          // Keep the server's read/write areas with the profile so nav, pages and actions can be gated.
+          const perms = normalizePermissions(data) || normalizePermissions(data.admin);
+          const profile = { ...data.admin, _perms: perms || undefined };
+          setSession(null, profile);
+          setAdmin(profile);
         }
       })
       .catch(() => {});
@@ -104,6 +147,14 @@ function AdminShell({ children }) {
 
   const ctx = useMemo(() => ({ admin, counts, refreshCounts, refreshProfile }), [admin, counts, refreshCounts, refreshProfile]);
 
+  // Any 403 from the API (a role without access to that area) becomes a toast.
+  const toast = useToast();
+  useEffect(() => {
+    const onForbidden = (e) => toast.error(e.detail?.message || "Your role does not allow this action.");
+    window.addEventListener(FORBIDDEN_EVENT, onForbidden);
+    return () => window.removeEventListener(FORBIDDEN_EVENT, onForbidden);
+  }, [toast]);
+
   const logout = () => {
     clearSession();
     setAdmin(null);
@@ -125,7 +176,10 @@ function AdminShell({ children }) {
     );
   }
 
-  const totalAlerts = (counts.pending_submissions || 0) + (counts.pending_reports || 0) + (counts.unread_messages || 0) + (counts.pending_reels || 0);
+  const pageArea = areaForPath(pathname);
+  const nav = visibleNav(admin);
+  // Only count waiting work in areas this role can open.
+  const totalAlerts = nav.reduce((sum, item) => sum + (item.badge ? counts[item.badge] || 0 : 0), 0);
   const name = admin?.name || admin?.username || "Admin";
 
   return (
@@ -157,7 +211,7 @@ function AdminShell({ children }) {
           </div>
 
           <nav className="admin-nav">
-            {NAV.map((item) => {
+            {nav.map((item) => {
               if (item.section) {
                 return (
                   <div key={item.section} className="admin-nav-section">
@@ -168,7 +222,7 @@ function AdminShell({ children }) {
               const Icon = item.icon;
               const badge = item.badge ? counts[item.badge] : 0;
               return (
-                <Link key={item.href} href={item.href} className={`admin-nav-link ${isActive(pathname, item.href) ? "active" : ""}`}>
+                <Link key={item.href} href={item.href} className={`admin-nav-link ${isActive(pathname, item) ? "active" : ""}`}>
                   <Icon size={17} />
                   <span>{item.label}</span>
                   {badge > 0 && <span className="admin-nav-badge">{badge > 99 ? "99+" : badge}</span>}
@@ -201,7 +255,7 @@ function AdminShell({ children }) {
           </div>
         </aside>
 
-        <main className="admin-main">{children}</main>
+        <main className="admin-main">{pageArea && !canRead(pageArea, admin) ? <NoAccess /> : children}</main>
       </div>
 
       <ChangePasswordModal open={pwOpen} onClose={() => setPwOpen(false)} />

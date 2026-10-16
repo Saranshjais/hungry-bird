@@ -27,7 +27,7 @@ export default function AdminReels() {
       const data = await adminFetch(`/reels?status=${s}`);
       setReels(data.reels || []);
     } catch (err) {
-      setError(err.message);
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -41,7 +41,7 @@ export default function AdminReels() {
     setBusyId(reel.id);
     try {
       await adminFetch(`/reels/${reel.id}/${action}`, { method: "POST" });
-      toast.success(action === "approve" ? `"${reel.title}" approved - it is now live in the app` : `"${reel.title}" rejected`);
+      toast.success(action === "approve" ? `"${reel.title}" approved - it now shows on the website` : `"${reel.title}" rejected - it no longer shows on the website`);
       load(status, { quiet: true });
       refreshCounts();
     } catch (err) {
@@ -76,7 +76,7 @@ export default function AdminReels() {
 
   return (
     <div>
-      <PageHeader title="Video Reels" subtitle="Short food videos uploaded by users. Approved reels are shown in the app and on the website." />
+      <PageHeader title="Video Reels" subtitle="Short food videos uploaded on the website. Approved reels are shown on the website only - the mobile app doesn't show reels." />
       <ReadOnlyNote area="reels" />
       <Tabs tabs={tabs} value={status} onChange={setStatus} />
       <ErrorBanner message={error} onRetry={() => load(status)} />
