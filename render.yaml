@@ -6,8 +6,12 @@
       "runtime": "python",
       "rootDir": "backend",
       "buildCommand": "pip install -r requirements.txt && flask db upgrade",
-      "startCommand": "gunicorn run:app",
+      "startCommand": "gunicorn -w 1 --threads 16 --timeout 60 run:app",
       "envVars": [
+        {
+          "key": "APP_ENV",
+          "value": "production"
+        },
         {
           "key": "SECRET_KEY",
           "generateValue": true
@@ -33,6 +37,14 @@
           "sync": false
         },
         {
+          "key": "CORS_ORIGINS",
+          "sync": false
+        },
+        {
+          "key": "RATELIMIT_STORAGE_URI",
+          "value": "memory://"
+        },
+        {
           "key": "ADMIN_USERNAME",
           "sync": false
         },
@@ -42,6 +54,42 @@
         },
         {
           "key": "ADMIN_PASSWORD",
+          "sync": false
+        },
+        {
+          "key": "SMTP_HOST",
+          "sync": false
+        },
+        {
+          "key": "SMTP_PORT",
+          "sync": false
+        },
+        {
+          "key": "SMTP_USERNAME",
+          "sync": false
+        },
+        {
+          "key": "SMTP_PASSWORD",
+          "sync": false
+        },
+        {
+          "key": "SMTP_FROM",
+          "sync": false
+        },
+        {
+          "key": "SMTP_SECURITY",
+          "value": "starttls"
+        },
+        {
+          "key": "RAZORPAY_KEY_ID",
+          "sync": false
+        },
+        {
+          "key": "RAZORPAY_KEY_SECRET",
+          "sync": false
+        },
+        {
+          "key": "RAZORPAY_WEBHOOK_SECRET",
           "sync": false
         }
       ]

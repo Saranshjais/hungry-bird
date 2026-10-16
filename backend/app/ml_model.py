@@ -21,21 +21,18 @@ def build_recommendation_model(vendors):
         return df, None
 
 
-def get_recommendations(vendor_name, df, similarity):
-    if similarity is None or vendor_name not in df["name"].values:
+def get_recommendations(vendor_id, df, similarity, count=5):
+    """Ids of the vendors most similar to `vendor_id` (callers serialize them for the viewer)."""
+    if similarity is None or vendor_id not in df["id"].values:
         return []
 
     try:
-        idx = df[df["name"] == vendor_name].index[0]
+        idx = df[df["id"] == vendor_id].index[0]
 
         scores = list(enumerate(similarity[idx]))
         scores = sorted(scores, key=lambda x: x[1], reverse=True)
 
-        results = []
-        for i in scores[1:6]:
-            results.append(df.iloc[i[0]].to_dict())
-
-        return results
+        return [int(df.iloc[i]["id"]) for i, _ in scores[1:count + 1]]
     except Exception as e:
         print(f"ML recommendation failed: {e}")
         return []

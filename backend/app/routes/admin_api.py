@@ -8,27 +8,53 @@ from functools import wraps
 import jwt
 import pandas as pd
 from flask import Blueprint, Response, current_app, g, jsonify, request
+from werkzeug.security import check_password_hash, generate_password_hash
 
-from app import db
-from app.helpers import get_settings, recompute_vendor_rating, save_settings, slugify, iso
+from app import db, limiter
+from app import codes
+from app.emailer import EmailNotConfigured, EmailSendError, email_available
+from app.helpers import (
+    ADMIN_TOKEN_AUDIENCE, category_filter, client_ip, finite_float, get_settings,
+    recompute_vendor_rating, save_settings, slugify, iso,
+)
 from app.models import (
     ADMIN_ROLES, AdminUser, AppBanner, AppNotification, Category, City, ContactMessage,
-    Rating, ReelSubmission, Report, SiteReview, User, Vendor, VendorSubmission,
+    Payment, Rating, ReelSubmission, Report, SiteReview, SubscriptionEvent, SubscriptionPlan,
+    Trail, User, Vendor, VendorSubmission, utc_iso,
 )
-from app.utils import send_push_batch
+from app.payments import extend_premium, payments_available, revoke_premium
+from app.utils import push_available, push_recipient_tokens, send_push_batch
 
 admin_api_bp = Blueprint("admin_api", __name__, url_prefix="/api/admin")
 
-# Which areas each staff role may change. Every active staff member can read.
+# Every area of the admin panel (GET /api/admin/me tells the panel which ones a role can open).
+AREAS = ("dashboard", "submissions", "vendors", "cities", "categories", "reviews", "users", "inbox",
+         "reports", "reels", "app", "content", "premium", "staff")
+
+# Which areas each staff role may change.
 ROLE_PERMISSIONS = {
     "super_admin": {"*"},
     "moderator": {"submissions", "vendors", "reviews", "reports", "reels", "categories", "users", "inbox"},
     "support": {"inbox", "reports"},
-    "city_manager": {"cities", "vendors", "submissions"},
-    "app_manager": {"app", "categories"},
+    "city_manager": {"cities", "vendors", "submissions", "content"},
+    "app_manager": {"app", "categories", "content"},
+}
+
+# Which areas each staff role may read. Reading "users" also unlocks personal data shown in other
+# areas (reviewer emails/IPs, submitter emails, names in the dashboard feed). "premium" (plans,
+# subscribers, payments) and "staff" are Super Admin only.
+ROLE_READ_PERMISSIONS = {
+    "super_admin": {"*"},
+    "moderator": {"dashboard", "submissions", "vendors", "cities", "categories", "reviews", "users",
+                  "inbox", "reports", "reels", "content"},
+    "support": {"dashboard", "inbox", "reports", "users", "vendors", "cities", "categories", "content"},
+    "city_manager": {"dashboard", "submissions", "vendors", "cities", "categories", "content"},
+    "app_manager": {"dashboard", "app", "categories", "content", "cities", "vendors"},
 }
 
 VENDOR_STATUSES = ("pending", "verified", "rejected")
+ADMIN_TOKEN_LIFETIME = datetime.timedelta(hours=24)
+_DUMMY_HASH = generate_password_hash("hungrybird-admin-timing-equaliser")
 
 
 def _now():
@@ -40,33 +66,47 @@ def _can(role, area):
     return "*" in perms or area in perms
 
 
+def _can_read(role, area):
+    perms = ROLE_READ_PERMISSIONS.get(role, set())
+    return "*" in perms or area in perms or _can(role, area)
+
+
+def _sees_personal_data():
+    return _can_read(g.admin.role, "users")
+
+
+def _forbidden():
+    return jsonify({"error": "Your role does not allow this action", "code": "FORBIDDEN"}), 403
+
+
 def admin_required(area=None, write=None, super_only=False):
-    """Authenticate a staff token. `area` gates non-GET requests (or all requests if write=False)."""
+    """Authenticate a staff token. `area` gates reads (GET) and writes (other methods) separately."""
     def decorator(f):
         @wraps(f)
         def decorated(*args, **kwargs):
             auth_header = request.headers.get("Authorization", "")
             token = auth_header.split(" ", 1)[1] if auth_header.startswith("Bearer ") else None
             if not token:
-                return jsonify({"error": "Token is missing"}), 401
+                return jsonify({"error": "Token is missing", "code": "UNAUTHORIZED"}), 401
             try:
-                data = jwt.decode(token, current_app.config["SECRET_KEY"], algorithms=["HS256"])
+                data = jwt.decode(token, current_app.config["SECRET_KEY"], algorithms=["HS256"],
+                                  audience=ADMIN_TOKEN_AUDIENCE)
             except jwt.ExpiredSignatureError:
-                return jsonify({"error": "Session expired, please log in again"}), 401
+                return jsonify({"error": "Session expired, please log in again", "code": "UNAUTHORIZED"}), 401
             except Exception:
-                return jsonify({"error": "Invalid token"}), 401
+                return jsonify({"error": "Invalid token", "code": "UNAUTHORIZED"}), 401
 
             if data.get("role") != "admin" or not data.get("admin_id"):
-                return jsonify({"error": "Invalid token, please log in again"}), 401
+                return jsonify({"error": "Invalid token, please log in again", "code": "UNAUTHORIZED"}), 401
             admin = db.session.get(AdminUser, data["admin_id"])
             if not admin or not admin.is_active:
-                return jsonify({"error": "Your admin access has been revoked"}), 401
+                return jsonify({"error": "Your admin access has been revoked", "code": "UNAUTHORIZED"}), 401
 
             is_write = request.method != "GET" if write is None else write
             if super_only and admin.role != "super_admin":
-                return jsonify({"error": "Only a Super Admin can do this"}), 403
-            if area and is_write and not _can(admin.role, area):
-                return jsonify({"error": "Your role does not allow this action"}), 403
+                return jsonify({"error": "Only a Super Admin can do this", "code": "FORBIDDEN"}), 403
+            if area and not (_can(admin.role, area) if is_write else _can_read(admin.role, area)):
+                return _forbidden()
 
             g.admin = admin
             return f(*args, **kwargs)
@@ -79,8 +119,8 @@ def _json():
 
 
 def _paginate(query, default_per_page=25):
-    page = max(request.args.get("page", 1, type=int), 1)
-    per_page = min(max(request.args.get("per_page", default_per_page, type=int), 1), 200)
+    page = max(request.args.get("page", 1, type=int) or 1, 1)
+    per_page = min(max(request.args.get("per_page", default_per_page, type=int) or default_per_page, 1), 200)
     total = query.order_by(None).count()
     items = query.offset((page - 1) * per_page).limit(per_page).all()
     pages = max((total + per_page - 1) // per_page, 1)
@@ -88,15 +128,24 @@ def _paginate(query, default_per_page=25):
 
 
 def _to_float(value):
+    """None for blank, else a finite float (NaN/Infinity raise ValueError)."""
     if value in (None, ""):
         return None
-    return float(value)
+    return finite_float(value)
 
 
 def _to_bool(value):
     if isinstance(value, bool):
         return value
     return str(value).strip().lower() in ("1", "true", "yes", "y", "on")
+
+
+def _to_int(value, default=0):
+    if value in (None, ""):
+        return default
+    if isinstance(value, bool):
+        raise ValueError("Not a number")
+    return int(value)
 
 
 def _clean_str(value, max_len=None):
@@ -113,20 +162,32 @@ def _clean_str(value, max_len=None):
 def _ensure_bootstrap_admin():
     """Create the first super admin so a fresh database is never locked out.
 
-    Credentials come from ADMIN_USERNAME / ADMIN_EMAIL / ADMIN_PASSWORD; without them the
-    legacy panel credentials are used. Change the password from the panel after first login.
+    Only when ADMIN_USERNAME, ADMIN_EMAIL and ADMIN_PASSWORD (12+ characters) are all set and the
+    admin_users table is empty. There are no built-in credentials.
     """
-    if not db.inspect(db.engine).has_table("admin_users"):
-        AdminUser.__table__.create(bind=db.engine, checkfirst=True)
-
-    if AdminUser.query.count() > 0:
+    try:
+        if not db.inspect(db.engine).has_table("admin_users"):
+            return  # schema not migrated yet (e.g. during `flask db upgrade` on an empty database)
+        if AdminUser.query.count() > 0:
+            return
+    except Exception:
+        current_app.logger.exception("Could not check for an existing admin account")
         return
 
-    username = os.getenv("ADMIN_USERNAME", "saransh")
-    password = current_app.config.get("ADMIN_PASSWORD") or "Sara@123"
+    cfg = current_app.config
+    username = (cfg.get("ADMIN_USERNAME") or os.getenv("ADMIN_USERNAME") or "").strip()
+    email = (cfg.get("ADMIN_EMAIL") or os.getenv("ADMIN_EMAIL") or "").strip().lower()
+    password = cfg.get("ADMIN_PASSWORD") or os.getenv("ADMIN_PASSWORD") or ""
+    if not username or not email or len(password) < 12:
+        current_app.logger.error(
+            "No admin account exists. Set ADMIN_USERNAME, ADMIN_EMAIL and ADMIN_PASSWORD (12+ characters) "
+            "and restart to create the first Super Admin."
+        )
+        return
+
     admin = AdminUser(
         name=os.getenv("ADMIN_NAME", "Super Admin"),
-        email=os.getenv("ADMIN_EMAIL", "admin@hungrybird.in").lower(),
+        email=email,
         username=username,
         role="super_admin",
         is_active=True,
@@ -134,15 +195,22 @@ def _ensure_bootstrap_admin():
     admin.set_password(password)
     db.session.add(admin)
     db.session.commit()
+    current_app.logger.info("Created the first Super Admin '%s'", username)
+
+
+def _admin_login_key():
+    data = _json()
+    identifier = str(data.get("username") or data.get("email") or "").strip().lower()[:150]
+    return f"admin|{client_ip()}|{identifier}"
 
 
 @admin_api_bp.route("/login", methods=["POST"])
+@limiter.limit("5 per minute", key_func=_admin_login_key)
+@limiter.limit("30 per hour")
 def login():
     data = _json()
-    identifier = (data.get("username") or data.get("email") or "").strip()
-    password = data.get("password") or ""
-
-    _ensure_bootstrap_admin()
+    identifier = str(data.get("username") or data.get("email") or "").strip()
+    password = data.get("password") if isinstance(data.get("password"), str) else ""
 
     admin = None
     if identifier:
@@ -150,10 +218,13 @@ def login():
             db.or_(AdminUser.username == identifier, AdminUser.email == identifier.lower())
         ).first()
 
-    if not admin or not admin.check_password(password):
-        return jsonify({"error": "Invalid username or password"}), 401
+    if not admin:
+        check_password_hash(_DUMMY_HASH, password)  # same work as a real check (no timing oracle)
+        return jsonify({"error": "Invalid username or password", "code": "INVALID_CREDENTIALS"}), 401
+    if not admin.check_password(password):
+        return jsonify({"error": "Invalid username or password", "code": "INVALID_CREDENTIALS"}), 401
     if not admin.is_active:
-        return jsonify({"error": "This admin account is disabled"}), 403
+        return jsonify({"error": "This admin account is disabled", "code": "FORBIDDEN"}), 403
 
     admin.last_login = _now()
     db.session.commit()
@@ -162,17 +233,33 @@ def login():
         "role": "admin",
         "admin_id": admin.id,
         "staff_role": admin.role,
-        "exp": _now() + datetime.timedelta(hours=24),
+        "aud": ADMIN_TOKEN_AUDIENCE,
+        "exp": _now() + ADMIN_TOKEN_LIFETIME,
     }, current_app.config["SECRET_KEY"], algorithm="HS256")
 
     return jsonify({"token": token, "admin": admin.to_dict()}), 200
+
+
+def _permission_summary(role):
+    read = [a for a in AREAS if _can_read(role, a)]
+    write = [a for a in AREAS if _can(role, a)]
+    return read, write
 
 
 @admin_api_bp.route("/me", methods=["GET"])
 @admin_required()
 def me():
     perms = sorted(ROLE_PERMISSIONS.get(g.admin.role, set()))
-    return jsonify({"admin": g.admin.to_dict(), "permissions": perms})
+    read, write = _permission_summary(g.admin.role)
+    return jsonify({
+        "admin": g.admin.to_dict(),
+        # Unchanged: areas the role may change ("*" = everything).
+        "permissions": perms,
+        "read_permissions": read,
+        "write_permissions": write,
+        "areas": {a: {"read": a in read, "write": a in write} for a in AREAS},
+        "can_see_personal_data": _can_read(g.admin.role, "users"),
+    })
 
 
 @admin_api_bp.route("/me/password", methods=["PUT"])
@@ -191,19 +278,31 @@ def change_my_password():
 
 # ==================== DASHBOARD ====================
 
+def _premium_stats():
+    since = _now() - datetime.timedelta(days=30)
+    paid = Payment.query.filter(Payment.status == "paid", Payment.paid_at >= since)
+    return {
+        "active_subscribers": User.query.filter(User.premium_until > _now()).count(),
+        "revenue_30d_paise": int(paid.with_entities(db.func.coalesce(db.func.sum(Payment.amount_paise), 0)).scalar() or 0),
+        "payments_30d": paid.count(),
+    }
+
+
 @admin_api_bp.route("/stats", methods=["GET"])
-@admin_required()
+@admin_required("dashboard")
 def stats():
-    days = min(max(request.args.get("days", 7, type=int), 1), 90)
+    days = min(max(request.args.get("days", 7, type=int) or 7, 1), 90)
     today = _now().date()
     start_date = today - datetime.timedelta(days=days - 1)
     start = datetime.datetime.combine(start_date, datetime.time.min)
+    personal = _sees_personal_data()
 
     totals = {
         "vendors": Vendor.query.count(),
         "hidden_gems": Vendor.query.filter(
             db.or_(Vendor.is_hidden_gem == True, Vendor.hidden_gem_candidate == True)  # noqa: E712
         ).count(),
+        "premium_vendors": Vendor.query.filter(Vendor.is_premium == True).count(),  # noqa: E712
         "cities": City.query.count(),
         "categories": Category.query.count(),
         "users": User.query.count(),
@@ -236,27 +335,30 @@ def stats():
             row[key] = counts.get(day, 0)
         series.append(row)
 
+    # Names of users/reviewers/senders are personal data: only roles that may read users see them.
     activity = []
     for u in User.query.order_by(User.created_at.desc()).limit(5).all():
         activity.append({"type": "user", "title": "New user registered",
-                         "detail": f"{u.name} joined the platform", "created_at": iso(u.created_at),
-                         "link": "/admin/users"})
+                         "detail": f"{u.name} joined the platform" if personal else "A new user joined",
+                         "created_at": iso(u.created_at), "link": "/admin/users"})
     for s in VendorSubmission.query.order_by(VendorSubmission.created_at.desc()).limit(5).all():
         activity.append({"type": "submission", "title": "New vendor submission",
                          "detail": f"{s.stall_name} ({s.city.name if s.city else 'Unknown city'}) - {s.status}",
                          "created_at": iso(s.created_at), "link": "/admin/submissions"})
     for r in Rating.query.order_by(Rating.created_at.desc()).limit(5).all():
+        who = (r.author_name or "Anonymous") if personal else "Someone"
         activity.append({"type": "review", "title": f"New {r.rating_value:g}★ review",
-                         "detail": f"{r.author_name or 'Anonymous'} on {r.vendor.name if r.vendor else 'a vendor'}",
+                         "detail": f"{who} on {r.vendor.name if r.vendor else 'a vendor'}",
                          "created_at": iso(r.created_at), "link": "/admin/ratings"})
     for rep in Report.query.order_by(Report.created_at.desc()).limit(5).all():
         activity.append({"type": "report", "title": "Content reported",
                          "detail": f"{rep.target_type.title()} #{rep.target_id}: {rep.reason}",
                          "created_at": iso(rep.created_at), "link": "/admin/reports"})
-    for m in ContactMessage.query.order_by(ContactMessage.created_at.desc()).limit(5).all():
-        activity.append({"type": "message", "title": "New support message",
-                         "detail": f"{m.name}: {m.subject or m.message[:60]}",
-                         "created_at": iso(m.created_at), "link": "/admin/inbox"})
+    if _can_read(g.admin.role, "inbox"):
+        for m in ContactMessage.query.order_by(ContactMessage.created_at.desc()).limit(5).all():
+            activity.append({"type": "message", "title": "New support message",
+                             "detail": f"{m.name}: {m.subject or m.message[:60]}",
+                             "created_at": iso(m.created_at), "link": "/admin/inbox"})
     activity.sort(key=lambda a: a["created_at"] or "", reverse=True)
 
     city_rows = (
@@ -283,6 +385,8 @@ def stats():
              "avg_rating": v.avg_rating, "total_ratings": v.total_ratings}
             for v in top_vendors
         ],
+        # Revenue is Super Admin only (area "premium"); other roles get null.
+        "premium": _premium_stats() if _can_read(g.admin.role, "premium") else None,
     })
 
 
@@ -301,6 +405,7 @@ def badge_counts():
 # ==================== SUBMISSIONS ====================
 
 def _submission_dict(sub):
+    personal = _sees_personal_data()
     return {
         "id": sub.id,
         "city_id": sub.city_id,
@@ -315,7 +420,8 @@ def _submission_dict(sub):
         "estimated_price": sub.estimated_price,
         "rating": sub.rating,
         "submitted_by_name": sub.submitted_by_name,
-        "submitted_by_email": sub.submitted_by_email,
+        # Contact details only for roles that may read personal data.
+        "submitted_by_email": sub.submitted_by_email if personal else None,
         "user_id": sub.user_id,
         "status": sub.status,
         "review_notes": sub.review_notes,
@@ -355,19 +461,24 @@ def approve_submission(submission_id):
         return jsonify({"error": "Latitude/longitude must be numbers."}), 400
     if lat is None or lng is None:
         return jsonify({"error": "Cannot approve: Missing location (lat/lng). Add coordinates first."}), 400
+    if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+        return jsonify({"error": "Latitude/longitude are out of range."}), 400
 
     name = _clean_str(overrides.get("stall_name"), 200) or sub.stall_name
     existing = Vendor.query.filter_by(name=name, city_id=sub.city_id).first()
     if existing:
         return jsonify({"error": "Vendor already exists in this city."}), 400
 
+    is_hidden_gem = _to_bool(overrides.get("is_hidden_gem", True))
     vendor = Vendor(
         city_id=sub.city_id,
         name=name,
         cuisine_type=_clean_str(overrides.get("cuisine_type"), 200) or sub.cuisine_type,
         description=_clean_str(overrides.get("description")) or sub.description,
-        is_hidden_gem=_to_bool(overrides.get("is_hidden_gem", True)),
+        is_hidden_gem=is_hidden_gem,
         is_famous=False,
+        is_premium=_to_bool(overrides.get("is_premium", is_hidden_gem)),
+        team_verified=_to_bool(overrides.get("team_verified", False)),
         avg_rating=None,
         total_ratings=0,
         price_level=_clean_str(overrides.get("price_level"), 20) or (sub.estimated_price or "")[:20] or None,
@@ -382,12 +493,13 @@ def approve_submission(submission_id):
     db.session.flush()
 
     if sub.rating:
+        # The submitter's own star rating counts as a real review; no invented review text.
         db.session.add(Rating(
             vendor_id=vendor.id,
             user_id=sub.user_id,
             rating_value=sub.rating,
-            author_name=sub.submitted_by_name or "Anonymous",
-            review_text="Initial rating from submitter",
+            author_name=sub.submitted_by_name or None,
+            review_text=None,
         ))
         db.session.flush()
         recompute_vendor_rating(vendor)
@@ -423,12 +535,12 @@ def delete_submission(submission_id):
 
 VENDOR_STR_FIELDS = {
     "name": 200, "cuisine_type": 200, "food_category": 80, "specialty_dish": 150,
-    "description": None, "opening_hours": 150, "closed_days": 60, "price_level": 20,
+    "description": 5000, "opening_hours": 150, "closed_days": 60, "price_level": 20,
     "address_text": 300, "area": 150, "landmark": 150, "phone": 50, "website": 300,
     "instagram": 150, "image_url": 500,
 }
 VENDOR_FLOAT_FIELDS = ("price_min", "price_max", "lat", "lng")
-VENDOR_BOOL_FIELDS = ("is_hidden_gem", "is_famous")
+VENDOR_BOOL_FIELDS = ("is_hidden_gem", "is_famous", "is_premium", "team_verified")
 
 
 def _apply_vendor_fields(vendor, data):
@@ -466,6 +578,10 @@ def _apply_vendor_fields(vendor, data):
         return "Latitude must be between -90 and 90"
     if vendor.lng is not None and not -180 <= vendor.lng <= 180:
         return "Longitude must be between -180 and 180"
+    for field in ("price_min", "price_max"):
+        value = getattr(vendor, field)
+        if value is not None and value < 0:
+            return f"{field} cannot be negative"
     return None
 
 
@@ -496,6 +612,10 @@ def get_vendors():
         query = query.filter(Vendor.is_hidden_gem == True)  # noqa: E712
     elif flag == "famous":
         query = query.filter(Vendor.is_famous == True)  # noqa: E712
+    elif flag == "premium":
+        query = query.filter(Vendor.is_premium == True)  # noqa: E712
+    elif flag == "team_verified":
+        query = query.filter(Vendor.team_verified == True)  # noqa: E712
     elif flag == "missing_location":
         query = query.filter(db.or_(Vendor.lat.is_(None), Vendor.lng.is_(None)))
     elif flag == "missing_details":
@@ -522,10 +642,13 @@ def get_vendor(vendor_id):
 @admin_required("vendors")
 def create_vendor():
     data = _json()
-    vendor = Vendor(source="admin", verified_status="verified", is_hidden_gem=False, is_famous=False, total_ratings=0)
+    vendor = Vendor(source="admin", verified_status="verified", is_hidden_gem=False, is_famous=False,
+                    is_premium=False, team_verified=False, total_ratings=0)
     error = _apply_vendor_fields(vendor, data)
     if error:
         return jsonify({"error": error}), 400
+    if "is_premium" not in data:
+        vendor.is_premium = bool(vendor.is_hidden_gem)  # hidden gems are Premium unless staff say otherwise
     if Vendor.query.filter_by(name=vendor.name, city_id=vendor.city_id).first():
         return jsonify({"error": "A vendor with this name already exists in this city"}), 400
     db.session.add(vendor)
@@ -543,6 +666,17 @@ def update_vendor(vendor_id):
         return jsonify({"error": error}), 400
     db.session.commit()
     return jsonify({"message": "Vendor updated successfully.", "vendor": vendor.to_admin_dict()}), 200
+
+
+@admin_api_bp.route("/vendors/<int:vendor_id>/recalculate-rating", methods=["POST"])
+@admin_required("vendors")
+def recalculate_vendor_rating(vendor_id):
+    """Recompute avg_rating / total_ratings from real reviews only."""
+    vendor = db.get_or_404(Vendor, vendor_id)
+    recompute_vendor_rating(vendor)
+    db.session.commit()
+    return jsonify({"message": "Rating recalculated from reviews.", "avg_rating": vendor.avg_rating,
+                    "total_ratings": vendor.total_ratings, "vendor": vendor.to_admin_dict()})
 
 
 @admin_api_bp.route("/vendors/<int:vendor_id>", methods=["DELETE"])
@@ -566,6 +700,7 @@ BULK_COLUMN_ALIASES = {
 @admin_api_bp.route("/vendors/bulk-upload", methods=["POST"])
 @admin_required("vendors")
 def bulk_upload_vendors():
+    request.max_content_length = current_app.config["MAX_BULK_UPLOAD_BYTES"]
     if "file" not in request.files:
         return jsonify({"error": "No file provided"}), 400
     file = request.files["file"]
@@ -579,8 +714,9 @@ def bulk_upload_vendors():
             df = pd.read_excel(file, engine="openpyxl")
         else:
             return jsonify({"error": "Unsupported file format. Please upload .csv or .xlsx"}), 400
-    except Exception as e:
-        return jsonify({"error": f"Could not read file: {e}"}), 400
+    except Exception:
+        current_app.logger.exception("Bulk upload: could not read file")
+        return jsonify({"error": "Could not read the file. Please check it is a valid CSV or XLSX."}), 400
 
     df.columns = [str(c).strip().lower().replace(" ", "_") for c in df.columns]
     df = df.rename(columns={k: v for k, v in BULK_COLUMN_ALIASES.items() if k in df.columns and v not in df.columns})
@@ -595,6 +731,7 @@ def bulk_upload_vendors():
         value = row.get(col)
         return None if pd.isna(value) else value
 
+    may_add_cities = _can(g.admin.role, "cities")
     imported, skipped, errors = 0, 0, []
     try:
         for index, row in df.iterrows():
@@ -609,7 +746,11 @@ def bulk_upload_vendors():
             city_slug = slugify(city_name)
             city = City.query.filter_by(slug=city_slug).first()
             if not city:
-                city = City(name=city_name.title(), slug=city_slug, country="India")
+                if not may_add_cities:
+                    skipped += 1
+                    errors.append(f"Row {line}: city '{city_name}' does not exist (your role cannot add cities)")
+                    continue
+                city = City(name=city_name.title(), slug=city_slug, country="India", is_active=True, sort_order=0)
                 db.session.add(city)
                 db.session.flush()
 
@@ -619,7 +760,8 @@ def bulk_upload_vendors():
                 continue
 
             vendor = Vendor(city_id=city.id, name=stall_name, source="admin_bulk", verified_status="verified",
-                            is_hidden_gem=True, is_famous=False, total_ratings=0)
+                            is_hidden_gem=True, is_famous=False, is_premium=True, team_verified=False,
+                            total_ratings=0)
             fields = {k: cell(row, k) for k in list(VENDOR_STR_FIELDS) + list(VENDOR_FLOAT_FIELDS) + list(VENDOR_BOOL_FIELDS)
                       if k != "name" and cell(row, k) is not None}
             error = _apply_vendor_fields(vendor, fields)
@@ -627,13 +769,15 @@ def bulk_upload_vendors():
                 skipped += 1
                 errors.append(f"Row {line}: {error}")
                 continue
+            if "is_premium" not in fields:
+                vendor.is_premium = bool(vendor.is_hidden_gem)
             db.session.add(vendor)
             imported += 1
         db.session.commit()
-    except Exception as e:
+    except Exception:
         db.session.rollback()
         current_app.logger.exception("Bulk upload failed")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "The import failed and nothing was saved. Please check the file and try again."}), 500
 
     return jsonify({
         "message": f"Successfully imported {imported} vendors" + (f", skipped {skipped}." if skipped else "!"),
@@ -648,13 +792,16 @@ def bulk_upload_vendors():
 def export_vendors():
     columns = ["id", "name", "city_name", "cuisine_type", "food_category", "specialty_dish", "description",
                "opening_hours", "price_level", "address_text", "area", "landmark", "lat", "lng", "phone",
-               "website", "instagram", "image_url", "is_hidden_gem", "is_famous", "avg_rating",
-               "total_ratings", "verified_status", "created_at"]
+               "website", "instagram", "image_url", "is_hidden_gem", "is_famous", "is_premium", "team_verified",
+               "avg_rating", "total_ratings", "verified_status", "created_at"]
     buf = io.StringIO()
     writer = csv.DictWriter(buf, fieldnames=columns, extrasaction="ignore")
     writer.writeheader()
     for v in Vendor.query.order_by(Vendor.id.asc()).all():
-        writer.writerow(v.to_admin_dict())
+        row = v.to_admin_dict()
+        # Spreadsheet apps execute cells starting with = + - @ (CSV injection).
+        writer.writerow({k: ("'" + val if isinstance(val, str) and val[:1] in ("=", "+", "-", "@") else val)
+                         for k, val in row.items()})
     return Response(
         "﻿" + buf.getvalue(),
         mimetype="text/csv",
@@ -664,16 +811,21 @@ def export_vendors():
 
 # ==================== CITIES ====================
 
+def _city_dict(c, counts):
+    return {
+        "id": c.id, "name": c.name, "slug": c.slug, "state": c.state, "country": c.country,
+        "lat": c.lat, "lng": c.lng, "vendor_count": counts.get(c.id, 0),
+        "description": c.description, "image_url": c.image_url,
+        "is_active": c.is_active is not False, "sort_order": c.sort_order or 0,
+    }
+
+
 @admin_api_bp.route("/cities", methods=["GET"])
 @admin_required("cities")
 def get_cities():
     counts = dict(db.session.query(Vendor.city_id, db.func.count(Vendor.id)).group_by(Vendor.city_id).all())
-    cities = City.query.order_by(City.name.asc()).all()
-    data = [{
-        "id": c.id, "name": c.name, "slug": c.slug, "state": c.state, "country": c.country,
-        "lat": c.lat, "lng": c.lng, "vendor_count": counts.get(c.id, 0),
-    } for c in cities]
-    return jsonify({"cities": data}), 200
+    cities = City.query.order_by(City.sort_order.asc(), City.name.asc()).all()
+    return jsonify({"cities": [_city_dict(c, counts) for c in cities]}), 200
 
 
 def _apply_city_fields(city, data):
@@ -684,12 +836,29 @@ def _apply_city_fields(city, data):
     for field in ("state", "country"):
         if field in data:
             setattr(city, field, _clean_str(data[field], 100))
+    if "description" in data:
+        city.description = _clean_str(data["description"], 2000)
+    if "image_url" in data:
+        city.image_url = _clean_str(data["image_url"], 500)
+        if city.image_url and not city.image_url.startswith(("https://", "http://", "/")):
+            return "image_url must be a link"
+    if "is_active" in data:
+        city.is_active = _to_bool(data["is_active"])
+    if "sort_order" in data:
+        try:
+            city.sort_order = _to_int(data["sort_order"])
+        except (TypeError, ValueError):
+            return "sort_order must be a number"
     for field in ("lat", "lng"):
         if field in data:
             try:
                 setattr(city, field, _to_float(data[field]))
             except (TypeError, ValueError):
                 return f"{field} must be a number"
+    if city.lat is not None and not -90 <= city.lat <= 90:
+        return "Latitude must be between -90 and 90"
+    if city.lng is not None and not -180 <= city.lng <= 180:
+        return "Longitude must be between -180 and 180"
     if not city.name:
         return "City name is required"
     clash = City.query.filter(City.slug == city.slug, City.id != (city.id or 0)).first()
@@ -701,13 +870,13 @@ def _apply_city_fields(city, data):
 @admin_api_bp.route("/cities", methods=["POST"])
 @admin_required("cities")
 def add_city():
-    city = City(country="India")
+    city = City(country="India", is_active=True, sort_order=0)
     error = _apply_city_fields(city, _json())
     if error:
         return jsonify({"error": error}), 400
     db.session.add(city)
     db.session.commit()
-    return jsonify({"message": "City added successfully.", "id": city.id}), 201
+    return jsonify({"message": "City added successfully.", "id": city.id, "city": _city_dict(city, {})}), 201
 
 
 @admin_api_bp.route("/cities/<int:city_id>", methods=["PUT"])
@@ -719,7 +888,7 @@ def update_city(city_id):
         db.session.rollback()
         return jsonify({"error": error}), 400
     db.session.commit()
-    return jsonify({"message": "City updated."})
+    return jsonify({"message": "City updated.", "city": _city_dict(city, {})})
 
 
 @admin_api_bp.route("/cities/<int:city_id>", methods=["DELETE"])
@@ -728,8 +897,10 @@ def delete_city(city_id):
     city = db.get_or_404(City, city_id)
     vendor_count = Vendor.query.filter_by(city_id=city.id).count()
     pending = VendorSubmission.query.filter_by(city_id=city.id).count()
-    if vendor_count or pending:
-        return jsonify({"error": f"Cannot delete: {city.name} still has {vendor_count} vendors and {pending} submissions."}), 400
+    trails = Trail.query.filter_by(city_id=city.id).count()
+    if vendor_count or pending or trails:
+        return jsonify({"error": f"Cannot delete: {city.name} still has {vendor_count} vendors, "
+                                 f"{pending} submissions and {trails} food trails."}), 400
     db.session.delete(city)
     db.session.commit()
     return jsonify({"message": "City deleted."})
@@ -738,11 +909,7 @@ def delete_city(city_id):
 # ==================== CATEGORIES ====================
 
 def _category_vendor_count(cat):
-    terms = {cat.name, cat.slug.replace("-", "_")}
-    clauses = []
-    for t in terms:
-        clauses += [Vendor.food_category.ilike(f"%{t}%"), Vendor.cuisine_type.ilike(f"%{t}%")]
-    return Vendor.query.filter(db.or_(*clauses)).count()
+    return Vendor.query.filter(category_filter(cat.slug)).count()
 
 
 @admin_api_bp.route("/categories", methods=["GET"])
@@ -761,9 +928,13 @@ def _apply_category_fields(cat, data):
         cat.icon = _clean_str(data["icon"], 20)
     if "image_url" in data:
         cat.image_url = _clean_str(data["image_url"], 500)
+    if "keywords" in data:
+        raw = data["keywords"]
+        words = raw if isinstance(raw, list) else str(raw or "").split(",")
+        cat.keywords = _clean_str(", ".join(str(w).strip() for w in words if str(w).strip()), 500)
     if "sort_order" in data:
         try:
-            cat.sort_order = int(data["sort_order"] or 0)
+            cat.sort_order = _to_int(data["sort_order"])
         except (TypeError, ValueError):
             return "sort_order must be a number"
     if "is_active" in data:
@@ -837,15 +1008,17 @@ def get_reviews():
         query = query.filter(db.or_(Rating.review_text.ilike(like), Rating.author_name.ilike(like), Vendor.name.ilike(like)))
     if vendor_id:
         query = query.filter(Rating.vendor_id == vendor_id)
-    if max_rating:
+    if max_rating is not None and max_rating == max_rating:
         query = query.filter(Rating.rating_value <= max_rating)
     reviews, meta = _paginate(query.order_by(Rating.created_at.desc()))
+    personal = _sees_personal_data()
     data = [{
         "id": r.id, "vendor_id": r.vendor_id, "vendor_name": r.vendor.name if r.vendor else None,
         "city_name": r.vendor.city.name if r.vendor and r.vendor.city else None,
         "rating_value": r.rating_value, "review_text": r.review_text,
         "author_name": r.author_name or "Anonymous", "user_id": r.user_id,
-        "user_email": r.user.email if r.user else None, "user_ip": r.user_ip,
+        "user_email": (r.user.email if r.user else None) if personal else None,
+        "user_ip": r.user_ip if personal else None,
         "created_at": iso(r.created_at),
     } for r in reviews]
     return jsonify({"reviews": data, **meta})
@@ -912,6 +1085,9 @@ def _user_row(u, review_counts, submission_counts):
         "submissions_count": submission_counts.get(u.id, 0),
         "notifications_enabled": u.notifications_enabled,
         "has_push_token": bool(u.push_token),
+        "email_verified": bool(u.email_verified),
+        "is_premium": u.is_premium,
+        "premium_until": utc_iso(u.premium_until),
     }
 
 
@@ -928,6 +1104,8 @@ def get_users():
         query = query.filter(User.status == "suspended")
     elif status == "active":
         query = query.filter(db.or_(User.status == "active", User.status.is_(None)))
+    elif status == "premium":
+        query = query.filter(User.premium_until > _now())
 
     users, meta = _paginate(query.order_by(User.created_at.desc()))
     ids = [u.id for u in users]
@@ -947,7 +1125,7 @@ def get_user(user_id):
     u = db.get_or_404(User, user_id)
     reviews = Rating.query.filter_by(user_id=u.id).order_by(Rating.created_at.desc()).limit(20).all()
     submissions = VendorSubmission.query.filter_by(user_id=u.id).order_by(VendorSubmission.created_at.desc()).limit(20).all()
-    return jsonify({
+    payload = {
         "user": _user_row(u, {u.id: Rating.query.filter_by(user_id=u.id).count()},
                           {u.id: VendorSubmission.query.filter_by(user_id=u.id).count()}),
         "favorites_count": len(u.favorites),
@@ -955,7 +1133,12 @@ def get_user(user_id):
                      "review_text": r.review_text, "created_at": iso(r.created_at)} for r in reviews],
         "submissions": [{"id": s.id, "stall_name": s.stall_name, "status": s.status,
                          "created_at": iso(s.created_at)} for s in submissions],
-    })
+    }
+    if _can_read(g.admin.role, "premium"):
+        events = (SubscriptionEvent.query.filter_by(user_id=u.id)
+                  .order_by(SubscriptionEvent.created_at.desc(), SubscriptionEvent.id.desc()).limit(50).all())
+        payload["subscription_events"] = [e.to_dict(staff=True) for e in events]
+    return jsonify(payload)
 
 
 @admin_api_bp.route("/users/<int:user_id>/status", methods=["PUT"])
@@ -970,21 +1153,324 @@ def update_user_status(user_id):
     return jsonify({"message": f"User {status}.", "status": status})
 
 
-@admin_api_bp.route("/users/<int:user_id>", methods=["DELETE"])
+@admin_api_bp.route("/users/<int:user_id>/send-reset", methods=["POST"])
 @admin_required("users")
-def delete_user(user_id):
+def send_user_reset_code(user_id):
+    """Email the user a password reset code (they finish on the app/website reset screen)."""
     u = db.get_or_404(User, user_id)
-    ContactMessage.query.filter_by(user_id=u.id).update({"user_id": None})
-    Report.query.filter_by(reporter_user_id=u.id).update({"reporter_user_id": None})
-    db.session.delete(u)
-    db.session.commit()
+    try:
+        codes.send_code(u.email, codes.PURPOSE_RESET_PASSWORD, user=u, ip=client_ip())
+    except codes.CodeError as err:
+        return jsonify({"error": err.message, "code": err.code, **err.extra}), err.status
+    except EmailNotConfigured:
+        return jsonify({"error": "Email is not configured on the server.", "code": "EMAIL_NOT_CONFIGURED"}), 503
+    except EmailSendError:
+        return jsonify({"error": "The email could not be sent. Please try again.", "code": "EMAIL_SEND_FAILED"}), 503
+    return jsonify({"message": f"A reset code was emailed to {u.email}."})
+
+
+@admin_api_bp.route("/users/<int:user_id>", methods=["DELETE"])
+@admin_required("users", super_only=True)
+def delete_user(user_id):
+    from app.routes.auth_api import delete_user_account
+    u = db.get_or_404(User, user_id)
+    delete_user_account(u)
     return jsonify({"message": "User deleted."})
+
+
+# ==================== PREMIUM ====================
+
+def _plan_dict(plan, payment_counts=None):
+    data = plan.to_admin_dict()
+    if payment_counts is not None:
+        data["payments_count"] = payment_counts.get(plan.id, 0)
+    return data
+
+
+def _apply_plan_fields(plan, data):
+    if "name" in data:
+        plan.name = _clean_str(data["name"], 100)
+    if "description" in data:
+        plan.description = _clean_str(data["description"], 500)
+    try:
+        if "price_paise" in data:
+            plan.price_paise = _to_int(data["price_paise"], None)
+        if "duration_days" in data:
+            plan.duration_days = _to_int(data["duration_days"], None)
+        if "sort_order" in data:
+            plan.sort_order = _to_int(data["sort_order"])
+    except (TypeError, ValueError):
+        return "price_paise, duration_days and sort_order must be whole numbers"
+    if "is_active" in data:
+        plan.is_active = _to_bool(data["is_active"])
+    if not plan.name:
+        return "Plan name is required"
+    # Razorpay's minimum order is ₹1 (100 paise).
+    if plan.price_paise is None or not 100 <= plan.price_paise <= 10_000_000:
+        return "price_paise must be between 100 (₹1) and 10000000"
+    if plan.duration_days is None or not 1 <= plan.duration_days <= 3660:
+        return "duration_days must be between 1 and 3660"
+    return None
+
+
+def _plan_payment_counts():
+    return dict(db.session.query(Payment.plan_id, db.func.count(Payment.id)).group_by(Payment.plan_id).all())
+
+
+@admin_api_bp.route("/plans", methods=["GET"])
+@admin_required("premium")
+def get_plans():
+    plans = SubscriptionPlan.query.order_by(SubscriptionPlan.sort_order.asc(), SubscriptionPlan.id.asc()).all()
+    counts = _plan_payment_counts()
+    return jsonify({"plans": [_plan_dict(p, counts) for p in plans]})
+
+
+@admin_api_bp.route("/plans", methods=["POST"])
+@admin_required("premium")
+def add_plan():
+    plan = SubscriptionPlan(is_active=True, sort_order=SubscriptionPlan.query.count())
+    error = _apply_plan_fields(plan, _json())
+    if error:
+        return jsonify({"error": error}), 400
+    db.session.add(plan)
+    db.session.commit()
+    return jsonify({"message": "Plan created.", "plan": _plan_dict(plan, {})}), 201
+
+
+@admin_api_bp.route("/plans/<int:plan_id>", methods=["PUT"])
+@admin_required("premium")
+def update_plan(plan_id):
+    plan = db.get_or_404(SubscriptionPlan, plan_id)
+    error = _apply_plan_fields(plan, _json())
+    if error:
+        db.session.rollback()
+        return jsonify({"error": error}), 400
+    db.session.commit()
+    return jsonify({"message": "Plan updated.", "plan": _plan_dict(plan, _plan_payment_counts())})
+
+
+@admin_api_bp.route("/plans/<int:plan_id>", methods=["DELETE"])
+@admin_required("premium")
+def delete_plan(plan_id):
+    plan = db.get_or_404(SubscriptionPlan, plan_id)
+    if Payment.query.filter_by(plan_id=plan.id).count():
+        plan.is_active = False  # keep it for the payment history
+        db.session.commit()
+        return jsonify({"message": "Plan has payments, so it was deactivated instead of deleted.",
+                        "deactivated": True, "plan": _plan_dict(plan, _plan_payment_counts())})
+    db.session.delete(plan)
+    db.session.commit()
+    return jsonify({"message": "Plan deleted.", "deactivated": False})
+
+
+def _payment_brief(p):
+    if not p:
+        return None
+    return {"id": p.id, "amount_paise": p.amount_paise, "status": p.status, "method": p.method,
+            "plan_name": p.plan_name, "created_at": utc_iso(p.created_at), "paid_at": utc_iso(p.paid_at)}
+
+
+@admin_api_bp.route("/subscriptions", methods=["GET"])
+@admin_required("premium")
+def get_subscriptions():
+    status = request.args.get("status", "active")
+    q = request.args.get("q", "").strip()
+    now = _now()
+    query = User.query.filter(User.premium_until.isnot(None))
+    if status == "active":
+        query = query.filter(User.premium_until > now)
+    elif status == "expired":
+        query = query.filter(User.premium_until <= now)
+    if q:
+        like = f"%{q}%"
+        query = query.filter(db.or_(User.name.ilike(like), User.email.ilike(like)))
+    users, meta = _paginate(query.order_by(User.premium_until.desc()))
+
+    last_payments = {}
+    ids = [u.id for u in users]
+    if ids:
+        for p in (Payment.query.filter(Payment.user_id.in_(ids), Payment.status == "paid")
+                  .order_by(Payment.paid_at.asc()).all()):
+            last_payments[p.user_id] = p  # ascending, so the newest wins
+    return jsonify({"subscriptions": [{
+        "user_id": u.id, "name": u.name, "email": u.email, "is_premium": u.is_premium,
+        "premium_until": utc_iso(u.premium_until), "last_payment": _payment_brief(last_payments.get(u.id)),
+    } for u in users], **meta})
+
+
+@admin_api_bp.route("/users/<int:user_id>/premium", methods=["POST"])
+@admin_required("premium")
+def change_user_premium(user_id):
+    u = db.get_or_404(User, user_id)
+    data = _json()
+    action = data.get("action")
+    note = _clean_str(data.get("note"), 500)
+    if action not in ("grant", "extend", "revoke"):
+        return jsonify({"error": "action must be grant, extend or revoke"}), 400
+    if action == "revoke":
+        event = revoke_premium(u, staff=g.admin, note=note)
+    else:
+        try:
+            days = _to_int(data.get("days"), None)
+        except (TypeError, ValueError):
+            days = None
+        if days is None or not 1 <= days <= 3660:
+            return jsonify({"error": "days must be between 1 and 3660"}), 400
+        event = extend_premium(u, days, action, staff=g.admin, note=note)
+    db.session.commit()
+    return jsonify({
+        "message": "Premium revoked." if action == "revoke" else f"Premium extended by {event.days} days.",
+        "user": {"user_id": u.id, "is_premium": u.is_premium, "premium_until": utc_iso(u.premium_until)},
+        "event": event.to_dict(staff=True),
+    })
+
+
+@admin_api_bp.route("/payments", methods=["GET"])
+@admin_required("premium")
+def get_payments():
+    status = request.args.get("status", "").strip()
+    q = request.args.get("q", "").strip()
+    query = Payment.query.outerjoin(User, Payment.user_id == User.id)
+    if status and status != "all":
+        query = query.filter(Payment.status == status)
+    if q:
+        like = f"%{q}%"
+        query = query.filter(db.or_(Payment.email.ilike(like), User.name.ilike(like), User.email.ilike(like),
+                                    Payment.provider_order_id.ilike(like), Payment.provider_payment_id.ilike(like)))
+    items, meta = _paginate(query.order_by(Payment.created_at.desc(), Payment.id.desc()))
+    return jsonify({"payments": [{
+        "id": p.id,
+        "user": {"id": p.user.id, "name": p.user.name, "email": p.user.email} if p.user
+                else {"id": None, "name": None, "email": p.email},
+        "plan": {"id": p.plan_id, "name": p.plan_name, "duration_days": p.days},
+        "amount_paise": p.amount_paise, "currency": p.currency, "status": p.status, "method": p.method,
+        "provider_order_id": p.provider_order_id, "provider_payment_id": p.provider_payment_id,
+        "created_at": utc_iso(p.created_at), "paid_at": utc_iso(p.paid_at),
+    } for p in items], **meta})
+
+
+# ==================== FOOD TRAILS ====================
+
+def _clean_stops(raw):
+    if raw in (None, ""):
+        return [], None
+    if not isinstance(raw, list):
+        return None, "stops must be a list"
+    if len(raw) > 30:
+        return None, "A trail can have at most 30 stops"
+    stops = []
+    for i, item in enumerate(raw, start=1):
+        if isinstance(item, str):
+            item = {"name": item}
+        if not isinstance(item, dict):
+            return None, f"Stop {i} is not valid"
+        name = _clean_str(item.get("name"), 150)
+        vendor_id = item.get("vendor_id")
+        if vendor_id not in (None, ""):
+            try:
+                vendor_id = int(vendor_id)
+            except (TypeError, ValueError):
+                return None, f"Stop {i}: vendor_id must be a number"
+            vendor = db.session.get(Vendor, vendor_id)
+            if not vendor:
+                return None, f"Stop {i}: vendor {vendor_id} does not exist"
+            name = name or vendor.name
+        else:
+            vendor_id = None
+        if not name:
+            return None, f"Stop {i} needs a name"
+        stops.append({"name": name, "vendor_id": vendor_id, "note": _clean_str(item.get("note"), 300)})
+    return stops, None
+
+
+def _apply_trail_fields(trail, data):
+    for field, max_len in (("title", 200), ("description", 5000), ("image_url", 500),
+                           ("duration_text", 100), ("price_text", 100)):
+        if field in data:
+            setattr(trail, field, _clean_str(data[field], max_len))
+    if "city_id" in data:
+        try:
+            city = db.session.get(City, int(data["city_id"]))
+        except (TypeError, ValueError):
+            city = None
+        if not city:
+            return "Please choose a valid city"
+        trail.city_id = city.id
+    if "stops" in data:
+        stops, error = _clean_stops(data["stops"])
+        if error:
+            return error
+        trail.stops = stops
+    for field in ("is_premium", "is_active"):
+        if field in data:
+            setattr(trail, field, _to_bool(data[field]))
+    if "sort_order" in data:
+        try:
+            trail.sort_order = _to_int(data["sort_order"])
+        except (TypeError, ValueError):
+            return "sort_order must be a number"
+    if not trail.title:
+        return "Trail title is required"
+    if not trail.city_id:
+        return "Please choose a city"
+    return None
+
+
+@admin_api_bp.route("/trails", methods=["GET"])
+@admin_required("content")
+def get_trails():
+    query = Trail.query
+    city_id = request.args.get("city_id", type=int)
+    if city_id:
+        query = query.filter(Trail.city_id == city_id)
+    trails = query.order_by(Trail.city_id.asc(), Trail.sort_order.asc(), Trail.id.asc()).all()
+    return jsonify({"trails": [t.to_admin_dict() for t in trails]})
+
+
+@admin_api_bp.route("/trails/<int:trail_id>", methods=["GET"])
+@admin_required("content")
+def get_trail(trail_id):
+    return jsonify({"trail": db.get_or_404(Trail, trail_id).to_admin_dict()})
+
+
+@admin_api_bp.route("/trails", methods=["POST"])
+@admin_required("content")
+def add_trail():
+    trail = Trail(is_premium=True, is_active=True, sort_order=Trail.query.count())
+    trail.stops = []
+    error = _apply_trail_fields(trail, _json())
+    if error:
+        return jsonify({"error": error}), 400
+    db.session.add(trail)
+    db.session.commit()
+    return jsonify({"message": "Trail created.", "trail": trail.to_admin_dict()}), 201
+
+
+@admin_api_bp.route("/trails/<int:trail_id>", methods=["PUT"])
+@admin_required("content")
+def update_trail(trail_id):
+    trail = db.get_or_404(Trail, trail_id)
+    error = _apply_trail_fields(trail, _json())
+    if error:
+        db.session.rollback()
+        return jsonify({"error": error}), 400
+    db.session.commit()
+    return jsonify({"message": "Trail updated.", "trail": trail.to_admin_dict()})
+
+
+@admin_api_bp.route("/trails/<int:trail_id>", methods=["DELETE"])
+@admin_required("content")
+def delete_trail(trail_id):
+    trail = db.get_or_404(Trail, trail_id)
+    db.session.delete(trail)
+    db.session.commit()
+    return jsonify({"message": "Trail deleted."})
 
 
 # ==================== STAFF ====================
 
 @admin_api_bp.route("/staff", methods=["GET"])
-@admin_required()
+@admin_required(super_only=True)
 def get_staff():
     staff = AdminUser.query.order_by(AdminUser.created_at.asc()).all()
     return jsonify({"staff": [s.to_dict() for s in staff]})
@@ -1057,6 +1543,7 @@ def delete_staff(staff_id):
         return jsonify({"error": "You cannot revoke your own access"}), 400
     if staff.role == "super_admin" and _other_active_super_admins(staff.id) == 0:
         return jsonify({"error": "There must be at least one active Super Admin"}), 400
+    SubscriptionEvent.query.filter_by(staff_id=staff.id).update({"staff_id": None})
     db.session.delete(staff)
     db.session.commit()
     return jsonify({"message": "Admin access revoked."})
@@ -1099,6 +1586,10 @@ def delete_message(message_id):
 
 # ==================== REPORTS ====================
 
+# Taking reported content down needs write access to the content's own area too.
+TAKE_DOWN_AREAS = {"review": "reviews", "reel": "reels", "vendor": "vendors"}
+
+
 def _report_target(rep):
     if rep.target_type == "vendor":
         v = db.session.get(Vendor, rep.target_id)
@@ -1121,6 +1612,7 @@ def _report_dict(rep):
         "reporter_name": rep.reporter_name or "Anonymous", "reporter_user_id": rep.reporter_user_id,
         "status": rep.status, "admin_notes": rep.admin_notes,
         "created_at": iso(rep.created_at), "resolved_at": iso(rep.resolved_at),
+        "can_take_down": _can(g.admin.role, TAKE_DOWN_AREAS.get(rep.target_type, "vendors")),
     }
 
 
@@ -1157,6 +1649,8 @@ def update_report(report_id):
 def take_down_report_target(report_id):
     """Remove a reported review/reel, or hide a reported vendor, then resolve the report."""
     rep = db.get_or_404(Report, report_id)
+    if not _can(g.admin.role, TAKE_DOWN_AREAS.get(rep.target_type, "vendors")):
+        return _forbidden()
     if rep.target_type == "review":
         review = db.session.get(Rating, rep.target_id)
         if review:
@@ -1245,7 +1739,7 @@ def reject_reel(reel_id):
 @admin_required("reels")
 def delete_reel(reel_id):
     reel = db.get_or_404(ReelSubmission, reel_id)
-    path = os.path.join(current_app.root_path, "static", "uploads", "reels", reel.video_filename)
+    path = os.path.join(current_app.root_path, "static", "uploads", "reels", os.path.basename(reel.video_filename))
     db.session.delete(reel)
     db.session.commit()
     try:
@@ -1258,17 +1752,33 @@ def delete_reel(reel_id):
 
 # ==================== MOBILE APP SETTINGS ====================
 
+def _service_status():
+    return {
+        "payments_available": payments_available(),
+        "email_available": email_available(),
+        "push_available": push_available(),
+    }
+
+
 @admin_api_bp.route("/app-settings", methods=["GET"])
 @admin_required("app")
 def get_app_settings():
-    return jsonify({"settings": get_settings()})
+    status = _service_status()
+    # Read-only service flags are returned both next to and inside "settings"; saving ignores them.
+    return jsonify({"settings": {**get_settings(), **status}, **status})
 
 
 @admin_api_bp.route("/app-settings", methods=["PUT"])
 @admin_required("app")
 def update_app_settings():
-    settings = save_settings(_json().get("settings") or _json())
-    return jsonify({"message": "App configuration saved.", "settings": settings})
+    data = _json()
+    try:
+        settings = save_settings(data.get("settings") if isinstance(data.get("settings"), dict) else data)
+    except ValueError as exc:
+        db.session.rollback()
+        return jsonify({"error": str(exc), "code": "VALIDATION"}), 400
+    status = _service_status()
+    return jsonify({"message": "App configuration saved.", "settings": {**settings, **status}, **status})
 
 
 @admin_api_bp.route("/banners", methods=["GET"])
@@ -1295,7 +1805,7 @@ def _apply_banner_fields(banner, data):
         banner.is_active = _to_bool(data["is_active"])
     if "sort_order" in data:
         try:
-            banner.sort_order = int(data["sort_order"] or 0)
+            banner.sort_order = _to_int(data["sort_order"])
         except (TypeError, ValueError):
             return "sort_order must be a number"
     if not banner.title or not banner.image_url:
@@ -1340,7 +1850,7 @@ def delete_banner(banner_id):
 @admin_required("app")
 def get_notifications():
     items = AppNotification.query.order_by(AppNotification.created_at.desc()).limit(100).all()
-    return jsonify({"notifications": [n.to_dict() for n in items]})
+    return jsonify({"notifications": [n.to_dict() for n in items], "push_available": push_available()})
 
 
 @admin_api_bp.route("/notifications", methods=["POST"])
@@ -1348,36 +1858,37 @@ def get_notifications():
 def send_notification():
     data = _json()
     title = _clean_str(data.get("title"), 150)
-    body = _clean_str(data.get("body"))
+    body = _clean_str(data.get("body"), 2000)
     target = data.get("target") or "all"
     if not title or not body:
         return jsonify({"error": "Title and message are required"}), 400
     if target != "all":
-        slug = target.split(":", 1)[-1]
+        slug = str(target).split(":", 1)[-1]
         if not City.query.filter_by(slug=slug).first():
             return jsonify({"error": "Unknown target city"}), 400
         target = f"city:{slug}"
+    link_type = data.get("link_type") or "none"
+    if link_type not in ("none", "vendor", "city", "category", "url"):
+        return jsonify({"error": "Invalid link type"}), 400
 
     note = AppNotification(
         title=title, body=body, target=target,
-        link_type=data.get("link_type") or "none", link_value=_clean_str(data.get("link_value"), 500),
+        link_type=link_type, link_value=_clean_str(data.get("link_value"), 500),
         sent_by=g.admin.name,
     )
     db.session.add(note)
     db.session.flush()
 
-    # Device push for users with a registered push token (the app also shows these in its inbox).
+    # The in-app inbox always gets the notification. Device push only reaches Expo tokens (the
+    # Flutter app does not register for push yet), and tokens aren't tied to a city.
     sent = 0
-    # Push tokens aren't tied to a city, so city announcements stay in the in-app inbox only.
-    if data.get("send_push", True) and target == "all":
-        tokens = [u.push_token for u in User.query.filter(
-            User.push_token.isnot(None), User.notifications_enabled == True,  # noqa: E712
-            db.or_(User.status.is_(None), User.status != "suspended"),
-        ).all()]
-        sent = send_push_batch(tokens, body, title, {"notification_id": note.id})
+    can_push = push_available()
+    if data.get("send_push", True) and target == "all" and can_push:
+        sent = send_push_batch(push_recipient_tokens(), body, title, {"notification_id": note.id})
     note.push_sent_count = sent
     db.session.commit()
-    return jsonify({"message": "Notification published.", "notification": note.to_dict()}), 201
+    return jsonify({"message": "Notification published.", "notification": note.to_dict(),
+                    "push_available": can_push}), 201
 
 
 @admin_api_bp.route("/notifications/<int:note_id>", methods=["DELETE"])

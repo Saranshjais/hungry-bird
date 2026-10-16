@@ -13,16 +13,28 @@ from app.models import City, Vendor, User, Category
 
 DATA_DIR = os.path.join(os.path.dirname(backend_dir), 'data')
 
+USAGE = """Usage: python seed_jaipur_data.py --reset
+
+Drops EVERY table and rebuilds a local SQLite database with the Jaipur research vendors.
+It refuses to touch anything but a local SQLite database unless ALLOW_DESTRUCTIVE_SEED=1.
+"""
+
 DEFAULT_CATEGORIES = [
-    ('Street Food', 'street-food', '🌮'),
-    ('Kachori & Samosa', 'kachori-samosa', '🥟'),
-    ('Chai & Tea', 'tea-chai', '☕'),
-    ('Lassi & Dairy', 'dairy-lassi', '🥛'),
-    ('Sweets', 'sweets', '🍬'),
-    ('Kulfi & Ice Cream', 'kulfi-ice-cream', '🍦'),
-    ('Snacks & Fast Food', 'fast-food-snacks', '🍔'),
-    ('Rajasthani', 'rajasthani-traditional', '🍛'),
+    ('Street Food', 'street-food', '🌮', 'street food, street_food, chaat, golgappa, pani puri'),
+    ('Kachori & Samosa', 'kachori-samosa', '🥟', 'kachori, samosa'),
+    ('Chai & Tea', 'tea-chai', '☕', 'tea, chai'),
+    ('Lassi & Dairy', 'dairy-lassi', '🥛', 'lassi, dairy, milk'),
+    ('Sweets', 'sweets', '🍬', 'sweet, mithai, mishtan, dessert'),
+    ('Kulfi & Ice Cream', 'kulfi-ice-cream', '🍦', 'kulfi, ice cream, ice_cream'),
+    ('Snacks & Fast Food', 'fast-food-snacks', '🍔', 'fast food, fast_food, snack'),
+    ('Rajasthani', 'rajasthani-traditional', '🍛', 'rajasthani, dal baati, thali'),
 ]
+
+
+def clean(val):
+    """Stripped text, or None for empty / 'null' cells (never a made-up default)."""
+    val = (val or '').strip()
+    return None if not val or val.lower() == 'null' else val
 
 def parse_float(val):
     if not val or val.strip() == '' or val.strip().lower() == 'null':
@@ -37,9 +49,22 @@ def parse_bool(val):
         return False
     return str(val).strip().lower() in ('true', '1', 'yes', 't')
 
+def _guard_destructive(app):
+    """drop_all() only ever runs on a local SQLite file, never on whatever DATABASE_URL points at."""
+    url = str(app.config["SQLALCHEMY_DATABASE_URI"])
+    if app.config.get("IS_PRODUCTION"):
+        sys.exit("Refusing to reset a production database.")
+    if not url.startswith("sqlite:") and os.getenv("ALLOW_DESTRUCTIVE_SEED") != "1":
+        sys.exit(f"Refusing to drop tables on {db.engine.url.render_as_string(hide_password=True)} "
+                 "(set ALLOW_DESTRUCTIVE_SEED=1 if you really mean it).")
+
+
 def seed_database():
+    if "--reset" not in sys.argv:
+        sys.exit(USAGE)
     app = create_app()
     with app.app_context():
+        _guard_destructive(app)
         print("Recreating database tables for fresh schema...")
         db.drop_all()
         db.create_all()
@@ -60,19 +85,6 @@ def seed_database():
             db.session.commit()
 
         city_id = jaipur.id
-
-        category_images = {
-            'sweets': 'https://images.unsplash.com/photo-1589301760014-d929f39ce9b1?q=80&w=800',
-            'dairy_lassi': 'https://images.unsplash.com/photo-1571006682862-3cd6145277d1?q=80&w=800',
-            'tea_chai': 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?q=80&w=800',
-            'fast_food_snacks': 'https://images.unsplash.com/photo-1601050690597-df0568f70950?q=80&w=800',
-            'kachori_samosa': 'https://images.unsplash.com/photo-1601050690597-df0568f70950?q=80&w=800',
-            'kulfi_ice_cream': 'https://images.unsplash.com/photo-1560008511-11c63416e52d?q=80&w=800',
-            'street_food': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=800',
-            'small_eatery': 'https://images.unsplash.com/photo-1631515243349-e0cb75fb8d3a?q=80&w=800',
-            'rajasthani_traditional': 'https://images.unsplash.com/photo-1626777552726-4c2810a41be7?q=80&w=800'
-        }
-        default_image = 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=800'
 
         hidden_gems_map = {}
         gem_csv = os.path.join(DATA_DIR, 'hidden_gem_candidates.csv')
@@ -109,11 +121,12 @@ def seed_database():
                     seen_codes.add(code)
 
                     cat = row.get('food_category', '').strip()
-                    img = category_images.get(cat, default_image)
 
                     p_min = parse_float(row.get('price_min'))
                     p_max = parse_float(row.get('price_max'))
-                    p_lvl = '₹' if p_min and p_min <= 50 else ('₹₹' if p_min else '₹')
+                    # Only derive a price band from a real price; unknown stays unknown.
+                    p_lvl = ('₹' if p_min <= 50 else '₹₹') if p_min else None
+                    opening, closing = clean(row.get('opening_time')), clean(row.get('closing_time'))
 
                     gem_info = hidden_gems_map.get(raw_code)
                     is_gem = parse_bool(row.get('hidden_gem_candidate')) or bool(gem_info)
@@ -124,47 +137,51 @@ def seed_database():
                         vendor_code=code,
                         name=name,
                         vendor_type=row.get('vendor_type', 'street_stall'),
-                        area=row.get('area', 'Jaipur').strip() or 'Jaipur',
-                        locality=row.get('locality', '').strip(),
-                        market=row.get('market', '').strip(),
-                        street=row.get('street', '').strip(),
-                        landmark=row.get('landmark', '').strip(),
-                        address_text=row.get('address', '').strip() or row.get('street', '').strip() or row.get('area', '').strip(),
+                        area=clean(row.get('area')),
+                        locality=clean(row.get('locality')),
+                        market=clean(row.get('market')),
+                        street=clean(row.get('street')),
+                        landmark=clean(row.get('landmark')),
+                        address_text=clean(row.get('address')) or clean(row.get('street')),
                         lat=parse_float(row.get('latitude')),
                         lng=parse_float(row.get('longitude')),
                         food_category=cat,
                         food_subcategories=row.get('food_subcategories', '').strip(),
                         cuisine_type=cat.replace('_', ' ').title(),
-                        specialty_dish=row.get('signature_dish', '').strip() or 'Local Specialty',
+                        specialty_dish=clean(row.get('signature_dish')),
                         price_min=p_min,
                         price_max=p_max,
                         price_level=p_lvl,
                         price_currency=row.get('price_currency', 'INR').strip() or 'INR',
-                        opening_time=row.get('opening_time', '').strip(),
-                        closing_time=row.get('closing_time', '').strip(),
-                        closed_days=row.get('closed_days', '').strip(),
-                        opening_hours=f"{row.get('opening_time', '')} - {row.get('closing_time', '')}" if row.get('opening_time') else "Open Daily",
-                        phone=row.get('phone', '').strip(),
-                        website=row.get('website', '').strip(),
-                        instagram=row.get('instagram', '').strip(),
+                        opening_time=opening,
+                        closing_time=closing,
+                        closed_days=clean(row.get('closed_days')),
+                        opening_hours=f"{opening} - {closing}" if opening and closing else None,
+                        phone=clean(row.get('phone')),
+                        website=clean(row.get('website')),
+                        instagram=clean(row.get('instagram')),
                         source_url=row.get('source_url', '').strip(),
                         source_type=row.get('source_type', '').strip(),
                         source_name=row.get('source_name', '').strip(),
-                        verification_level=row.get('verification_level', 'LEVEL_3_BUSINESS_VERIFIED').strip(),
-                        verification_status=row.get('verification_status', 'VERIFIED').strip(),
+                        verification_level=clean(row.get('verification_level')),
+                        verification_status=clean(row.get('verification_status')),
                         verified_status='verified',
-                        last_verified_at=row.get('last_verified_at', '2026-08-13').strip(),
+                        last_verified_at=clean(row.get('last_verified_at')),
                         verified_location=parse_bool(row.get('verified_location')),
                         verified_business=parse_bool(row.get('verified_business')),
                         verified_food_type=parse_bool(row.get('verified_food_type')),
                         hidden_gem_candidate=is_gem,
                         is_hidden_gem=is_gem,
+                        is_premium=is_gem,
+                        team_verified=False,
                         hidden_gem_score_status=score_status,
-                        description=row.get('notes', '').strip() or row.get('description', '').strip() or f"Famous {name} in {row.get('area', 'Jaipur')}.",
-                        image_url=img,
-                        avg_rating=4.8 if is_gem else 4.6,
-                        total_ratings=120 if is_gem else 85,
-                        data_confidence=row.get('data_confidence', 'HIGH').strip() or 'HIGH'
+                        description=clean(row.get('description')),
+                        notes=clean(row.get('notes')),
+                        # No stock photo and no rating: ratings come only from real reviews.
+                        image_url=None,
+                        avg_rating=None,
+                        total_ratings=0,
+                        data_confidence=clean(row.get('data_confidence'))
                     )
                     db.session.add(v_obj)
                     added_count += 1
@@ -189,44 +206,48 @@ def seed_database():
                         code = f"HB-OSM-{added_count+1:04d}"
                     seen_codes.add(code)
 
-                    cat = row.get('food_category', 'street_food').strip() or 'street_food'
-                    img = category_images.get(cat, default_image)
+                    cat = clean(row.get('food_category'))
 
                     v_obj = Vendor(
                         city_id=city_id,
                         vendor_code=code,
                         name=name,
-                        vendor_type=row.get('vendor_type', 'street_stall').strip() or 'street_stall',
-                        area=row.get('area', 'Jaipur').strip() or 'Jaipur',
-                        locality=row.get('locality', '').strip(),
-                        address_text=row.get('address', '').strip() or row.get('area', 'Jaipur').strip(),
+                        vendor_type=clean(row.get('vendor_type')),
+                        area=clean(row.get('area')),
+                        locality=clean(row.get('locality')),
+                        address_text=clean(row.get('address')),
                         lat=parse_float(row.get('latitude')),
                         lng=parse_float(row.get('longitude')),
                         food_category=cat,
-                        cuisine_type=cat.replace('_', ' ').title(),
-                        specialty_dish=row.get('signature_dish', '').strip() or 'Street Food Specialty',
-                        opening_hours="Open Daily",
+                        cuisine_type=cat.replace('_', ' ').title() if cat else None,
+                        specialty_dish=clean(row.get('signature_dish')),
+                        opening_hours=None,
                         source_url=row.get('source_url', '').strip(),
                         source_type=row.get('source_type', 'OPENSTREETMAP').strip() or 'OPENSTREETMAP',
                         source_name=row.get('source_name', 'OpenStreetMap').strip() or 'OpenStreetMap',
-                        verification_level=row.get('verification_level', 'LEVEL_1_SOURCE_VERIFIED').strip() or 'LEVEL_1_SOURCE_VERIFIED',
+                        verification_level=clean(row.get('verification_level')),
                         verification_status='CANDIDATE',
                         verified_status='verified',
                         verified_location=parse_bool(row.get('verified_location')),
-                        image_url=img,
-                        avg_rating=4.5,
-                        total_ratings=35,
-                        data_confidence=row.get('data_confidence', 'MEDIUM').strip() or 'MEDIUM'
+                        is_premium=True,
+                        team_verified=False,
+                        image_url=None,
+                        avg_rating=None,
+                        total_ratings=0,
+                        data_confidence=clean(row.get('data_confidence'))
                     )
                     db.session.add(v_obj)
                     added_count += 1
 
         # Default app categories (slugs mirror the food_category data keys)
         if Category.query.count() == 0:
-            for i, (name, slug, icon) in enumerate(DEFAULT_CATEGORIES):
-                db.session.add(Category(name=name, slug=slug, icon=icon, sort_order=i, is_active=True))
+            for i, (name, slug, icon, keywords) in enumerate(DEFAULT_CATEGORIES):
+                db.session.add(Category(name=name, slug=slug, icon=icon, keywords=keywords, sort_order=i, is_active=True))
 
         db.session.commit()
+        # create_all() built the current schema, so record it as fully migrated.
+        from flask_migrate import stamp
+        stamp(directory=os.path.join(backend_dir, 'migrations'))
         total_vendors = Vendor.query.count()
         hidden_gems_count = Vendor.query.filter((Vendor.is_hidden_gem == True) | (Vendor.hidden_gem_candidate == True)).count()
         print(f"Database Seeding Complete! Total Vendors in DB: {total_vendors} (Hidden Gems: {hidden_gems_count}).")

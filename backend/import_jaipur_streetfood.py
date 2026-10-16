@@ -1,6 +1,10 @@
 """Safely add street-food records from the large Jaipur CSV.
 
 Unlike seed_jaipur_data.py, this importer never drops existing tables or rows.
+
+Only real values are stored: Google Maps star ratings / review counts are NOT copied (vendor
+ratings come only from HungryBird reviews), and missing hours, area, photo or description stay
+empty instead of getting a placeholder.
 """
 
 import csv
@@ -19,7 +23,6 @@ from app.models import City, Vendor
 
 
 CSV_PATH = os.path.join(os.path.dirname(backend_dir), "data", "jaipur-streetfood.csv")
-DEFAULT_IMAGE = "https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=600"
 
 
 def clean(value):
@@ -40,7 +43,7 @@ def normalize_name(value):
 def opening_hours(value):
     raw = clean(value)
     if not raw or raw == "{}":
-        return "Open Daily"
+        return None
     try:
         parsed = json.loads(raw)
         if isinstance(parsed, dict):
@@ -102,8 +105,6 @@ def import_records():
                 continue
 
             tier = clean(row.get("tier"))
-            rating = number(row.get("review_rating"), 4.5)
-            reviews = int(number(row.get("review_count"), 0) or 0)
             candidate = tier in {"hidden_gem", "local_street_food"}
             db.session.add(
                 Vendor(
@@ -112,19 +113,21 @@ def import_records():
                     cuisine_type=clean(row.get("category"))[:200] or "Street Food",
                     is_hidden_gem=tier == "hidden_gem",
                     is_famous=tier == "well_known",
-                    avg_rating=rating,
-                    total_ratings=reviews,
-                    address_text=clean(row.get("address"))[:300],
-                    area="Jaipur",
-                    description=f"Street-food discovery in Jaipur. {clean(row.get('category'))}"[:1000],
-                    specialty_dish=clean(row.get("category"))[:150] or "Street Food Specialty",
+                    is_premium=tier == "hidden_gem" or candidate,
+                    team_verified=False,
+                    avg_rating=None,
+                    total_ratings=0,
+                    address_text=clean(row.get("address"))[:300] or None,
+                    area=None,
+                    description=None,
+                    specialty_dish=None,
                     opening_hours=opening_hours(row.get("open_hours")),
                     lat=number(row.get("latitude")),
                     lng=number(row.get("longitude")),
                     source="jaipur-streetfood.csv",
                     verified_status="verified",
                     place_id=place_id,
-                    image_url=DEFAULT_IMAGE,
+                    image_url=None,
                     vendor_code=vendor_code(place_id),
                     vendor_type=tier[:80] or "street_food",
                     food_category=clean(row.get("category"))[:80] or "Street Food",
