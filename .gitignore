@@ -47,6 +47,7 @@ instance/
 backend.log
 
 # IDE
+.claude/worktrees/
 .vscode/
 .idea/
 *.swp
